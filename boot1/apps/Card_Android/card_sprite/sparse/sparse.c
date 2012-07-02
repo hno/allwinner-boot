@@ -124,11 +124,14 @@ int unsparse_deal(void)
 	char *source;
 	chunk_header_t *chunk;
 	int  flash_start;
+	int  ratio0, ratio1;
 
 	flash_start = android_format_flash_start;
 	header = (sparse_header_t *)android_format_dram_base;
 	source = android_format_dram_base + header->file_hdr_sz;
 
+	ratio0 = ratio1= 0;
+	__inf("sparse ratio=%d\n", ratio0);
 	for (i=0; i < header->total_chunks; i++)
 	{
 		chunk = (chunk_header_t *)source;
@@ -176,6 +179,13 @@ int unsparse_deal(void)
 
 				return -1;
 		}
+		ratio1 = i*10 / header->total_chunks;
+		if(ratio0 != ratio1)
+		{
+			ratio0 = ratio1;
+			__inf("sparse ratio=%d\n", ratio0);
+		}
+
 	}
 
 	return 0;

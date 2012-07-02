@@ -25,6 +25,7 @@
 static void  print_version(void);
 static __s32 reserved_init(void);
 static __s32 reserved_exit(void);
+static void eGon2_storage_type_set(void);
 /*******************************************************************************
 *函数名称: eGon2_start
 *函数原型：void Boot1_C_part( void )
@@ -180,6 +181,7 @@ void eGon2_start( void )
 //	}
 #if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
 	eGon2_block_ratio();
+	eGon2_storage_type_set();
 #endif
 	if(force_to_card0 == 1)
 	{
@@ -200,6 +202,10 @@ void eGon2_start( void )
 		if(BT1_head.boot_head.platform[7])
 		{
 			str_pointer_array[0] = str_array1;
+		}
+		else
+		{
+			eGon2_storage_type_set();
 		}
 #endif
         eGon2_run_app(1, str_pointer_array);
@@ -258,6 +264,18 @@ static __s32 reserved_exit(void)
 {
     return 0;
 }
+static void eGon2_storage_type_set(void)
+{
+	boot_file_head_t  *bfh;
+	int  type;
 
+	bfh = (boot_file_head_t *)BOOT1_BASE;
+	type = bfh->eGON_vsn[2];
 
+	if(!eGon2_script_parser_patch("target", "storage_type", type))
+	{
+		eGon2_printf("storage_type=%d\n", type);
+	}
 
+	return ;
+}

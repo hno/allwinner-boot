@@ -31,7 +31,7 @@ OBJS=$(SRCCS:.c=.o) $(SRCSS:.S=.o)
 
 
 #生成输出目标文件
-nand:$(LOCALTARGET)
+sdmmc:$(LOCALTARGET)
 	$(LOAD) $(LDFLAGS) -O binary -S -g -R .note -R .comment $(LOCALTARGET) $(TMPTARGET)
 	-$(WORKTOOLS)/gen_check_code $(TMPTARGET) boot1.bin
 	cp boot1.bin $(TARGET)
@@ -47,5 +47,5 @@ $(LOCALTARGET):$(OBJS)
 
 # 删除生成的中间文件
 clean:
-	-rm $(OBJS) $(LOCALTARGET) $(TEMPTARGET) boot1.bin
+	-rm $(OBJS) $(LOCALTARGET) $(TMPTARGET) boot1.bin
 

@@ -47,5 +47,5 @@ $(LOCALTARGET):$(OBJS)
 
 # 删除生成的中间文件
 clean:
-	-rm $(OBJS) $(LOCALTARGET) $(TEMPTARGET) boot1.bin
+	-rm $(OBJS) $(LOCALTARGET) $(TMPTARGET) boot1.bin
 

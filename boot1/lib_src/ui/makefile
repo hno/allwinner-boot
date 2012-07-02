@@ -30,7 +30,7 @@ OBJS=$(SRCCS:.c=.o) $(SRCSS:.S=.o)
 $(LOCALTARGET):$(OBJS)
 	$(AR) $(ARFLAGS) $(LOCALTARGET) $(filter %.o ,$+) $(LIBS)
 	cp $(LOCALTARGET) $(TARGET0)
-	-rm $(LOCALTARGET)
+	-rm $(OBJS) $(LOCALTARGET)
 
 
 # 删除生成的中间文件

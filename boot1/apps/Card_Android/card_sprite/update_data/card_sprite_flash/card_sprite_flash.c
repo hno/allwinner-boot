@@ -258,7 +258,8 @@ int sprite_flash_hardware_scan(void *flash_info, int erase_flash)
 
 	type = 0;
 	ret = wBoot_script_parser_fetch("target", "storage_type", &type, 1);
-	if((!ret) && (type == 2))
+	__inf("storage type = %d\n", type);
+	if(type == 2)
 	{
 		goto __hardware_scan__;
 	}

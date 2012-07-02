@@ -32,7 +32,7 @@ OBJS=$(SRCCS:.c=.o) $(SRCSS:.S=.o)
 #生成输出目标文件
 all:$(LOCALTARGET)
 	$(LOAD) $(LDFLAGS) $(LOCALTARGET) $(TARGET)
-	-rm $(OBJS) $(LOCALTARGET)
+	-rm $(OBJS)
 	@echo ----------------------------
 	@echo target make finish
 	@echo ----------------------------

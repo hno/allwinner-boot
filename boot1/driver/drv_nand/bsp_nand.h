@@ -35,7 +35,7 @@
 //  nand driver 版本号
 //---------------------------------------------------------------
 #define  NAND_VERSION_0                 0x02
-#define  NAND_VERSION_1                 0x06
+#define  NAND_VERSION_1                 0x10
 
 //---------------------------------------------------------------
 //  结构体 定义
@@ -133,6 +133,12 @@ extern __s32 NAND_GetParam(boot_nand_para_t * nand_param);
 extern __s32 NAND_GetFlashInfo(boot_flash_info_t *info);
 extern __u32 NAND_GetDiskSize(void);
 extern void  NAND_SetSrcClkName(__u32 pll_name);
+
+//for lsb mode
+extern __s32 NFC_LSBEnable(__u32 chip, __u32 read_retry_type);
+extern __s32 NFC_LSBDisable(__u32 chip, __u32 read_retry_type);
+extern __s32 NFC_LSBInit(__u32 read_retry_type);
+extern __s32 NFC_LSBExit(__u32 read_retry_type);
 
 /* 
 *   Description:

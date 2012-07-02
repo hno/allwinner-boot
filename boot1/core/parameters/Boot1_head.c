@@ -45,7 +45,7 @@ const boot1_file_head_t  BT1_head = {
 							   		      BOOT1_VERSION,
 							   		      EGON_VERSION,
 							   		      {
-							   		      	'1','.','4','.','0',0,0,0
+							   		      	'1','.','5','.','0',0,0,0
 							   		      },
 							 	      },
 							 	      {

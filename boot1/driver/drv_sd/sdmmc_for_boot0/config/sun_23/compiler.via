@@ -1,7 +1,0 @@
---cpu=Cortex-A8.no_neon
-
--O0
--I "D:\winners\eBase\eGON\EGON2_TRUNK\boot_23\boot1\include"
--I "D:\winners\eBase\eGON\EGON2_TRUNK\boot_23\boot1\driver\drv_sd\sdmmc_for_boot0"
--I "D:\winners\eBase\eGON\EGON2_TRUNK\boot_23\boot1\driver\drv_sd\src"
--I "D:\winners\eBase\eGON\EGON2_TRUNK\boot_23\boot1\driver\drv_sd\sdmmc_for_boot0\osal"

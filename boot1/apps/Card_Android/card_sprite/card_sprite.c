@@ -94,8 +94,6 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 		boot_ui_progressbar_config(progressbar_hd, UI_BOOT_GUI_RED, UI_BOOT_GUI_GREEN, 2);
 		boot_ui_progressbar_active(progressbar_hd);
 	}
-	//读取原有的uboot环境变量
-	private_fetch_from_flash();
 	//NAND设备初始化
     memset(flash_info, 0, 512);
     __inf("erase flag=%d\n", flash_erase);
@@ -117,6 +115,8 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
     	goto _update_error_;
     }
+    //读取原有的uboot环境变量
+	private_fetch_from_flash();
     //准备nand数据信息
 	sprite_show(CARD_SPRITE_FLASH_INFO);
 	src_buf = (char *)sprite_malloc(1024 * 1024);
@@ -279,7 +279,6 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	sprite_ratio = CARD_SPRITE_GET_MAP;
 	for(i=0;i<dl_info->download_count;i++)
 	{
-__download_part_data__:
 		__inf("dl name = %s\n", dl_info->one_part_info[i].name);
 	    imgitemhd = Img_OpenItem(imghd, "RFSFAT16", (char *)dl_info->one_part_info[i].dl_filename);
 	    if(!imgitemhd)
@@ -455,6 +454,8 @@ __download_part_data__:
 	    {
 	    	__inf("part %s not need verify\n", dl_info->one_part_info[i].dl_filename);
 	    }
+__download_part_data__:
+		;
 	}
 	sprite_show(CARD_SPRITE_DOWN_PART);
 /*****************************************************************************
