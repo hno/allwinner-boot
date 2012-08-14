@@ -51,27 +51,11 @@ int standby_int_init(void)
 	asm("msr cpsr_c, r0");
 
 	//保存中断寄存器值
-	addr = (int *)(0x01c20400);
-	for(i=1;i<36;i++)
-	{
-		int_reggroup_value[i] = *(addr + i);
-	}
-	//关闭所有中断使能,仅保留POWER中断
-	INTC_REG_ENABLE0 = 1;
-	INTC_REG_ENABLE1 = 0;
-	INTC_REG_ENABLE2 = 0;
-	//打开所有中断mask
-	INTC_REG_MASK0 = 0;
-	INTC_REG_MASK1 = 0;
-	INTC_REG_MASK2 = 0;
-	//清除所有中断pengding
-	INTC_REG_FIQ_PENDCLR0 = 0xffffffff;
-	INTC_REG_FIQ_PENDCLR1 = 0xffffffff;
-	INTC_REG_FIQ_PENDCLR2 = 0xffffffff;
-
-	INTC_REG_IRQ_PENDCLR0 = 0xffffffff;
-	INTC_REG_IRQ_PENDCLR1 = 0xffffffff;
-	INTC_REG_IRQ_PENDCLR2 = 0xffffffff;
+//	addr = (int *)(0x01c20400);
+//	for(i=1;i<36;i++)
+//	{
+//		int_reggroup_value[i] = *(addr + i);
+//	}
 
     return 0;
 }
@@ -97,19 +81,19 @@ int standby_int_init(void)
 */
 int standby_int_exit(void)
 {
-	int	  i;
-	int   *addr;
-
-	//保存中断寄存器值
-	addr = (int *)(0x01c20400);
-	if(!int_reggroup_value)
-	{
-		return -1;
-	}
-	for(i=1;i<36;i++)
-	{
-		*(addr + i) = int_reggroup_value[i];
-	}
+//	int	  i;
+//	int   *addr;
+//
+//	//保存中断寄存器值
+//	addr = (int *)(0x01c20400);
+//	if(!int_reggroup_value)
+//	{
+//		return -1;
+//	}
+//	for(i=1;i<36;i++)
+//	{
+//		*(addr + i) = int_reggroup_value[i];
+//	}
 
 	asm("mrs r0, cpsr");
 	asm("bic r0, r0, #(0x40|0x80)");
@@ -121,15 +105,15 @@ int standby_int_exit(void)
 
 int standby_int_query(void)
 {
-	__u32 reg_val;
-
-	reg_val = INTC_REG_IRQ_PENDCLR0;
-	if(reg_val & 1)
-	{
-		INTC_REG_IRQ_PENDCLR0 = reg_val;
-
-		return 1;
-	}
+//	__u32 reg_val;
+//
+//	reg_val = INTC_REG_IRQ_PENDCLR0;
+//	if(reg_val & 1)
+//	{
+//		INTC_REG_IRQ_PENDCLR0 = reg_val;
+//
+//		return 1;
+//	}
 
 	return 0;
 }

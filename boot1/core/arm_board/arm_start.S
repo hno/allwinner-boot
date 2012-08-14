@@ -45,7 +45,7 @@
      ldr     pc,_undefined_instruction
 
 _undefined_instruction:	.word undefined_instruction
-_software_interrupt:     .word software_interrupt
+_software_interrupt:    .word software_interrupt
 _irq:					.word irq_interrupt
 
 #define     INTC_REG_VCTR    0x1c20400
@@ -60,13 +60,7 @@ irq_interrupt:
     msr     cpsr_c, #(ARMV7_FIQ_MASK | ARMV7_IRQ_MASK | ARMV7_SYSTEM_MODE)     @; 切换到SYSTEM模式
     stmfd   sp!, {r0-r12, lr}                                @; 保存lr_usr和其它用到的寄存器
 
-    ldr	    r0,  =INTC_REG_VCTR
-    ldr		r1,  [r0]
-    ldr		r0,  =eGon2_IRQVectorTable
-    add		r1,  r0, r1, lsl #1
-    ldr		r0,  [r1]					@;/* arg of isr		*/
-    mov     lr,  pc
-    ldr     pc,  [r1, #4]               @;/* r1保存函数参数，r1+4保存函数地址. r1传递给了r0，实际上用r0传递中断函数参数 */
+	bl      gic_irq_handler
 
     ldmfd   sp!, {r0-r12, lr}                           @; 恢复SYSTEM模式寄存器
     msr     cpsr_c, #(ARMV7_FIQ_MASK | ARMV7_IRQ_MASK | ARMV7_IRQ_MODE)     @; 切换到IRQ模式

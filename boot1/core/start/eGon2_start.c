@@ -47,7 +47,7 @@ void eGon2_start( void )
 
 	/* init enviroment for running app */
 //	move_RW( );
-	reposition_boot_standby();
+//	reposition_boot_standby();
 	clear_ZI( );
 
     // 做两次调频，第一次先到384M ???

@@ -36,7 +36,7 @@ extern __s32 timer1_int_func(void *arg);
 
 typedef __s32  (* __int_func )(void* /*p_arg*/);     /* isr function pointer                                         */
 
-static __s32 esIRQHandler_default( void * pArg );
+static int esIRQHandler_default( void * pArg );
 
 typedef struct
 {
@@ -45,105 +45,115 @@ typedef struct
 
 }__int_func_t;
 
-__int_func_t  eGon2_IRQVectorTable[84] =
+__int_func_t  eGon2_IRQVectorTable[GIC_IRQ_NUM];
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    函数名称：
+*
+*    参数列表：
+*
+*    返回值  ：
+*
+*    说明    ：
+*
+*
+************************************************************************************************************
+*/
+static void gic_distributor_init(void)
 {
-        { 0, esIRQHandler_default },       //index  0
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },       //index 9
+	__u32 cpumask = 0x01010101;
+	__u32 gic_irqs;
+	__u32 i;
 
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },       //index 19
+	GICD_CTLR = 0;
 
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, timer0_int_func      },   	   //timer0 22
-        { 0, timer1_int_func      },   	   //timer1 23
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },       //index 29
+	/* check GIC hardware configutation */
+	gic_irqs = ((GICD_TYPE & 0x1f) + 1) * 32;
+	if (gic_irqs > 1020)
+	{
+		gic_irqs = 1020;
+	}
+	else if (gic_irqs < GIC_IRQ_NUM)
+	{
+		eGon2_printf("GIC parameter config error, only support %d"
+				" irqs < %d(spec define)!!\n", gic_irqs, GIC_IRQ_NUM);
+		return ;
+	}
 
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },       //index 39
+	/* set trigger type to be level-triggered, active low */
+	for (i=0; i<GIC_IRQ_NUM; i+=16)
+	{
+		GICD_ICFGR(i>>4) = 0;
+	}
+	/* set priority */
+	for (i=GIC_SRC_SPI(0); i<GIC_IRQ_NUM; i+=4)
+	{
+		GICD_SPI_PRIO((i-32)>>2) = 0xa0a0a0a0;
+	}
+	/* set processor target */
+	for (i=32; i<GIC_IRQ_NUM; i+=4)
+	{
+		GICD_SPI_ITARG((i-32)>>2) = cpumask;
+	}
+	/* disable all interrupts */
+	for (i=32; i<GIC_IRQ_NUM; i+=32)
+	{
+		GICD_ICENABLER(i>>5) = 0xffffffff;
+	}
+	/* clear all interrupt active state */
+	for (i=32; i<GIC_IRQ_NUM; i+=32)
+	{
+		GICD_ICACTIVER(i>>5) = 0xffffffff;
+	}
+	GICD_CTLR = 1;
 
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },       //index 49
+	return ;
+}
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    函数名称：
+*
+*    参数列表：
+*
+*    返回值  ：
+*
+*    说明    ：
+*
+*
+************************************************************************************************************
+*/
+static void gic_cpuif_init(void)
+{
+	__u32 i;
 
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },      //index 59
+	GICC_CTRL = 0;
+	/*
+	 * Deal with the banked PPI and SGI interrupts - disable all
+	 * PPI interrupts, ensure all SGI interrupts are enabled.
+	*/
+	GICD_ICENABLER(0) = 0xffff0000;
+	GICD_ISENABLER(0) = 0x0000ffff;
+	/* Set priority on PPI and SGI interrupts */
+	for (i=0; i<16; i+=4)
+	{
+		GICD_SGI_PRIO(i>>2) = 0xa0a0a0a0;
+	}
+	for (i=16; i<32; i+=4)
+	{
+		GICD_PPI_PRIO((i-16)>>2) = 0xa0a0a0a0;
+	}
 
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },      //index 69
+	GICC_PMR  = 0xf0;
+	GICC_CTRL = 1;
 
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },      //index 79
-
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default },
-        { 0, esIRQHandler_default }		  //index 83
-};
-
-
-
-
+	return ;
+}
 /*
 *********************************************************************************************************
 *										   IRQHandler_default
@@ -154,10 +164,12 @@ __int_func_t  eGon2_IRQVectorTable[84] =
 * Returns	 : void
 *********************************************************************************************************
 */
-static __s32 esIRQHandler_default(void * pArg)
+static int esIRQHandler_default(void * pArg)
 {
 	eGon2_printf("int not support\n");
     while(1);
+
+	return 0;
 }
 
 /*
@@ -172,22 +184,17 @@ static __s32 esIRQHandler_default(void * pArg)
 */
 void eGon2_Int_Init(void)
 {
-	//关闭所有中断使能
-	INTC_REG_ENABLE0 = 0;
-	INTC_REG_ENABLE1 = 0;
-	INTC_REG_ENABLE2 = 0;
-	//打开所有中断mask
-	INTC_REG_MASK0 = 0;
-	INTC_REG_MASK1 = 0;
-	INTC_REG_MASK2 = 0;
-	//清除所有中断pengding
-	INTC_REG_FIQ_PENDCLR0 = 0xffffffff;
-	INTC_REG_FIQ_PENDCLR1 = 0xffffffff;
-	INTC_REG_FIQ_PENDCLR2 = 0xffffffff;
+	int i;
 
-	INTC_REG_IRQ_PENDCLR0 = 0xffffffff;
-	INTC_REG_IRQ_PENDCLR1 = 0xffffffff;
-	INTC_REG_IRQ_PENDCLR2 = 0xffffffff;
+	for (i=0; i<GIC_IRQ_NUM; i++)
+	{
+		eGon2_IRQVectorTable[i].pIsr = esIRQHandler_default;
+	}
+	eGon2_IRQVectorTable[GIC_SRC_TIMER0].pIsr = timer0_int_func;
+	eGon2_IRQVectorTable[GIC_SRC_TIMER1].pIsr = timer1_int_func;
+
+	gic_distributor_init();
+	gic_cpuif_init();
 
 	return;
 }
@@ -203,32 +210,6 @@ void eGon2_Int_Init(void)
 */
 void eGon2_Int_Exit(void)
 {
-    //关闭TIMER中断
-    *(volatile unsigned int *)(0x01c20c00 + 0x00) = 0;
-    *(volatile unsigned int *)(0x01c20c00 + 0x04) |= 0x043f;
-    *(volatile unsigned int *)(0x01c20c00 + 0x10) = 0;
-    *(volatile unsigned int *)(0x01c20c00 + 0x20) = 0;
-    //关闭DMA中断
-    *(volatile unsigned int *)(0x01c02000 + 0x00) = 0;
-    *(volatile unsigned int *)(0x01c02000 + 0x04) = 0xffffffff;
-
-	//关闭所有中断使能
-	INTC_REG_ENABLE0 = 0;
-	INTC_REG_ENABLE1 = 0;
-	INTC_REG_ENABLE2 = 0;
-	//打开所有中断mask
-	INTC_REG_MASK0 = 0;
-	INTC_REG_MASK1 = 0;
-	INTC_REG_MASK2 = 0;
-	//清除所有中断pengding
-	INTC_REG_FIQ_PENDCLR0 = 0xffffffff;
-	INTC_REG_FIQ_PENDCLR1 = 0xffffffff;
-	INTC_REG_FIQ_PENDCLR2 = 0xffffffff;
-
-	INTC_REG_IRQ_PENDCLR0 = 0xffffffff;
-	INTC_REG_IRQ_PENDCLR1 = 0xffffffff;
-	INTC_REG_IRQ_PENDCLR2 = 0xffffffff;
-
     return;
 }
 /*
@@ -246,17 +227,14 @@ void eGon2_Int_Exit(void)
 __s32 eGon2_InsINT_Func(__u32 irq_no, int *func_addr, void *p_arg)
 {
     close_sys_int();
-    if(irq_no < 80)
+    if (irq_no < GIC_IRQ_NUM)
     {
-        if(eGon2_IRQVectorTable[irq_no].pIsr == esIRQHandler_default)    //还没有进行注册
-        {
-            eGon2_IRQVectorTable[irq_no].pIsr = (__int_func )func_addr;
-            eGon2_IRQVectorTable[irq_no].pArg = p_arg;
-            open_sys_int();
+		eGon2_IRQVectorTable[irq_no].pIsr = (__int_func )func_addr;
+        eGon2_IRQVectorTable[irq_no].pArg = p_arg;
+		open_sys_int();
 
-            return 0;
-        }
-    }
+		return 0;
+	}
     open_sys_int();
 
     return -1;
@@ -278,17 +256,17 @@ __s32 eGon2_InsINT_Func(__u32 irq_no, int *func_addr, void *p_arg)
 __s32 eGon2_UnsInt_Func(__u32 irq_no)
 {
     close_sys_int();
-    if(irq_no < 80)
+    if(irq_no < GIC_IRQ_NUM)
     {
-        if(eGon2_IRQVectorTable[irq_no].pIsr != esIRQHandler_default)    //还没有进行注册
-        {
-            eGon2_IRQVectorTable[irq_no].pIsr = esIRQHandler_default;
-            eGon2_IRQVectorTable[irq_no].pArg = 0;
-            open_sys_int();
+    	if(eGon2_IRQVectorTable[irq_no].pIsr != esIRQHandler_default)
+    	{
+			eGon2_IRQVectorTable[irq_no].pIsr = (__int_func )esIRQHandler_default;
+        	eGon2_IRQVectorTable[irq_no].pArg = 0;
+			open_sys_int();
+		}
 
-            return 0;
-        }
-    }
+		return 0;
+	}
     open_sys_int();
 
     return -1;
@@ -307,25 +285,19 @@ __s32 eGon2_UnsInt_Func(__u32 irq_no)
 */
 __s32 eGon2_EnableInt(__u32 irq_no)
 {
-    if(irq_no < 32)
-    {
-        INTC_REG_ENABLE0    |=  (1 << irq_no);
-        INTC_REG_MASK0 	    &= ~(1 << irq_no);
-        if(irq_no == INTC_IRQNO_FIQ) /* must clear pending bit when enabled */
-            INTC_REG_FIQ_PENDCLR0 = (1 << INTC_IRQNO_FIQ);
-    }
-    else if(irq_no < 64)
-    {
-    	irq_no              -= 32;
-        INTC_REG_ENABLE1    |=  (1 << irq_no);
-        INTC_REG_MASK1 	    &= ~(1 << irq_no);
-    }
-    else
-    {
-        irq_no               -= 64;
-        INTC_REG_ENABLE2    |=  (1 << irq_no);
-        INTC_REG_MASK2 	    &= ~(1 << irq_no);
-    }
+	__u32 reg_val;
+	__u32 offset;
+
+	if (irq_no >= GIC_IRQ_NUM)
+	{
+		eGon2_printf("irq NO.(%d) > GIC_IRQ_NUM(%d) !!\n", irq_no, GIC_IRQ_NUM);
+		return -1;
+	}
+
+	offset   = irq_no >> 5; // 除32
+	reg_val  = GICD_ISENABLER(offset);
+	reg_val |= 1 << (irq_no & 0x1f);
+	GICD_ISENABLER(offset) = reg_val;
 
     return 0;
 }
@@ -344,25 +316,92 @@ __s32 eGon2_EnableInt(__u32 irq_no)
 */
 __s32 eGon2_DisableInt(__u32 irq_no)
 {
-    if(irq_no < 32)
-    {
-        INTC_REG_ENABLE0    &= ~(1 << irq_no);
-        INTC_REG_MASK0 	    |=  (1 << irq_no);
-    }
-    else if(irq_no < 64)
-    {
-    	irq_no -= 32;
-        INTC_REG_ENABLE1    &= ~(1 << irq_no);
-        INTC_REG_MASK1 	    |=  (1 << irq_no);
-    }
-    else
-    {
-        irq_no -= 64;
-        INTC_REG_ENABLE2    &= ~(1 << irq_no);
-        INTC_REG_MASK2 	    |=  (1 << irq_no);
-    }
+	__u32 reg_val;
+	__u32 offset;
+
+	if (irq_no >= GIC_IRQ_NUM)
+	{
+		eGon2_printf("irq NO.(%d) > GIC_IRQ_NUM(%d) !!\n", irq_no, GIC_IRQ_NUM);
+		return -1;
+	}
+
+	offset   = irq_no >> 5; // 除32
+	reg_val  = GICD_ISENABLER(offset);
+	reg_val &= ~(1 << (irq_no & 0x1f));
+	GICD_ISENABLER(offset) = reg_val;
 
     return 0;
+}
+
+
+
+void gic_sgi_handler(__u32 id)
+{
+	eGon2_printf("SGI irq %d coming... \n", id);
+}
+
+void gic_ppi_handler(__u32 id)
+{
+	eGon2_printf("PPI irq %d coming... \n", id);
+}
+
+void gic_spi_handler(__u32 id)
+{
+	if(eGon2_IRQVectorTable[id].pIsr != (__int_func )esIRQHandler_default)
+	{
+		eGon2_IRQVectorTable[id].pIsr(eGon2_IRQVectorTable[id].pArg);
+	}
+
+	return ;
+}
+
+void gic_clear_pending(u32 idnum)
+{
+	__u32 reg_val;
+	__u32 offset;
+
+	offset = idnum >> 5; // 除32
+	reg_val = GICD_ICPENDR(offset);
+	reg_val |= (1 << (idnum & 0x1f));
+	GICD_ICPENDR(offset) = reg_val;
+
+	return ;
+}
+
+void gic_irq_handler(void)
+{
+	u32 idnum;
+
+	idnum = GICC_IAR;
+	if (idnum == 1023)
+	{
+		eGon2_printf("spurious irq !!\n");
+		return;
+	}
+	if (idnum >= GIC_IRQ_NUM)
+	{
+		eGon2_printf("irq NO.(%d) > GIC_IRQ_NUM(%d) !!\n", idnum, GIC_IRQ_NUM-32);
+		return;
+	}
+	if (idnum < 16)
+	{
+		gic_sgi_handler(idnum);
+	}
+	else if (idnum < 32)
+	{
+		gic_ppi_handler(idnum);
+	}
+	else
+	{
+		gic_spi_handler(idnum);
+	}
+
+	GICC_EOIR = idnum;
+	GICC_DIR  = idnum;
+
+	gic_clear_pending(idnum);
+
+	return ;
 }
 
 

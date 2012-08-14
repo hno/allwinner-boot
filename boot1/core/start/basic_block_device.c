@@ -111,7 +111,8 @@ __s32 eGon2_block_phywrite(__u32 start_block, __u32 nblock, void *pbuffer)
 
 __s32 eGon2_block_size(void)
 {
-	return NAND_GetDiskSize();
+	//return NAND_GetDiskSize();
+	return 0;
 }
 
 void eGon2_block_ratio(void)

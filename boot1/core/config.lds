@@ -29,16 +29,22 @@ SECTIONS
 	{
 		*(EXCLUDE_FILE(standby/*.o drivers/iic/sw_iic.o).rodata)
 	}
+
 	.bss ALIGN(4):
 	{
 		_bss_start = .;
 		*(EXCLUDE_FILE(standby/*.o drivers/iic/sw_iic.o).bss)
-		_bss_end = .;
+	}
+	_bss_end = ( ADDR (.bss) + SIZEOF (.bss) );
+
+	.notes ALIGN(4):
+	{
+		*(.note.*)
 	}
 
-	_standby_start_lma = .;
+	_standby_start_lma = ( ADDR (.notes) + SIZEOF (.notes) );
 	.boot_standby_text 0x400 :
-	AT ( ADDR (.bss) + SIZEOF (.bss) )
+	AT ( ADDR (.notes) + SIZEOF (.notes) )
 	{
 		_standby_start = .;
 		standby/*.o(.text .data .rodata .bss)

@@ -113,6 +113,10 @@
 #define TWIC1_REGS_BASE        ( REGS_BASE + 0x2B000 )    //twi1
 #define TWIC2_REGS_BASE        ( REGS_BASE + 0x2B400 )    //twi2
 
+#define ARMV7_SCU_BASE		(0x01c80000)
+#define ARMV7_GIC_BASE		(0x01c81000)
+#define ARMV7_CPUIF_BASE	(0x01c82000)
+#define ARMV7_CPUBIST_BASE	(0x01c88000)
 
 
 #endif // end of #ifndef __SUNII_H_

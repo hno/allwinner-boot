@@ -23,182 +23,293 @@
 *   Interrupt controller define
 *********************************************************************************************************
 */
-#define bINT_CTL(Nb)	__REG(INTC_REGS_BASE + (Nb))
-/* Offset */
-;/* Offset */
-#define  INTC_REG_o_VCTR             0x00
-#define  INTC_REG_o_VTBLBADDR        0x04
+/* GIC registers */
+#define GICD_CTLR			__REG(ARMV7_GIC_BASE + 0x0000)
+#define GICD_TYPE			__REG(ARMV7_GIC_BASE + 0x0004)
+#define GICD_IIDR			__REG(ARMV7_GIC_BASE + 0x0008)
 
-#define  INTC_REG_o_NMI_CTRL         0x0C
+#define GICD_IGROUPR		__REG(ARMV7_GIC_BASE + 0x0080)
 
-#define  INTC_REG_o_IRQ_PENDCLR0     0x10
-#define  INTC_REG_o_IRQ_PENDCLR1     0x14
-#define  INTC_REG_o_IRQ_PENDCLR2     0x18
+#define GICD_ISENABLER(n)	__REG(ARMV7_GIC_BASE + 0x100 + 4 * (n))
+#define GICD_ICENABLER(n)	__REG(ARMV7_GIC_BASE + 0x180 + 4 * (n))
 
-#define  INTC_REG_o_FIQ_PENDCLR0     0x20
-#define  INTC_REG_o_FIQ_PENDCLR1     0x24
-#define  INTC_REG_o_FIQ_PENDCLR2     0x28
+#define GICD_ISPENDR(n)		__REG(ARMV7_GIC_BASE + 0x200 + 4 * (n))
+#define GICD_ICPENDR(n)		__REG(ARMV7_GIC_BASE + 0x280 + 4 * (n))
 
-#define  INTC_REG_o_IRQ_SEL0         0x30
-#define  INTC_REG_o_IRQ_SEL1         0x34
-#define  INTC_REG_o_IRQ_SEL2         0x38
+#define GICD_ISACTIVER(n)	__REG(ARMV7_GIC_BASE + 0x300 + 4 * (n))
+#define GICD_ICACTIVER(n)	__REG(ARMV7_GIC_BASE + 0x380 + 4 * (n))
 
-#define  INTC_REG_o_ENABLE0          0x40
-#define  INTC_REG_o_ENABLE1          0x44
-#define  INTC_REG_o_ENABLE2          0x48
+#define GICD_SGI_PRIO(n)	__REG(ARMV7_GIC_BASE + 0x400 + 4 * (n))
+#define GICD_PPI_PRIO(n)	__REG(ARMV7_GIC_BASE + 0x410 + 4 * (n))
+#define GICD_SPI_PRIO(n)	__REG(ARMV7_GIC_BASE + 0x420 + 4 * (n))
 
-#define  INTC_REG_o_MASK0            0x50
-#define  INTC_REG_o_MASK1            0x54
-#define  INTC_REG_o_MASK2            0x58
+#define GICD_SGI_ITARG(n)	__REG(ARMV7_GIC_BASE + 0x800 + 4 * (n))
+#define GICD_PPI_ITARG(n)	__REG(ARMV7_GIC_BASE + 0x810 + 4 * (n))
+#define GICD_SPI_ITARG(n)	__REG(ARMV7_GIC_BASE + 0x820 + 4 * (n))
 
-#define  INTC_REG_o_RESP0            0x60
-#define  INTC_REG_o_RSEP1            0x64
-#define  INTC_REG_o_RESP2            0x68
+#define GICD_ICFGR(n)		__REG(ARMV7_GIC_BASE + 0xc00 + 4 * (n))
 
-#define  INTC_REG_o_FF0              0x70
-#define  INTC_REG_o_FF1              0x74
-#define  INTC_REG_o_FF2              0x78
+#define GICD_SGIR			__REG(ARMV7_GIC_BASE + 0xf00)	// 0xf00
 
-#define  INTC_REG_o_PRIO0            0x80
-#define  INTC_REG_o_PRIO1            0x84
-#define  INTC_REG_o_PRIO2            0x88
-#define  INTC_REG_o_PRIO3            0x8C
-#define  INTC_REG_o_PRIO4            0x90
+#define GICC_CTRL			__REG(ARMV7_CPUIF_BASE + 0x000)	// 0x8000
+#define GICC_PMR			__REG(ARMV7_CPUIF_BASE + 0x004) // 0x8004
+#define GICC_BPR			__REG(ARMV7_CPUIF_BASE + 0x008) // 0x8008
+#define GICC_IAR			__REG(ARMV7_CPUIF_BASE + 0x00c) // 0x800c
+#define GICC_EOIR			__REG(ARMV7_CPUIF_BASE + 0x010) // 0x8010
+#define GICC_RPR			__REG(ARMV7_CPUIF_BASE + 0x014) // 0x8014
+#define GICC_HPPIR			__REG(ARMV7_CPUIF_BASE + 0x018) // 0x8018
+#define GICC_DIR			__REG(ARMV7_CPUIF_BASE + 0x1000)// 0x1000
 
-/* registers */
-#define  INTC_REG_VCTR				 bINT_CTL(  INTC_REG_o_VCTR           )
-#define  INTC_REG_VTBLBADDR			 bINT_CTL(  INTC_REG_o_VTBLBADDR      )
+/* gic source list */
+/* software generated interrupt */
+#define GIC_SRC_SGI(_n)		(_n)
+#define GIC_SRC_SGI0		GIC_SRC_SGI(0 )  // (0 )
+#define GIC_SRC_SGI1		GIC_SRC_SGI(1 )  // (1 )
+#define GIC_SRC_SGI2		GIC_SRC_SGI(2 )  // (2 )
+#define GIC_SRC_SGI3		GIC_SRC_SGI(3 )  // (3 )
+#define GIC_SRC_SGI4		GIC_SRC_SGI(4 )  // (4 )
+#define GIC_SRC_SGI5		GIC_SRC_SGI(5 )  // (5 )
+#define GIC_SRC_SGI6		GIC_SRC_SGI(6 )  // (6 )
+#define GIC_SRC_SGI7		GIC_SRC_SGI(7 )  // (7 )
+#define GIC_SRC_SGI8		GIC_SRC_SGI(8 )  // (8 )
+#define GIC_SRC_SGI9		GIC_SRC_SGI(9 )  // (9 )
+#define GIC_SRC_SGI10		GIC_SRC_SGI(10)  // (10)
+#define GIC_SRC_SGI11		GIC_SRC_SGI(11)  // (11)
+#define GIC_SRC_SGI12		GIC_SRC_SGI(12)  // (12)
+#define GIC_SRC_SGI13		GIC_SRC_SGI(13)  // (13)
+#define GIC_SRC_SGI14		GIC_SRC_SGI(14)  // (14)
+#define GIC_SRC_SGI15		GIC_SRC_SGI(15)  // (15)
+/* private peripheral interrupt */
+#define GIC_SRC_PPI(_n)		(16 + (_n))
+#define GIC_SRC_PPI0		GIC_SRC_PPI(0 )  // (16)
+#define GIC_SRC_PPI1		GIC_SRC_PPI(1 )  // (17)
+#define GIC_SRC_PPI2		GIC_SRC_PPI(2 )  // (18)
+#define GIC_SRC_PPI3		GIC_SRC_PPI(3 )  // (19)
+#define GIC_SRC_PPI4		GIC_SRC_PPI(4 )  // (20)
+#define GIC_SRC_PPI5		GIC_SRC_PPI(5 )  // (21)
+#define GIC_SRC_PPI6		GIC_SRC_PPI(6 )  // (22)
+#define GIC_SRC_PPI7		GIC_SRC_PPI(7 )  // (23)
+#define GIC_SRC_PPI8		GIC_SRC_PPI(8 )  // (24)
+#define GIC_SRC_PPI9		GIC_SRC_PPI(9 )  // (25)
+#define GIC_SRC_PPI10		GIC_SRC_PPI(10)  // (26)
+#define GIC_SRC_PPI11		GIC_SRC_PPI(11)  // (27)
+#define GIC_SRC_PPI12		GIC_SRC_PPI(12)  // (28)
+#define GIC_SRC_PPI13		GIC_SRC_PPI(13)  // (29)
+#define GIC_SRC_PPI14		GIC_SRC_PPI(14)  // (30)
+#define GIC_SRC_PPI15		GIC_SRC_PPI(15)  // (31)
+/* external peripheral interrupt */
 
-#define  INTC_REG_NMI_CTRL			 bINT_CTL(  INTC_REG_o_NMI_CTRL       )
+#define GIC_SRC_SPI(_n)		(32 + (_n))
 
-#define  INTC_REG_IRQ_PENDCLR0		 bINT_CTL(  INTC_REG_o_IRQ_PENDCLR0   )
-#define  INTC_REG_IRQ_PENDCLR1		 bINT_CTL(  INTC_REG_o_IRQ_PENDCLR1   )
-#define  INTC_REG_IRQ_PENDCLR2		 bINT_CTL(  INTC_REG_o_IRQ_PENDCLR2   )
+//#ifndef FPGA_PLATFORM	//chip irq mapping
+#if 0
 
-#define  INTC_REG_FIQ_PENDCLR0		 bINT_CTL(  INTC_REG_o_FIQ_PENDCLR0   )
-#define  INTC_REG_FIQ_PENDCLR1		 bINT_CTL(  INTC_REG_o_FIQ_PENDCLR1   )
-#define  INTC_REG_FIQ_PENDCLR2		 bINT_CTL(  INTC_REG_o_FIQ_PENDCLR2   )
+#define GIC_SRC_NMI			GIC_SRC_SPI(0)   // (32)
+#define GIC_SRC_UART0		GIC_SRC_SPI(1)   // (33)
+#define GIC_SRC_UART1		GIC_SRC_SPI(2)   // (34)
+#define GIC_SRC_UART2		GIC_SRC_SPI(3)   // (35)
+#define GIC_SRC_UART3		GIC_SRC_SPI(4)   // (36)
+#define GIC_SRC_CIR0		GIC_SRC_SPI(5)   // (37)
+#define GIC_SRC_CIR1		GIC_SRC_SPI(6  ) // (38)
+#define GIC_SRC_TWI0		GIC_SRC_SPI(7  ) // (39)
+#define GIC_SRC_TWI1		GIC_SRC_SPI(8  ) // (40)
+#define GIC_SRC_TWI2		GIC_SRC_SPI(9  ) // (41)
+#define GIC_SRC_SPI0		GIC_SRC_SPI(10 ) // (42)
+#define GIC_SRC_SPI1		GIC_SRC_SPI(11 ) // (43)
+#define GIC_SRC_SPI2		GIC_SRC_SPI(12 ) // (44)
+#define GIC_SRC_SPDIF		GIC_SRC_SPI(13 ) // (45)
+#define GIC_SRC_AC97		GIC_SRC_SPI(14 ) // (46)
+#define GIC_SRC_TS			GIC_SRC_SPI(15 ) // (47)
+#define GIC_SRC_IIS			GIC_SRC_SPI(16 ) // (48)
+#define GIC_SRC_UART4		GIC_SRC_SPI(17 ) // (49)
+#define GIC_SRC_UART5		GIC_SRC_SPI(18 ) // (50)
+#define GIC_SRC_UART6		GIC_SRC_SPI(19 ) // (51)
+#define GIC_SRC_UART7		GIC_SRC_SPI(20 ) // (52)
+#define GIC_SRC_KP			GIC_SRC_SPI(21 ) // (53)
+#define GIC_SRC_TIMER0		GIC_SRC_SPI(22 ) // (54)
+#define GIC_SRC_TIMER1		GIC_SRC_SPI(23 ) // (55)
+#define GIC_SRC_TIMER2		GIC_SRC_SPI(24 ) // (56)
+#define GIC_SRC_TIMER3		GIC_SRC_SPI(25 ) // (57)
+#define GIC_SRC_CAN			GIC_SRC_SPI(26 ) // (58)
+#define GIC_SRC_DMA			GIC_SRC_SPI(27 ) // (59)
+#define GIC_SRC_PIO_EINT	GIC_SRC_SPI(28 ) // (60)
+#define GIC_SRC_TP			GIC_SRC_SPI(29 ) // (61)
+#define GIC_SRC_CODEC		GIC_SRC_SPI(30 ) // (62)
+#define GIC_SRC_LRADC		GIC_SRC_SPI(31 ) // (63)
+#define GIC_SRC_MMC0		GIC_SRC_SPI(32 ) // (64)
+#define GIC_SRC_MMC1		GIC_SRC_SPI(33 ) // (65)
+#define GIC_SRC_MMC2		GIC_SRC_SPI(34 ) // (66)
+#define GIC_SRC_MMC3		GIC_SRC_SPI(35 ) // (67)
+#define GIC_SRC_MS			GIC_SRC_SPI(36 ) // (68)
+#define GIC_SRC_NAND		GIC_SRC_SPI(37 ) // (69)
+#define GIC_SRC_USB0		GIC_SRC_SPI(38 ) // (70)
+#define GIC_SRC_USB1		GIC_SRC_SPI(39 ) // (71)
+#define GIC_SRC_USB2		GIC_SRC_SPI(40 ) // (72)
+#define GIC_SRC_SCR			GIC_SRC_SPI(41 ) // (73)
+#define GIC_SRC_CSI0		GIC_SRC_SPI(42 ) // (74)
+#define GIC_SRC_CSI1		GIC_SRC_SPI(43 ) // (75)
+#define GIC_SRC_LCD0		GIC_SRC_SPI(44 ) // (76)
+#define GIC_SRC_LCD1		GIC_SRC_SPI(45 ) // (77)
+#define GIC_SRC_MP			GIC_SRC_SPI(46 ) // (78)
+#define GIC_SRC_DEBE0_DEFE0	GIC_SRC_SPI(47 ) // (79)
+#define GIC_SRC_DEBE1_DEFE1	GIC_SRC_SPI(48 ) // (80)
+#define GIC_SRC_PMU			GIC_SRC_SPI(49 ) // (81)
+#define GIC_SRC_SPI3		GIC_SRC_SPI(50 ) // (82)
+//#define GIC_SRC_			GIC_SRC_SPI(51 ) // (83)
+#define GIC_SRC_PATA		GIC_SRC_SPI(52 ) // (84)
+#define GIC_SRC_VE			GIC_SRC_SPI(53 ) // (85)
+#define GIC_SRC_SS			GIC_SRC_SPI(54 ) // (86)
+#define GIC_SRC_EMAC		GIC_SRC_SPI(55 ) // (87)
+#define GIC_SRC_SATA		GIC_SRC_SPI(56 ) // (88)
+#define GIC_SRC_GPS			GIC_SRC_SPI(57 ) // (89)
+#define GIC_SRC_HDMI		GIC_SRC_SPI(58 ) // (90)
+#define GIC_SRC_TVE01		GIC_SRC_SPI(59 ) // (91)
+#define GIC_SRC_ACE			GIC_SRC_SPI(60 ) // (92)
+#define GIC_SRC_TVD			GIC_SRC_SPI(61 ) // (93)
+#define GIC_SRC_PS2_0		GIC_SRC_SPI(62 ) // (94)
+#define GIC_SRC_PS2_1		GIC_SRC_SPI(63 ) // (95)
+#define GIC_SRC_USB3		GIC_SRC_SPI(64 ) // (96)
+#define GIC_SRC_USB4		GIC_SRC_SPI(65 ) // (97 )
+#define GIC_SRC_PLE_PERFMU	GIC_SRC_SPI(66 ) // (98 )
+#define GIC_SRC_TIMER4		GIC_SRC_SPI(67 ) // (99 )
+#define GIC_SRC_TIMER5		GIC_SRC_SPI(68 ) // (100)
+#define GIC_SRC_GPU_GP		GIC_SRC_SPI(69 ) // (101)
+#define GIC_SRC_GPU_GPMMU	GIC_SRC_SPI(70 ) // (102)
+#define GIC_SRC_GPU_PP0		GIC_SRC_SPI(71 ) // (103)
+#define GIC_SRC_GPU_PPMMU0	GIC_SRC_SPI(72 ) // (104)
+#define GIC_SRC_GPU_PMU		GIC_SRC_SPI(73 ) // (105)
+#define GIC_SRC_GPU_PP1		GIC_SRC_SPI(74 ) // (106)
+#define GIC_SRC_GPU_PPMMU1	GIC_SRC_SPI(75 ) // (107)
+#define GIC_SRC_GPU_RSV0	GIC_SRC_SPI(76 ) // (108)
+#define GIC_SRC_GPU_RSV1	GIC_SRC_SPI(77 ) // (109)
+#define GIC_SRC_GPU_RSV2	GIC_SRC_SPI(78 ) // (110)
+#define GIC_SRC_GPU_RSV3	GIC_SRC_SPI(79 ) // (111)
+#define GIC_SRC_GPU_RSV4	GIC_SRC_SPI(80 ) // (112)
+#define GIC_SRC_HSTMR0		GIC_SRC_SPI(81 ) // (113)
+#define GIC_SRC_HSTMR1		GIC_SRC_SPI(82 ) // (114)
+#define GIC_SRC_HSTMR2		GIC_SRC_SPI(83 ) // (115)
+#define GIC_SRC_HSTMR3		GIC_SRC_SPI(84 ) // (116)
+#define GIC_SRC_GMAC		GIC_SRC_SPI(85 ) // (117)
+//#define GIC_SRC_	GIC_SRC_SPI(86 ) // (118)
+//#define GIC_SRC_	GIC_SRC_SPI(87 ) // (119)
+//#define GIC_SRC_	GIC_SRC_SPI(88 ) // (120)
+//#define GIC_SRC_	GIC_SRC_SPI(89 ) // (121)
+//#define GIC_SRC_	GIC_SRC_SPI(90 ) // (122)
+//#define GIC_SRC_	GIC_SRC_SPI(91 ) // (123)
+//#define GIC_SRC_	GIC_SRC_SPI(92 ) // (124)
+//#define GIC_SRC_	GIC_SRC_SPI(93 ) // (125)
+//#define GIC_SRC_	GIC_SRC_SPI(94 ) // (126)
+//#define GIC_SRC_	GIC_SRC_SPI(95 ) // (127)
+//#define GIC_SRC_	GIC_SRC_SPI(96 ) // (128)
+//#define GIC_SRC_	GIC_SRC_SPI(97 ) // (129)
+//
+//#define GIC_SRC_	GIC_SRC_SPI(108) // (140)
+//#define GIC_SRC_	GIC_SRC_SPI(109) // (141)
+//#define GIC_SRC_	GIC_SRC_SPI(110) // (142)
+//#define GIC_SRC_	GIC_SRC_SPI(111) // (143)
+//#define GIC_SRC_	GIC_SRC_SPI(112) // (144)
+//#define GIC_SRC_	GIC_SRC_SPI(113) // (145)
+//#define GIC_SRC_	GIC_SRC_SPI(114) // (146)
+//#define GIC_SRC_	GIC_SRC_SPI(115) // (147)
+//#define GIC_SRC_	GIC_SRC_SPI(116) // (148)
+//#define GIC_SRC_	GIC_SRC_SPI(117) // (149)
+//#define GIC_SRC_	GIC_SRC_SPI(118) // (150)
+//#define GIC_SRC_	GIC_SRC_SPI(119) // (151)
+//#define GIC_SRC_	GIC_SRC_SPI(120) // (152)
+//#define GIC_SRC_	GIC_SRC_SPI(121) // (153)
+//#define GIC_SRC_	GIC_SRC_SPI(122) // (154)
+//#define GIC_SRC_	GIC_SRC_SPI(123) // (155)
+//#define GIC_SRC_	GIC_SRC_SPI(124) // (156)
 
-#define  INTC_REG_IRQ_SEL0			 bINT_CTL(  INTC_REG_o_IRQ_SEL0       )
-#define  INTC_REG_IRQ_SEL1			 bINT_CTL(  INTC_REG_o_IRQ_SEL1       )
-#define  INTC_REG_IRQ_SEL2			 bINT_CTL(  INTC_REG_o_IRQ_SEL2       )
+#define GIC_IRQ_NUM		(GIC_SRC_HSTMR3 + 1)
 
-#define  INTC_REG_ENABLE0			 bINT_CTL(  INTC_REG_o_ENABLE0        )
-#define  INTC_REG_ENABLE1			 bINT_CTL(  INTC_REG_o_ENABLE1        )
-#define  INTC_REG_ENABLE2			 bINT_CTL(  INTC_REG_o_ENABLE2        )
+#else	//fpga irq mapping
+#define GIC_SRC_NMI			GIC_SRC_SPI(0) 	// (32)
+#define GIC_SRC_UART0		GIC_SRC_SPI(1)	// (33)
+#define GIC_SRC_UART1		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_UART2		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_UART3		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_UART4		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_UART5		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_UART6		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_UART7		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_TWI0		GIC_SRC_SPI(2)	// (34)
+#define GIC_SRC_TWI1		GIC_SRC_SPI(2)	// (34)	not exist in fpga, just for compiling
+#define GIC_SRC_TWI2		GIC_SRC_SPI(2)	// (34)	not exist in fpga, just for compiling
+#define GIC_SRC_PIO_EINT	GIC_SRC_SPI(2)	// (34)
+#define GIC_SRC_CIR0		GIC_SRC_SPI(2)	// (34)
+#define GIC_SRC_CIR1		GIC_SRC_SPI(2)	// (34)	not exist in fpga, just for compiling
+#define GIC_SRC_KP			GIC_SRC_SPI(2)	// (34)
+#define GIC_SRC_CAN			GIC_SRC_SPI(2)	// (34)
+#define GIC_SRC_PS2_0		GIC_SRC_SPI(2)	// (34)
+#define GIC_SRC_PS2_1		GIC_SRC_SPI(2)	// (34)	not exist in fpga, just for compiling
+#define GIC_SRC_SPDIF		GIC_SRC_SPI(3)  // (35)
+#define GIC_SRC_IIS			GIC_SRC_SPI(3)  // (35)
+#define GIC_SRC_AC97		GIC_SRC_SPI(3)  // (35)
+#define GIC_SRC_TS			GIC_SRC_SPI(3)  // (35)
+#define GIC_SRC_PLE_PERFMU	GIC_SRC_SPI(3)  // (35)
+#define GIC_SRC_TIMER0		GIC_SRC_SPI(4)  // (36)
+#define GIC_SRC_TIMER1		GIC_SRC_SPI(5)  // (37)
+#define GIC_SRC_HSTMR0		GIC_SRC_SPI(5)  // (37)
+#define GIC_SRC_HSTMR1		GIC_SRC_SPI(5)  // (37)	not exist in fpga, just for compiling
+#define GIC_SRC_HSTMR2		GIC_SRC_SPI(5)  // (37)	not exist in fpga, just for compiling
+#define GIC_SRC_HSTMR3		GIC_SRC_SPI(5)  // (37)	not exist in fpga, just for compiling
+#define GIC_SRC_TIMER2		GIC_SRC_SPI(6)  // (38)
+#define GIC_SRC_TIMER3		GIC_SRC_SPI(6)  // (38)	not exist in fpga, just for compiling
+#define GIC_SRC_TIMER4		GIC_SRC_SPI(6)  // (38)	not exist in fpga, just for compiling
+#define GIC_SRC_TIMER5		GIC_SRC_SPI(6)  // (38)	not exist in fpga, just for compiling
+#define GIC_SRC_DMA			GIC_SRC_SPI(7)  // (38)
+#define GIC_SRC_TP			GIC_SRC_SPI(8)  // (40)
+#define GIC_SRC_CODEC		GIC_SRC_SPI(8)  // (40)
+#define GIC_SRC_LRADC		GIC_SRC_SPI(8)  // (40)
+#define GIC_SRC_MMC0		GIC_SRC_SPI(9)  // (41)
+#define GIC_SRC_MMC1		GIC_SRC_SPI(9)  // (41) not exist in fpga, just for compiling
+#define GIC_SRC_MMC2		GIC_SRC_SPI(10) // (42)
+#define GIC_SRC_MMC3		GIC_SRC_SPI(10) // (42) not exist in fpga, just for compiling
+#define GIC_SRC_MS			GIC_SRC_SPI(10) // (42)
+#define GIC_SRC_NAND		GIC_SRC_SPI(11) // (43)
+#define GIC_SRC_USB0		GIC_SRC_SPI(12) // (44)
+#define GIC_SRC_USB1		GIC_SRC_SPI(13) // (45)
+#define GIC_SRC_USB2		GIC_SRC_SPI(14) // (46)
+#define GIC_SRC_CSI1		GIC_SRC_SPI(14) // (46)
+#define GIC_SRC_TVD			GIC_SRC_SPI(14) // (46)
+#define GIC_SRC_SCR			GIC_SRC_SPI(15) // (47)
+#define GIC_SRC_SPI0		GIC_SRC_SPI(15) // (47)
+#define GIC_SRC_SPI1		GIC_SRC_SPI(15) // (47) not exist in fpga, just for compiling
+#define GIC_SRC_SPI2		GIC_SRC_SPI(15) // (47) not exist in fpga, just for compiling
+#define GIC_SRC_SPI3		GIC_SRC_SPI(15) // (47) not exist in fpga, just for compiling
+#define GIC_SRC_TVE01		GIC_SRC_SPI(15) // (47)
+#define GIC_SRC_EMAC		GIC_SRC_SPI(15) // (47)
+#define GIC_SRC_GMAC		GIC_SRC_SPI(15) // (47)
+#define GIC_SRC_USB3		GIC_SRC_SPI(15) // (47)
+#define GIC_SRC_CSI0		GIC_SRC_SPI(16) // (48)
+#define GIC_SRC_USB4		GIC_SRC_SPI(16) // (48)
+#define GIC_SRC_LCD0		GIC_SRC_SPI(17) // (49)
+#define GIC_SRC_LCD1		GIC_SRC_SPI(18) // (50)
+#define GIC_SRC_MP			GIC_SRC_SPI(19) // (51)
+#define GIC_SRC_DEBE0_DEFE0	GIC_SRC_SPI(20) // (52)
+#define GIC_SRC_DEBE1_DEFE1	GIC_SRC_SPI(21) // (53)
+#define GIC_SRC_PMU			GIC_SRC_SPI(22) // (54)
+#define GIC_SRC_SATA		GIC_SRC_SPI(22) // (54)
+#define GIC_SRC_PATA		GIC_SRC_SPI(22) // (54)
+#define GIC_SRC_HDMI		GIC_SRC_SPI(23) // (55)
+#define GIC_SRC_VE			GIC_SRC_SPI(24) // (56)
+#define GIC_SRC_SS			GIC_SRC_SPI(24) // (56)
+#define GIC_SRC_GPS			GIC_SRC_SPI(24) // (56)
+#define GIC_SRC_ACE			GIC_SRC_SPI(24) // (56)
+#define GIC_SRC_GPU_GP		GIC_SRC_SPI(25) // (57)
+#define GIC_SRC_GPU_GPMMU	GIC_SRC_SPI(26) // (58)
+#define GIC_SRC_GPU_PP0		GIC_SRC_SPI(27) // (59)
+#define GIC_SRC_GPU_PPMMU0	GIC_SRC_SPI(28) // (60)
+#define GIC_SRC_GPU_PMU		GIC_SRC_SPI(29) // (61)
+#define GIC_SRC_GPU_PP1		GIC_SRC_SPI(30) // (62)
+#define GIC_SRC_GPU_PPMMU1	GIC_SRC_SPI(31) // (63)
+#define GIC_IRQ_NUM			(GIC_SRC_GPU_PPMMU1 + 1)
 
-#define  INTC_REG_MASK0				 bINT_CTL(  INTC_REG_o_MASK0          )
-#define  INTC_REG_MASK1				 bINT_CTL(  INTC_REG_o_MASK1          )
-#define  INTC_REG_MASK2				 bINT_CTL(  INTC_REG_o_MASK2          )
-
-#define  INTC_REG_RESP0				 bINT_CTL(  INTC_REG_o_RESP0          )
-#define  INTC_REG_RSEP1				 bINT_CTL(  INTC_REG_o_RSEP1          )
-#define  INTC_REG_RESP2				 bINT_CTL(  INTC_REG_o_RESP2          )
-
-#define  INTC_REG_FF0				 bINT_CTL(  INTC_REG_o_FF0            )
-#define  INTC_REG_FF1				 bINT_CTL(  INTC_REG_o_FF1            )
-#define  INTC_REG_FF2				 bINT_CTL(  INTC_REG_o_FF2            )
-
-#define  INTC_REG_PRIO0				 bINT_CTL(  INTC_REG_o_PRIO0          )
-#define  INTC_REG_PRIO1				 bINT_CTL(  INTC_REG_o_PRIO1          )
-#define  INTC_REG_PRIO2				 bINT_CTL(  INTC_REG_o_PRIO2          )
-#define  INTC_REG_PRIO3				 bINT_CTL(  INTC_REG_o_PRIO3          )
-#define  INTC_REG_PRIO4				 bINT_CTL(  INTC_REG_o_PRIO4          )
-
-
-/* mask */
-#define  INTC_IRQNO_FIQ              0
-#define  INTC_IRQNO_UART0            1
-#define  INTC_IRQNO_UART1            2
-#define  INTC_IRQNO_UART2            3
-#define  INTC_IRQNO_UART3            4
-#define  INTC_IRQNO_IR0              5
-#define  INTC_IRQNO_IR1              6
-#define  INTC_IRQNO_TWI0             7
-#define  INTC_IRQNO_TWI1             8
-#define  INTC_IRQNO_TWI2             9
-
-#define  INTC_IRQNO_SPI0             10
-#define  INTC_IRQNO_SPI1             11
-#define  INTC_IRQNO_SPI2             12
-#define  INTC_IRQNO_SPDIF            13
-#define  INTC_IRQNO_AC97             14
-#define  INTC_IRQNO_TS               15
-#define  INTC_IRQNO_IIS              16
-
-#define  INTC_IRQNO_UART4            17
-#define  INTC_IRQNO_UART5            18
-#define  INTC_IRQNO_UART6            19
-#define  INTC_IRQNO_UART7            20
-
-#define  INTC_IRQNO_KEYPAD           21
-#define  INTC_IRQNO_TIMER0           22
-#define  INTC_IRQNO_TIMER1           23
-#define  INTC_IRQNO_TIMER245         24
-#define  INTC_IRQNO_TIMER3           25
-#define  INTC_IRQNO_CAN              26
-#define  INTC_IRQNO_DMA              27
-#define  INTC_IRQNO_PIO              28
-#define  INTC_IRQNO_TP               29
-
-#define  INTC_IRQNO_ADDA             30
-#define  INTC_IRQNO_LRADC            31
-#define  INTC_IRQNO_SDMMC0           32
-#define  INTC_IRQNO_SDMMC1           33
-#define  INTC_IRQNO_SDMMC2           34
-#define  INTC_IRQNO_SDMMC3           35
-#define  INTC_IRQNO_MS               36
-#define  INTC_IRQNO_NAND             37
-#define  INTC_IRQNO_USB0             38
-#define  INTC_IRQNO_USB1             39
-#define  INTC_IRQNO_USB2             40
-
-#define  INTC_IRQNO_SCR              41
-
-#define  INTC_IRQNO_CSI0             42
-#define  INTC_IRQNO_CSI1             43
-#define  INTC_IRQNO_LCD0             44
-#define  INTC_IRQNO_LCD1             45
-#define  INTC_IRQNO_MP               46
-#define  INTC_IRQNO_DE_FE0           47
-#define  INTC_IRQNO_DE_FE1           48
-#define  INTC_IRQNO_PMU              49
-
-#define  INTC_IRQNO_SPI3             50
-#define  INTC_IRQNO_TZASC            51
-#define  INTC_IRQNO_PATA             52
-#define  INTC_IRQNO_VE               53
-
-#define  INTC_IRQNO_SS               54
-#define  INTC_IRQNO_EMAC             55
-#define  INTC_IRQNO_SATA             56
-#define  INTC_IRQNO_GPS              57
-#define  INTC_IRQNO_HDMI             58
-#define  INTC_IRQNO_TVE01            59
-
-#define  INTC_IRQNO_ACE              60
-#define  INTC_IRQNO_TVD              61
-#define  INTC_IRQNO_PS0              62
-#define  INTC_IRQNO_PS1              63
-#define  INTC_IRQNO_USB3             64
-#define  INTC_IRQNO_USB4             65
-#define  INTC_IRQNO_PLE              66
-#define  INTC_IRQNO_TIMER4           67
-#define  INTC_IRQNO_TIMER5           68
-#define  INTC_IRQNO_GPU_GP           69
-
-#define  INTC_IRQNO_GPU_MP           70
-#define  INTC_IRQNO_GPU_PP0          71
-#define  INTC_IRQNO_GPU_PPMMU0       72
-#define  INTC_IRQNO_GPU_PMU          73
-#define  INTC_IRQNO_GPU_RSV0         74
-#define  INTC_IRQNO_GPU_RSV1         75
-#define  INTC_IRQNO_GPU_RSV2         76
-#define  INTC_IRQNO_GPU_RSV3         77
-#define  INTC_IRQNO_GPU_RSV4         78
-#define  INTC_IRQNO_GPU_RSV5         79
-#define  INTC_IRQNO_GPU_RSV6         80
+#endif	//fpga irq mapping
 
 
-#endif  /* _INTC_H_ */
+#endif
+
+
 
