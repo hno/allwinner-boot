@@ -1,0 +1,60 @@
+;/*
+;************************************************************************************************************************
+;*                                                         eGON
+;*                                         the Embedded GO-ON Bootloader System
+;*
+;*                             Copyright(C), 2006-2008, Allwinner Microelectronic Co., Ltd.
+;*											       All Rights Reserved
+;*
+;* File Name : Boot0_scatter.sct
+;*
+;* Author : Gary.Wang
+;*
+;* Version : 1.1.0
+;*
+;* Date : 2007.11.06
+;*
+;* Description : scatter file for Boot0.
+;*
+;* Functions list :
+;*
+;* Others : None at present.
+;*
+;*
+;* History :
+;*
+;*  <Author>        <time>       <version>      <description>
+;*
+;* Gary.Wang       2007.11.06      1.1.0        build the file
+;*
+;************************************************************************************************************************
+;*/
+
+
+
+
+;/*---------------------------------------------------------------------------*/
+;/*                          --+++-- NOTE --+++--                             */
+;/*             RW and ZI datas MUST NOT appear in Boot0 project!             */
+;/*---------------------------------------------------------------------------*/
+
+Boot0_load  0x0
+{
+	Boot0_EXE_head  +0
+	{
+		*.o( bt0_head, +FIRST )
+		*.o( init )
+	}
+
+	Boot0_EXE_other +0
+	{
+		*( + RO )
+	}
+
+	Boot0_RW_ZI  +0
+	{
+		*( + RW )
+		*( + ZI )
+	}
+}
+
