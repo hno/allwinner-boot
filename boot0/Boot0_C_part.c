@@ -76,8 +76,8 @@ void Boot0_C_part( void )
 	mmu_system_init(EGON2_DRAM_BASE, 4 * 1024, EGON2_MMU_BASE);
 	mmu_enable();
 
-	//dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // 初始化DRAM
-	dram_size = init_DRAM(1, (void *)BT0_head.prvt_head.dram_para);
+	dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // 初始化DRAM
+	//dram_size = init_DRAM(1, (void *)&BT0_head.prvt_head.dram_para);
 	if(dram_size)
 	{
 		msg("dram size =%d\n", dram_size);

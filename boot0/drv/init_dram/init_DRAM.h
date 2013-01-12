@@ -34,7 +34,7 @@
 #define  __init_DRAM_h
 
 
-extern __s32 init_DRAM( int type, void *buff );
+extern __s32 init_DRAM( int type );
 
 
 

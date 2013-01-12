@@ -782,7 +782,7 @@ int mmc_startup(struct mmc *mmc)
 {
 	int err;
 	u32 mult, freq;
-	u64 cmult, csize, capacity;
+	unsigned long long cmult, csize, capacity;
 	struct mmc_cmd cmd;
 	char ext_csd[512];
 	int timeout = 1000;

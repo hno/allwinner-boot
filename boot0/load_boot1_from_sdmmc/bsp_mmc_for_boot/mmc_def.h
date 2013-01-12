@@ -13,7 +13,7 @@
 #include "boot0_i.h"
 #include <string.h>
 
-#define MMC_SUN6I
+#define MMC_SUN7I
 #define MAX_MMC_NUM			4
 #define MMC_TRANS_BY_DMA
 //#define MMC_DEBUG
