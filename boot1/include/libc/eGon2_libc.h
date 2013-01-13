@@ -33,12 +33,19 @@ extern  void  wlibc_ntprintf( const char * str, ...);
 
 #define __wrn(...)          (wlibc_uprintf("WRN:L%d(%s):", __LINE__, __FILE__),                 \
     						     wlibc_ntprintf(__VA_ARGS__))
+#ifdef BOOT1_DEBUG
+#define __debug(...)        (wlibc_uprintf("DEBUG:L%d(%s):", __LINE__, __FILE__),                \
+    						     wlibc_ntprintf(__VA_ARGS__))
+#else
+#define __debug(...)
+#endif
 
 #else
 
 #define __inf(...)
 #define __msg(...)
 #define __wrn(...)
+#define __debug(...)
 
 #endif
 /* 系统提供的twi操作函数 */

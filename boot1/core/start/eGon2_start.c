@@ -73,6 +73,7 @@ void eGon2_start( void )
     print_version();
     //初始化IIC, 现在还没有调整过频率，运行在384M
     eGon2_twi_init(BT1_head.prvt_head.twi_port, (normal_gpio_cfg *)BT1_head.prvt_head.twi_ctrl, 24000000, 400000);
+#ifndef CONFIG_SUN7I_FPGA
     //初始化POWER，调整核心电压
     if(!eGon2_power_init((void *)&BT1_head.prvt_head.core_para))
     {
@@ -92,6 +93,13 @@ void eGon2_start( void )
     {
     	eGon2_printf("set dcdc2 failed, set default clock 384M\n");
     }
+#else
+    eGon2_power_init((void *)&BT1_head.prvt_head.core_para);
+    eGon2_printf("set pll1 %d\n", BT1_head.prvt_head.core_para.user_set_clock);
+    default_clock = eGon2_clock_set_ext(BT1_head.prvt_head.core_para.user_set_clock, BT1_head.prvt_head.core_para.user_set_core_vol);
+    eGon2_printf("set dcdc2=%d, clock=%d successed\n", BT1_head.prvt_head.core_para.user_set_core_vol, default_clock);
+#endif
+
     eGon2_key_init();
     //检查是否需要直接进入fel，通常用于异常出现的情况
     exception = eGon2_boot_detect();
@@ -115,8 +123,16 @@ void eGon2_start( void )
     	force_to_card0 = 1;
     }
 	eGon2_printf("flash init start\n");
-    eGon2_block_device_init();
-    eGon2_printf("flash init finish\n");
+    if(!eGon2_block_device_init())
+    {
+    	eGon2_printf("flash init finish\n");
+    }
+    else
+    {
+    	eGon2_printf("flash init failed\n");
+
+    	eGon2_jump_Fel( );
+    }
     fs_ops.Write = eGon2_block_device_write;
     fs_ops.Read  = eGon2_block_device_read;
     fs_ops.Init  = reserved_init;
@@ -199,7 +215,7 @@ void eGon2_start( void )
 
 		str_pointer_array[0] = str_array0;
 
-		if(BT1_head.boot_head.platform[7])
+		if(!BT1_head.boot_head.platform[7])
 		{
 			str_pointer_array[0] = str_array1;
 		}

@@ -38,14 +38,14 @@ const boot1_file_head_t  BT1_head = {
 	      /* jump_instruction */          ( 0xEA000000 | ( ( ( sizeof( boot1_file_head_t ) + sizeof( int ) - 1 ) / sizeof( int ) - 2 ) & 0x00FFFFFF ) ),
 							   		      BOOT1_MAGIC,
 							   		      STAMP_VALUE,
-							   		      NF_ALIGN_SIZE,
-							   		      sizeof( boot_file_head_t ),
-							   		      BOOT_PUB_HEAD_VERSION,
+							   		      0,
+							   		      0,
+							   		      0x4000,
 							   		      BOOT1_FILE_HEAD_VERSION,
 							   		      BOOT1_VERSION,
 							   		      EGON_VERSION,
 							   		      {
-							   		      	'1','.','5','.','0',0,0,0
+							   		      	'2','.','0','.','0',0,0,0
 							   		      },
 							 	      },
 							 	      {

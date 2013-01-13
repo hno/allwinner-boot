@@ -23,6 +23,9 @@
 #ifndef _EGON2_H_
 #define _EGON2_H_
 
+#define  CONFIG_SUN7I_FPGA
+#define  BOOT1_DEBUG
+
 #include "types.h"
 #include "arch.h"
 #include "interinc/boot1_v2.h"
@@ -30,9 +33,6 @@
 #include "eGon2_driver.h"
 #include "eGon2_syscall.h"
 #include "libc/eGon2_libc.h"
-
-
-
 
 #endif	//_EGON2_H_
 

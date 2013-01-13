@@ -1,35 +1,26 @@
 /*
-************************************************************************************************************************
-*                                                         eGON
-*                                         the Embedded GO-ON Bootloader System
+********************************************************************************
+
+*           				eBase 
+*                 the Abstract of Hardware 
+*                     
+* 
+*              (c) Copyright 2012-2016, ALL WINNER TECH. 
+*           								All Rights Reserved 
+
 *
-*                             Copyright(C), 2006-2008, Allwinner Microelectronic Co., Ltd.
-*											       All Rights Reserved
-*
-* File Name : sdcard_op.h
-*
-* Author : Gary.Wang
-*
-* Version : 1.1.0
-*
-* Date : 2007.12.13
-*
-* Description : This file provides some basic functions to operating Nand Flash Controller rather
-*             than Nand Flash chips.
-*
-* Others : None at present.
-*
-*
-* History :
-*
-*  <Author>        <time>       <version>      <description>
-*
-* Gary.Wang       2007.12.13      1.1.0        build the file
-*
-************************************************************************************************************************
+* File    : bsp_sdc_for_boot.h
+* By      : Aaron <leafy.myeh@allwinnertech.com>
+* Version : V1.00
+* Date    : 2012/2/13 18:50 
+* Description :  
+* Update   :  date      		author         version     notes    
+*			 2012/2/13 			Sam.Wu   		V1.0	 create
+*			
+********************************************************************************
 */
-#ifndef  _SDMMC_FOR_BOOT_H_
-#define  _SDMMC_FOR_BOOT_H_
+#ifndef _BSP_SDC_FOR_BOOT_H_
+#define _BSP_SDC_FOR_BOOT_H_
 
 /*
 ************************************************************************************************************************
@@ -43,7 +34,7 @@
 *               = -1     fail.
 ************************************************************************************************************************
 */
-extern  __s32   SDMMC_PhyInit(__u32 card_no, __u32 speed_mode, __u32 line_sel);
+__s32 SDMMC_PhyInit(__u32 card_no, __u32 bus_width);
 /*
 ************************************************************************************************************************
 *                       SDMMC_PhyExit
@@ -56,7 +47,7 @@ extern  __s32   SDMMC_PhyInit(__u32 card_no, __u32 speed_mode, __u32 line_sel);
 *               = -1     fail.
 ************************************************************************************************************************
 */
-extern  __s32   SDMMC_PhyExit (__u32 card_no);
+__s32 SDMMC_PhyExit(__u32 card_no);
 /*
 ************************************************************************************************************************
 *                       SDMMC_PhyRead
@@ -69,7 +60,7 @@ extern  __s32   SDMMC_PhyExit (__u32 card_no);
 *               = -1     fail.
 ************************************************************************************************************************
 */
-extern  __s32   SDMMC_PhyRead (__u32 block, __u32 nblock, void *buf, __u32 card_no);
+__s32 SDMMC_PhyRead(__u32 start_sector, __u32 nsector, void *buf, __u32 card_no);
 /*
 ************************************************************************************************************************
 *                       SDMMC_PhyWrite
@@ -82,7 +73,14 @@ extern  __s32   SDMMC_PhyRead (__u32 block, __u32 nblock, void *buf, __u32 card_
 *               = -1     fail.
 ************************************************************************************************************************
 */
-extern  __s32   SDMMC_PhyWrite(__u32 block, __u32 nblock, void *buf, __u32 card_no);
+__s32 SDMMC_PhyWrite(__u32 start_sector, __u32 nsector, void *buf, __u32 card_no);
+
+__s32 SDMMC_PhyDiskSize(__u32 card_no);
+
+__s32 SDMMC_PhyErase(__u32 block, __u32 nblock, __u32 card_no);
+
+
+
 /*
 ************************************************************************************************************************
 *                       SDMMC_PhyInit
@@ -95,7 +93,7 @@ extern  __s32   SDMMC_PhyWrite(__u32 block, __u32 nblock, void *buf, __u32 card_
 *               = -1     fail.
 ************************************************************************************************************************
 */
-extern  __s32   SDMMC_LogicalInit(__u32 card_no, __s32 card_offset, __u32 line_sel);
+__s32 SDMMC_LogicalInit(__u32 card_no, __u32 card_offset, __u32 bus_width);
 /*
 ************************************************************************************************************************
 *                       SDMMC_LogicalExit
@@ -108,7 +106,7 @@ extern  __s32   SDMMC_LogicalInit(__u32 card_no, __s32 card_offset, __u32 line_s
 *               = -1     fail.
 ************************************************************************************************************************
 */
-extern  __s32   SDMMC_LogicalExit(__u32 card_no);
+__s32 SDMMC_LogicalExit(__u32 card_no);
 /*
 ************************************************************************************************************************
 *                       SDMMC_LogicalRead
@@ -120,8 +118,8 @@ extern  __s32   SDMMC_LogicalExit(__u32 card_no);
 *Return     :   = 0      ok;
 *               = -1     fail.
 ************************************************************************************************************************
-*/
-extern  __s32   SDMMC_LogicalRead (__u32 block, __u32 nblock, void *buf, __u32 card_no);
+*/__s32 SDMMC_LogicalRead(__u32 start_sector, __u32 nsector, void *buf, __u32 card_no);
+
 /*
 ************************************************************************************************************************
 *                       SDMMC_LogicalWrite
@@ -134,9 +132,12 @@ extern  __s32   SDMMC_LogicalRead (__u32 block, __u32 nblock, void *buf, __u32 c
 *               = -1     fail.
 ************************************************************************************************************************
 */
-extern  __s32   SDMMC_LogicalWrite(__u32 block, __u32 nblock, void *buf, __u32 card_no);
+__s32 SDMMC_LogicalWrite(__u32 start_sector, __u32 nsector, void *buf, __u32 card_no);
 
-extern  __s32 	SDMMC_PhyDiskSize(void);
-extern  __s32 	SDMMC_LogicalDiskSize(void);
 
-#endif /*_SDMMC_FOR_BOOT_H_*/
+__s32 SDMMC_LogicalDiskSize(__u32 card_no);
+
+__s32 SDMMC_LogicaErase(__u32 block, __u32 nblock, __u32 card_no);
+
+
+#endif //#ifndef _BSP_SDC_FOR_BOOT_H_

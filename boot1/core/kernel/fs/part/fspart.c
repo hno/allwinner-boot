@@ -320,14 +320,14 @@ int FS_getpart_capacity(int part_index)
 */
 int bootfs_scan_part(void)
 {
-   int i, part_index = 0;
-   MBR    *mbr;
+    int i, part_index = 0;
+    MBR    *mbr;
 
-   pCurPartOpts.Read(0, MBR_SIZE >> 9 , BOOTFSMBR_buf);
+    pCurPartOpts.Read(0, MBR_SIZE >> 9 , BOOTFSMBR_buf);
 
-   mbr = (MBR*)BOOTFSMBR_buf;
-   if(!strncmp((const char*)mbr->magic, MBR_MAGIC, 8))
-   {
+    mbr = (MBR*)BOOTFSMBR_buf;
+    if(!strncmp((const char*)mbr->magic, MBR_MAGIC, 8))
+    {
         int crc = 0;
 
         crc = _calc_crc32((void *)&mbr->version, MBR_SIZE-4);
@@ -407,7 +407,11 @@ int bootfs_scan_part(void)
                 }
             }
         }
-   	}
+    }
+    else
+    {
+    	eGon2_printf("mbr magic %s is not correct\n", mbr->magic);
+    }
 
 	return part_index;
 }

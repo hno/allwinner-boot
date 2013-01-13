@@ -33,9 +33,10 @@ OBJS=$(SRCCS:.c=.o) $(SRCSS:.S=.o)
 #生成输出目标文件
 nand:$(LOCALTARGET)
 	$(LOAD) $(LDFLAGS) -O binary -S -g -R .note -R .comment $(LOCALTARGET) $(TMPTARGET)
-	-$(WORKTOOLS)/gen_check_code $(TMPTARGET) boot1.bin
-	cp boot1.bin $(TARGET)
-	-rm $(OBJS) $(TMPTARGET) boot1.bin
+	-$(WORKTOOLS)/gen_check_code $(TMPTARGET)
+	-cp $(TMPTARGET) $(TARGET0)
+	cp  $(TMPTARGET) $(TARGET1)
+	-rm $(OBJS) $(TMPTARGET)
 	@echo ----------------------------
 	@echo target make finish
 	@echo ----------------------------
