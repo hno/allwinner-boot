@@ -207,15 +207,16 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
 		rval &= ~(1 << (8 + sdc_no));
 	writel(rval, mmchost->hclkbase);
 	/* release reset */
-	rval = readl(mmchost->hclkrst);
+	/*rval = readl(mmchost->hclkrst);
 	if (onoff)
 		rval |= (1 << (8 + sdc_no));
 	else
 		rval &= ~(1 << (8 + sdc_no));
 	writel(rval, mmchost->hclkrst);
-
+    */
 	/* config mod clock */
 	if (onoff) {
+        //fix me: now use 24M OSC, switch to pll5 in the future
 		writel(0x80000000, mmchost->mclkbase);
 		mmcdbg("init mmc mclk %d\n", mmchost->mclk);
 	} else {

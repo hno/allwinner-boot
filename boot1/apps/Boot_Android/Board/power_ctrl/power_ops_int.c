@@ -175,7 +175,7 @@ __s32 eGon2_power_int_query(__u8 *int_status)
         	return -1;
     	}
     }
-    INTC_REG_IRQ_PENDCLR0 |= 1;
+//    INTC_REG_IRQ_PENDCLR0 |= 1;
 
 	return 0;
 }
