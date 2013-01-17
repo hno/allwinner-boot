@@ -44,28 +44,31 @@ extern const boot0_file_head_t  BT0_head;
 __s32 load_boot1_from_sdmmc( char *buf)
 {
     __u32  length;
-    __s32  card_no, i;
+    __s32  card_no, index;
 	boot_file_head_t  *bfh;
 	boot_sdcard_info_t  *sdcard_info = (boot_sdcard_info_t *)buf;
 
-	i = BT0_head.boot_head.platform[0];
-	for(i=0;i<4;i++)
+	card_no = BT0_head.boot_head.platform[0];
+	msg("boot card number =%d\n", card_no);
+	//for(i=0;i<4;i++)
 	{
 		/* open sdmmc */
-		card_no = sdcard_info->card_no[i];
-		msg("card no is %d\n", card_no);
-		if(card_no < 0)
-		{
-			msg("bad card number %d in card boot\n", card_no);
 
-			continue;
-		}
-		msg("sdcard %d line count %d\n", card_no, sdcard_info->line_count[i] );
-		if(!sdcard_info->line_count[i])
+		index= (card_no==0) ? 0 : 1;
+		card_no = sdcard_info->card_no[index];
+//		if(card_no < 0)
+//		{
+//			msg("bad card number %d in card boot\n", card_no);
+
+//			continue;
+//		}
+		msg("sdcard %d line count =%d\n", card_no, sdcard_info->line_count[index] );
+		msg("sdcard %d line sel =%d\n", card_no, sdcard_info->line_sel[index] );
+		if(!sdcard_info->line_sel[index])
 		{
-			sdcard_info->line_count[i] = 4;
+			sdcard_info->line_sel[index] = 4;
 		}
-		if( SDMMC_PhyInit( card_no, sdcard_info->line_count[i] ) == -1)   //高速卡，4线配置
+		if( SDMMC_PhyInit( card_no, sdcard_info->line_sel[index] ) == -1)   //高速卡，4线配置
 		{
 			msg("Fail in Init sdmmc.\n");
 			goto __card_op_fail__;
@@ -103,7 +106,8 @@ __s32 load_boot1_from_sdmmc( char *buf)
 	        msg("Fail in checking boot1.\n");
 	       	goto __card_op_fail__;
 	    }
-		if(i == 0)
+
+		if(card_no == 0)
 		{
 			bfh->eGON_vsn[2] = 1;
 		}
@@ -122,7 +126,7 @@ __s32 load_boot1_from_sdmmc( char *buf)
 __card_op_fail__:
 		SDMMC_PhyExit(card_no );
 
-		continue;
+	//	continue;
 	}
 
 	return ERROR;

@@ -56,7 +56,7 @@ int BootMain(int argc, char **argv)
 	MBR					  mbr_info;
     boot_global_info_t   *global_info;
 
-
+    DMSG_INFO("big firmware! here we go !\n");
 	DMSG_INFO("Sprite start\n");
 	{
 		char ch;

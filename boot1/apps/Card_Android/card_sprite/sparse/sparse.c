@@ -29,7 +29,7 @@
 #include  "sparse_format.h"
 
 #define  SPARSE_HEADER_MAJOR_VER 1
-#define  ANDROID_FORMAT_DRAM_ADDRESS         0x48000000
+#define  ANDROID_FORMAT_DRAM_ADDRESS         0x46000000
 
 int    android_format_flash_start;
 char  *android_format_dram_base;

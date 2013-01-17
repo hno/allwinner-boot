@@ -34,7 +34,7 @@ extern    int   sprite_flash_read (__u32 nSectNum,  __u32 nSectorCnt, void * pBu
 extern    int   sprite_flash_write(__u32 nSectNum,  __u32 nSectorCnt, void * pBuf);
 
 
-extern    int 	sprite_flash_hardware_scan(void *flash_info, int erase_flash);
+extern    int 	sprite_flash_hardware_scan(void *mbr_i,void *flash_info, int erase_flash);
 
 extern    int   create_stdmbr(void *mbr_i);
 

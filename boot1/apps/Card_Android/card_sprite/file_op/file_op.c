@@ -61,7 +61,7 @@ __s32 DFB_LogicWrite(UInt32 nSectNum, UInt32 nSectorCnt, void *pBuf)
 
 WRes DFB_Part_Read(void *data, __u32 size, CSzFile *p)
 {
-    UInt32 Offset;
+    UInt64 Offset;
     UInt32 Left;
     UInt32 ReadOut;
     UInt32 len;
@@ -341,7 +341,7 @@ WRes File_Write(const void *data, __u32 size, __u32 size_cnt, CSzFile *p)
 
 WRes File_Seek(CSzFile *p, __int64 pos, ESzSeek origin)
 {
-    UInt32 Offset;
+    Int64 Offset;
     Int64 SeekPos;
     switch (origin)
     {
@@ -351,13 +351,13 @@ WRes File_Seek(CSzFile *p, __int64 pos, ESzSeek origin)
       default: return 1;
     }
     /* 只支持在打开文件大小范围内seek */
-    if ((p->Size < (UInt32)(SeekPos + pos)) || (0 > (SeekPos + pos)))
+    if ((p->Size <(SeekPos + pos)) || (0 > (SeekPos + pos)))
     {
         sprite_wrn("Seek overflow\n");
         return 1;
     }
-    p->CurPos = (UInt32)(SeekPos + pos);
-    p->CurSec = p->SectorNr + (p->CurPos>>DEC_SECTOR_BITS);
+    p->CurPos = SeekPos + pos;
+    p->CurSec = p->SectorNr + (Sector_t)(p->CurPos>>DEC_SECTOR_BITS);
 
     /* 如果Seek后的位置未以一个Sector对齐，则预读一个Sector到Buffer中 */
     Offset = p->CurPos & (DEC_SECTOR_SIZE - 1);

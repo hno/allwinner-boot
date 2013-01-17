@@ -13,6 +13,11 @@
 
 extern void *NAND_IORemap(unsigned int base_addr, unsigned int size);
 
+//DMA
+extern __s32 NAND_DMAConfigStart(int rw, unsigned int buff_addr, int len);
+extern int NAND_RequestDMA(void);
+extern int NAND_WaitDmaFinish(void);
+
 //USE_SYS_CLK
 extern int NAND_ClkRequest(void);
 extern void NAND_ClkRelease(void);

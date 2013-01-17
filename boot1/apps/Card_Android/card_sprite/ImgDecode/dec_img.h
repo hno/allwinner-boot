@@ -14,9 +14,9 @@ extern HIMAGE 		Img_Open		(__u32 start_sector, int size);
 
 extern HIMAGEITEM 	Img_OpenItem	(HIMAGE hImage, char * MainType, char * subType);
 
-extern __u32 		Img_GetItemSize	(HIMAGE hImage, HIMAGEITEM hItem);
+extern __u64		Img_GetItemSize	(HIMAGE hImage, HIMAGEITEM hItem);
 
-extern __u32 		Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 Length);
+extern __u32 		Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u64 Length);
 
 extern __u32 		Img_CloseItem	(HIMAGE hImage, HIMAGEITEM hItem);
 

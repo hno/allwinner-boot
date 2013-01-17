@@ -92,17 +92,19 @@ __s32 BOOT_NandGetPara(boot_nand_para_t *param)
 	param->SectorCntPerPage = 0x10;
 	param->PageCntPerPhyBlk = 0x100;
 	param->BlkCntPerDie = 0x800;
-	param->OperationOpt = 0x48;
+	param->OperationOpt = 0x1c8;
 	param->FrequencePar = 0x1f;
-	param->EccMode = 2;
+	param->EccMode = 3;
 	memset(param->NandChipId, 0xff, 8);
 	param->NandChipId[0] = 0xad;
 	param->NandChipId[1] = 0xd7;
 	param->NandChipId[2] = 0x94;
-	param->NandChipId[3] = 0x9a;
+	param->NandChipId[3] = 0xda;
+	param->NandChipId[4] = 0x74;
+	param->NandChipId[5] = 0xc3;
 	param->ValidBlkRatio = 900;
 	param->good_block_ratio = 960;
-	param->ReadRetryType = 0;
+	param->ReadRetryType = 0x00010604;
 	param->DDRType = 0;
 #endif
 	return 0;

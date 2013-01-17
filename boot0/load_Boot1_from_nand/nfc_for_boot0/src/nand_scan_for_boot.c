@@ -43,7 +43,7 @@ void _InitNandPhyInfo(boot_nand_para_t *nand_info)
 {
     __u32 i;
     
-    NandStorageInfo.ChannelCnt       = nand_info->ChannelCnt       ;
+//    NandStorageInfo.ChannelCnt       = nand_info->ChannelCnt       ;
     NandStorageInfo.ChipCnt          = nand_info->ChipCnt          ;
     NandStorageInfo.ChipConnectInfo  = nand_info->ChipConnectInfo  ;
     NandStorageInfo.RbCnt            = nand_info->RbCnt            ;
@@ -127,7 +127,7 @@ __s32 _CheckNandID(__u8 *pNandID)
 __s32  BOOT_AnalyzeNandSystem(void)
 {
     __s32 result;
-    __u32 i;
+    //__u32 i;
     __u8  tmpChipID[8];
     boot_nand_para_t nand_info;
 

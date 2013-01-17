@@ -40,8 +40,10 @@
 //==============================================================================
 
 #define  NAND_VERSION_0                 0x02
-#define  NAND_VERSION_1                 0x10
-#define  NAND_DRV_DATE                  0x20120610
+#define  NAND_VERSION_1                 0x11
+#define  NAND_DRV_DATE                  0x20121207
+
+
 
 
 //define the max value of the count of chip select

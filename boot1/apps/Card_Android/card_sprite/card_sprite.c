@@ -71,8 +71,9 @@ static  void  sprite_show(int ratio)
 __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 {
     HIMAGEITEM  imghd = 0, imgitemhd = 0;
-    __u32       item_original_size = 0, item_rest_size = 0;
-    __u32		item_verify_size = 0;
+    __u64      item_original_size = 0;
+    __u64       item_rest_size = 0;
+    __u64		item_verify_size = 0;
     __u32       part_sector, file_sector, flash_sector;
     int         crc, mbr_count, mbr_buf_size;
     __u32		img_start;
@@ -94,10 +95,12 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 		boot_ui_progressbar_config(progressbar_hd, UI_BOOT_GUI_RED, UI_BOOT_GUI_GREEN, 2);
 		boot_ui_progressbar_active(progressbar_hd);
 	}
+	//读取原有的uboot环境变量
+	private_fetch_from_flash();
 	//NAND设备初始化
     memset(flash_info, 0, 512);
     __inf("erase flag=%d\n", flash_erase);
-    ret = update_flash_hardware_scan(flash_info, flash_erase);
+    ret = update_flash_hardware_scan(mbr_i,flash_info, flash_erase);
     if(ret == 0)
     {
     	__inf("burn nand\n");
@@ -115,8 +118,6 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
     	goto _update_error_;
     }
-    //读取原有的uboot环境变量
-	private_fetch_from_flash();
     //准备nand数据信息
 	sprite_show(CARD_SPRITE_FLASH_INFO);
 	src_buf = (char *)sprite_malloc(1024 * 1024);
@@ -141,7 +142,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
     mbr_info = (MBR *)mbr_i;
     {
     	for(i=0;i<mbr_info->PartCount;i++)
-    	{
+    	{   
 			if((!strcmp((const char *)mbr_info->array[i].classname, "DISK")) || (!strcmp((const char *)mbr_info->array[i].classname, "disk")))
         	{
             	break;
@@ -158,7 +159,6 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 //*************************************************************************************
 //*************************************************************************************
 	img_start = mbr_info->array[1 + i].addrlo;
-	__inf("part start = %d\n", img_start);
     imghd = Img_Open(img_start, TEST_BLK_BYTES);
     if(!imghd)       //初始化
     {
@@ -184,7 +184,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 //*************************************************************************************
 //*************************************************************************************
 	//获取MBR
-	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890___mbr");
+	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890___MBR");
 	if(!imgitemhd)
 	{
 		sprite_wrn("sprite update error: fail to open item for mbr\n");
@@ -198,8 +198,8 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
         sprite_wrn("sprite update error: get mbr size fail\n");
         goto _update_error_;
     }
-    mbr_buf_size = item_original_size;
-	tmp_mbr_buf = (char *)sprite_malloc(item_original_size);
+    mbr_buf_size = (int)item_original_size;
+	tmp_mbr_buf = (char *)sprite_malloc((__u32)item_original_size);
 	if(!tmp_mbr_buf)
     {
         sprite_wrn("sprite update error: fail to get memory for mbr\n");
@@ -233,7 +233,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 //*************************************************************************************
 //*************************************************************************************
 	//获取 DOWNLOAD MAP
-	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890dlinfo");
+	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890DLINFO");
 	if(!imgitemhd)
 	{
 		sprite_wrn("sprite update error: fail to open item for download map\n");
@@ -289,7 +289,9 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    }
 	    private_type = 0;
 	    item_original_size = Img_GetItemSize(imghd, imgitemhd);
-	    __inf("item_original_size=%d\n", item_original_size);
+   
+	    __inf("item_original_size high =%d\n", (__u32)((item_original_size>>32)&0xffffffff));
+        __inf("item_original_size low =%d\n", (__u32)(item_original_size));
 	    if(!item_original_size)
 	    {
 	        sprite_wrn("sprite update error: get part file %s size failed\n", dl_info->one_part_info[i].dl_filename);
@@ -315,7 +317,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    //sprite_wrn("get part file %s size = %d\n", dl_info->one_part_info[i].dl_filename, item_original_size);
 	    item_rest_size = item_original_size;
 	    //检查文件大小是否小于等于分区大小
-		file_sector = item_original_size / 512;
+		file_sector = (__u32)(item_original_size / 512);
 		part_sector = dl_info->one_part_info[i].lenlo;
 		if(file_sector > part_sector)
 		{
@@ -342,7 +344,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
 	            goto _update_error_;
 	        }
-	        this_ratio = (((item_original_size>>9) - (item_rest_size>>9))*aver_rage)/(item_original_size>>9);
+	        this_ratio = (int)(((item_original_size>>9) - (item_rest_size>>9))*aver_rage)/((__u32)(item_original_size>>9));
 	        if(this_ratio)
 	        {
 	        	if(pre_ratio != this_ratio)
@@ -361,8 +363,8 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
 	            goto _update_error_;
 	        }
-	        decode((__u32)src_buf, (__u32)dest_buf, item_rest_size, &actual_buf_addr);
-	        if(update_flash_write((void *)actual_buf_addr, item_rest_size))
+	        decode((__u32)src_buf, (__u32)dest_buf, (__u32)item_rest_size, &actual_buf_addr);
+	        if(update_flash_write((void *)actual_buf_addr, (__u32)item_rest_size))
 	        {
 	        	sprite_wrn("sprite update error: fail to write last data in %s\n", dl_info->one_part_info[i].dl_filename);
 
@@ -431,7 +433,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
 				        			goto __download_part_data__;
 				        		}
-				        		sum += verify_sum(dest_buf, item_rest_size);
+				        		sum += verify_sum(dest_buf, (__u32)item_rest_size);
 				        	}
 				        }
 				        else
@@ -531,11 +533,11 @@ __download_part_data__:
     //取出boot1
     if(!sprite_type)
     {
-    	imgitemhd = Img_OpenItem(imghd, "BOOT    ", "BOOT1_0000000000");
+    	imgitemhd = Img_OpenItem(imghd, "12345678", "UBOOT_0000000000");
     }
     else
     {
-    	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890boot_1");
+    	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890BOOT_1");
     }
     if(!imgitemhd)
     {
@@ -559,13 +561,13 @@ __download_part_data__:
     imgitemhd = NULL;
     if(!sprite_type)
     {
-    	init_code(1);
+    	init_code(0); /*现在boot1_nand.bin不加密*/
     }
     else
     {
     	init_code(0);
     }
-    decode((__u32)src_buf, (__u32)dest_buf, item_original_size, &actual_buf_addr);
+    decode((__u32)src_buf, (__u32)dest_buf, (__u32)item_original_size, &actual_buf_addr);
     exit_code();
 
     if(update_boot1((void *)actual_buf_addr, flash_info, sprite_type))
@@ -589,7 +591,7 @@ __download_part_data__:
     }
     else
     {
-    	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890boot_0");
+    	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890BOOT_0");
     }
     if(!imgitemhd)
     {
@@ -617,7 +619,7 @@ __download_part_data__:
     {
     	init_code(0);
     }
-    decode((__u32)src_buf, (__u32)dest_buf, item_original_size, &actual_buf_addr);
+    decode((__u32)src_buf, (__u32)dest_buf, (__u32)item_original_size, &actual_buf_addr);
     exit_code();
 
     if(update_boot0((void *)actual_buf_addr, flash_info, sprite_type))

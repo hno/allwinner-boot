@@ -26,7 +26,7 @@ typedef unsigned int 	UInt32;
 typedef unsigned int 	Sector_t;
 
 typedef long long       Int64;
-
+typedef unsigned long long UInt64;
 typedef enum __ESzSeek
 {
   SZ_SEEK_SET = 0,
@@ -55,7 +55,7 @@ typedef struct  __CSzFile
   int   		writeMode;		/* write open mode falg 			*/
   Sector_t 		SectorNr;		/* begin sector number 				*/
   Sector_t 		CurSec;			/* current sector number 			*/
-  UInt32   		CurPos;			/* file current postion 			*/
+  __int64   	CurPos;			/* file current postion 			*/
   __int64   	Size;			/* total size (just for read open) 	*/
   DecBuffer_t	Buffer_t;		/* data buffer 						*/
 } CSzFile;

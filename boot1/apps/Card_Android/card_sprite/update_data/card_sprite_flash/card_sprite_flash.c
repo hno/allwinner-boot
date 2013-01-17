@@ -109,12 +109,12 @@ __s32 sprite_flash_init(void)
 	}
 	else if(card_sprite_type == 1)
 	{
-		ret = wBoot_script_parser_fetch("card_boot2_para", "card_line", &line_sel, 1);
+		ret = wBoot_script_parser_fetch("card2_boot_para", "card_line", &line_sel, 1);
 		if(ret)
 		{
 			line_sel = 4;
 		}
-		ret = wBoot_script_parser_fetch("card_boot2_para", "card_high_speed", &speed_mode, 1);
+		ret = wBoot_script_parser_fetch("card2_boot_para", "card_high_speed", &speed_mode, 1);
 		if(ret)
 		{
 			speed_mode = 1;
@@ -247,13 +247,14 @@ __s32 sprite_flash_write(__u32 nSectNum, __u32 nSectorCnt, void * pBuf)
 *
 ************************************************************************************************************
 */
-int sprite_flash_hardware_scan(void *flash_info, int erase_flash)
+int sprite_flash_hardware_scan(void *mbr_i,void *flash_info, int erase_flash)
 {
-	int  ret;
+	int  ret,i;
 	boot_nand_para_t  nand_para;
 	int  line_sel;
 	int  speed_mode;
 	int  type;
+    MBR* mbr_info=(MBR*)mbr_i;
 	//É¨ÃèNAND
 
 	type = 0;
@@ -295,17 +296,17 @@ int sprite_flash_hardware_scan(void *flash_info, int erase_flash)
 	return 0;
 __hardware_scan__:
 	//nand²Ù×÷Ê§°Ü£¬³¢ÊÔ²Ù×÷¿¨
-	ret = wBoot_script_parser_fetch("card_boot2_para", "card_line", &line_sel, 1);
+	ret = wBoot_script_parser_fetch("card2_boot_para", "card_line", &line_sel, 1);
 	if(ret)
 	{
 		line_sel = 4;
 	}
-	ret = wBoot_script_parser_fetch("card_boot2_para", "card_high_speed", &speed_mode, 1);
-	if(ret)
-	{
-		speed_mode = 1;
-	}
-	ret = SDMMC_PhyInit(2, speed_mode, line_sel);
+//	ret = wBoot_script_parser_fetch("card2_boot_para", "card_high_speed", &speed_mode, 1);
+//	if(ret)
+//	{
+//		speed_mode = 1;
+//	}
+	ret = SDMMC_PhyInit(2,line_sel);
 	if(ret == -1)
 	{
 		__inf("sprite error: try sdcard failed\n");
@@ -313,41 +314,29 @@ __hardware_scan__:
 		return -1;
 	}
 	card_sprite_type = 1;
+    
 	if(erase_flash)
 	{
-		int   rest, start;
-		char  *data;
+      char *data;
+      int erase_sector_count=16;//how many sector do you want to erase ?
+      data = wBoot_malloc(512*erase_sector_count);
+      memset(data,0xff,512*erase_sector_count);
+      for(i=0;i<mbr_info->PartCount;i++)
+      {
+            __inf("erase sdcard part: %s ,start sector=%d,sector count=%d\n",\
+                mbr_info->array[i].name,mbr_info->array[i].addrlo,erase_sector_count);
+					
+            if(SDMMC_LogicalWrite(mbr_info->array[i].addrlo,erase_sector_count,data,2))
+            {
+                __inf("erase sdcard part %s fail!\n",mbr_info->array[i].name);
+                wBoot_free(data);
+               return -1;
+            }
 
-		data = wBoot_malloc(1024 * 1024);
-		memset(data, 0xff, 1024 * 1024);
-		rest = ret;
-		start = 0;
-
-		while(rest > 2048)
-		{
-			if(SDMMC_PhyWrite(start, 2048, data, 2))
-			{
-				__inf("erase sdcard from sector %d, total 2048 failed\n", start);
-
-				return -1;
-			}
-			start += 2048;
-			rest -= 2048;
-		}
-		if(rest)
-		{
-			if(SDMMC_PhyWrite(start, rest, data, 2))
-			{
-				__inf("erase sdcard from sector %d, total %d failed\n", start, rest);
-
-				return -1;
-			}
-		}
-		if(data)
-		{
-			wBoot_free(data);
-		}
+      }
+     wBoot_free(data);
 	}
+
 	SDMMC_PhyExit(2);
 
 	return 1;
@@ -415,7 +404,7 @@ int create_stdmbr(void *mbr_i)
 	mbrst = (mbr_stand *)mbr_bufst;
 
 	//memcpy(mbr_bufst, tmp_buffer, 13);
-	usize = SDMMC_GetDiskSize() - 20 * 1024 * 1024/512 - size;
+	usize = SDMMC_PhyDiskSize(2) - 20 * 1024 * 1024/512 - size;
 
 	mbrst->part_info[0].indicator = 0x80;
 	mbrst->part_info[0].part_type = 0x0B;
@@ -431,10 +420,10 @@ int create_stdmbr(void *mbr_i)
 	mbrst->part_info[1].total_sectorsh = (mbr->array[0].lenlo  & 0xffff0000) >> 16;
 
 	mbrst->part_info[2].part_type = 0x05;
-	mbrst->part_info[2].start_sectorl  = 0;
-	mbrst->part_info[2].start_sectorh  = 1;
+	mbrst->part_info[2].start_sectorl  = 1;
+	mbrst->part_info[2].start_sectorh  = 0;
 	mbrst->part_info[2].total_sectorsl = (size & 0x0000ffff) >> 0;
-	mbrst->part_info[2].total_sectorsh = (size & 0xffff0000) >> 0;
+	mbrst->part_info[2].total_sectorsh = (size & 0xffff0000) >> 16;
 
 	mbrst->end_flag = 0xAA55;
 	if(SDMMC_PhyWrite(0, 1, mbr_bufst, 2))

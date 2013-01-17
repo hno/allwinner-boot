@@ -52,7 +52,7 @@
 #define EGON2_REGS_SIZE					0x02000000
 
 
-#define NF_ALIGN_SIZE                   SZ_8K
+#define NF_ALIGN_SIZE                   SZ_16K
 #define SF_ALIGN_SIZE                   512       // change 256 to 512. by Gary, 2009-12-10 11:46:51
 #define IE_ALIGN_SIZE                   512       // change  64 to 512. by Gary, 2009-12-10 11:46:51
 

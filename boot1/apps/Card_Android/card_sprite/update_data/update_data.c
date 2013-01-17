@@ -31,8 +31,8 @@ extern  int      env_exist;
 static  int      flash_start_sector = -1;
 
 int		android_format;
-char    *flash_memory_base = (char *)0x48000000;
-char    *env_memory_base   = (char *)0x46000000;
+char    *flash_memory_base = (char *)0x46000000;
+char    *env_memory_base   = (char *)0x44000000;
 char    *flash_memory;
 int		 flash_memory_size;
 /*
@@ -453,8 +453,8 @@ __s32 update_flash_close(void)
 *
 ************************************************************************************************************
 */
-int update_flash_hardware_scan(void *flash_info, int erase_flash)
+int update_flash_hardware_scan(void* mbr_i,void *flash_info, int erase_flash)
 {
-	return sprite_flash_hardware_scan(flash_info, erase_flash);
+	return sprite_flash_hardware_scan(mbr_i,flash_info, erase_flash);
 }
 

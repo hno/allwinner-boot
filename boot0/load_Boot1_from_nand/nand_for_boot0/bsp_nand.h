@@ -42,7 +42,7 @@
 //---------------------------------------------------------------
 typedef struct 
 {
-	__u32		ChannelCnt;
+	//__u32		ChannelCnt;
 	__u32        ChipCnt;                            //the count of the total nand flash chips are currently connecting on the CE pin
     __u32       ChipConnectInfo;                    //chip connect information, bit == 1 means there is a chip connecting on the CE pin
 	__u32		RbCnt;
@@ -62,7 +62,7 @@ typedef struct
 	__u32 		good_block_ratio;					//good block ratio get from hwscan
 	__u32		ReadRetryType;						//the read retry type
 	__u32       DDRType;
-	__u32		Reserved[22];
+	__u32		Reserved[23];
 }boot_nand_para_t;
 
 typedef struct boot_flash_info{
@@ -79,7 +79,7 @@ struct boot_physical_param{
 	__u32   chip; //chip no
 	__u32  block; // block no within chip
 	__u32  page; // apge no within block
-	__u32  sectorbitmap; //done't care
+	__u64  sectorbitmap; //done't care
 	void   *mainbuf; //data buf
 	void   *oobbuf; //oob buf
 };

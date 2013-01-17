@@ -52,7 +52,7 @@ struct __OptionalPhyOpPar_t
 
 typedef struct 
 {
-	__u32		ChannelCnt;
+	//__u32		ChannelCnt;
     __u32        ChipCnt;                            //the count of the total nand flash chips are currently connecting on the CE pin
     __u32       ChipConnectInfo;                    //chip connect information, bit == 1 means there is a chip connecting on the CE pin
 	__u32		RbCnt;
@@ -72,7 +72,7 @@ typedef struct
 	__u32 		good_block_ratio;					//good block ratio get from hwscan
 	__u32		ReadRetryType;						//the read retry type
 	__u32       DDRType;
-	__u32		Reserved[22];
+	__u32		Reserved[23];
 }boot_nand_para_t;
 
 typedef struct boot_flash_info{
@@ -151,7 +151,7 @@ struct __PhysicOpPara_t
     __u32        BankNum;                            //the number of the bank current accessed, bank NO. is different of chip NO.
     __u32       PageNum;                            //the number of the page current accessed, the page is based on single-plane or multi-plane
     __u32       BlkNum;                             //the number of the physic block, the block is based on single-plane or multi-plane
-    __u32       SectBitmap;                         //the bitmap of the sector in the page which need access data
+    __u64       SectBitmap;                         //the bitmap of the sector in the page which need access data
     void        *MDataPtr;                          //the pointer to main data buffer, it is the start address of a page size based buffer
     void        *SDataPtr;                          //the pointer to spare data buffer, it will be set to NULL if needn't access spare data
 };

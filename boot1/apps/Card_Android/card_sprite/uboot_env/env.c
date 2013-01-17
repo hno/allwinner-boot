@@ -29,7 +29,7 @@
 #define  ENV_DATA_DRAM_ADDRESS         0x58000000
 #define  ENV_FLASH_DRAM_ADDRESS		   0x48000000
 #define  ENV_SIZE                      (128 * 1024)
-#define  PRIVATE_FLASH_DRAM_ADDRESS	   0x5A000000
+#define  PRIVATE_FLASH_DRAM_ADDRESS	   0x5E000000
 
 char  *env_data_dram_base;
 char  *env_data_dram_addr;

@@ -68,7 +68,7 @@ extern  __s32  update_force_to_flash(void);
 extern  __s32  erase_all_flash( void );
 
 
-extern    int  update_flash_hardware_scan(void *flash_info, int erase_flash);
+extern    int  update_flash_hardware_scan(void *mbr_i, void *flash_info, int erase_flash);
 
 
 #endif	/* __UPDATA_DATA_H__ */

@@ -27,6 +27,9 @@ typedef struct tag_IMAGE_HANDLE
 	ImageItem_t *ItemTable;		//item信息表
 
 	RC_ENDECODE_IF_t rc_if_decode[IF_CNT];//解密接口
+	
+	__bool			bWithEncpy; // 是否加密
+	
 }IMAGE_HANDLE;
 
 #define INVALID_INDEX		0xFFFFFFFF
@@ -34,7 +37,7 @@ typedef struct tag_IMAGE_HANDLE
 #pragma pack(push, 1)
 typedef struct tag_ITEM_HANDLE{
 	__u32	index;					//在ItemTable中的索引
-	__u32 pos;
+	__u64 pos;
 }ITEM_HANDLE;
 #pragma pack(pop)
 
@@ -112,7 +115,28 @@ HIMAGE 	Img_Open	(__u32 start_sector, int size)
 	//------------------------------------------------
 	//读img头
 	//------------------------------------------------
-	if(!File_Read(&ImageHead, sizeof(ImageHead_t), 1, pImage->fp))
+	if(File_Read(&ImageHead, sizeof(ImageHead_t), 1, pImage->fp))
+	{
+        
+	    sprite_free(pImage);
+		sprite_wrn("DEC_IMG: read imagehead fail!\n");
+
+        return  NULL;
+
+    }
+     
+	if(memcmp(ImageHead.magic, IMAGE_MAGIC, 8) == 0)
+	{
+		pImage->bWithEncpy = 0;
+       // sprite_wrn("DEC_IMG: no encpy used!\n");
+	}
+	else
+	{
+		pImage->bWithEncpy = 1;
+       // sprite_wrn("DEC_IMG:  encpy used!\n");
+	}
+	
+	if(pImage->bWithEncpy)
 	{
     	__u8 * pHead = (__u8 *) &ImageHead;
     	__u8 * pHeadDecode = (__u8 *)&pImage->ImageHead;
@@ -134,11 +158,12 @@ HIMAGE 	Img_Open	(__u32 start_sector, int size)
     }
     else
     {
-        return 0;
+        memcpy((void *)(&(pImage->ImageHead)), (void*)&ImageHead, sizeof(ImageHead_t));
     }
 	//------------------------------------------------
 	//比较magic
 	//------------------------------------------------
+	//sprite_wrn("DEC_IMG: img header magic:%s\n",pImage->ImageHead.magic);
 	if (memcmp(pImage->ImageHead.magic, IMAGE_MAGIC, 8))
 	{
 	    sprite_free(pImage);
@@ -171,6 +196,10 @@ HIMAGE 	Img_Open	(__u32 start_sector, int size)
 
 		return NULL;
 	}
+  //  sprite_wrn("DEC_IMG: pImage->ImageHead.itemoffset=0x%x\n",pImage->ImageHead.itemoffset);
+  // sprite_wrn("DEC_IMG: pImage->ImageHead.itemSize=0x%x\n",pImage->ImageHead.itemsize);
+  //  sprite_wrn("DEC_IMG: pImage->ImageHead.itemcount=%d\n",pImage->ImageHead.itemcount);
+    
 	File_Seek(pImage->fp, pImage->ImageHead.itemoffset, SZ_SEEK_SET);
 	if(File_Read(ItemTableBuf, ItemTableSize, 1, pImage->fp))
 	{
@@ -182,6 +211,7 @@ HIMAGE 	Img_Open	(__u32 start_sector, int size)
 	// decode ItemTable
 	//------------------------------------------------
 	pItemTableDecode = (__u8 *)pImage->ItemTable;
+    if(pImage->bWithEncpy)
 	{
 	    __u8 *pin, *pout;
 
@@ -201,7 +231,13 @@ HIMAGE 	Img_Open	(__u32 start_sector, int size)
     			return NULL;
     		}
     	}
-    }
+    }else
+	{
+	
+		memcpy(pItemTableDecode, ItemTableBuf, ItemTableSize);
+	
+	}
+	
     sprite_free(ItemTableBuf);
 
     buffer_encode = (__u8 *)sprite_malloc(buffer_encode_size);
@@ -254,7 +290,9 @@ HIMAGEITEM 	Img_OpenItem	(HIMAGE hImage, char * MainType, char * subType)
 
 	for (i = 0; i < pImage->ImageHead.itemcount ; i++)
 	{
-		if (memcmp(ITEM_PHOENIX_TOOLS, MainType, MAINTYPE_LEN) == 0)//
+    //  sprite_wrn("pImage->ItemTable[%d].mainType=%s,subType=%s\n",i,pImage->ItemTable[i].mainType,\
+    //    pImage->ItemTable[i].subType);
+        if (memcmp(ITEM_PHOENIX_TOOLS, MainType, MAINTYPE_LEN) == 0)//
 		{
 			if (memcmp(MainType, pImage->ItemTable[i].mainType, MAINTYPE_LEN) == 0 )
 			{
@@ -293,12 +331,16 @@ HIMAGEITEM 	Img_OpenItem	(HIMAGE hImage, char * MainType, char * subType)
 //    无
 //
 //------------------------------------------------------------------------------------------------------------
-__u32 Img_GetItemSize	(HIMAGE hImage, HIMAGEITEM hItem)
+__u64 Img_GetItemSize	(HIMAGE hImage, HIMAGEITEM hItem)
 {
-	IMAGE_HANDLE* pImage = (IMAGE_HANDLE *)hImage;
-	ITEM_HANDLE * pItem  = (ITEM_HANDLE  *)hItem;
+    IMAGE_HANDLE *pImage = (IMAGE_HANDLE *)hImage;
+    ITEM_HANDLE  *pItem  = (ITEM_HANDLE  *)hItem;
+    __u64      nItemSize;
 
-	return pImage->ItemTable[pItem->index].filelen;
+ 	nItemSize  = pImage->ItemTable[pItem->index].filelenLo;
+    nItemSize |= (__u64)pImage->ItemTable[pItem->index].filelenHi << 32;
+//	return pImage->ItemTable[pItem->index].filelen;
+  	return nItemSize;
     //由于有第一层加密，因此都会按照分组进行
 }
 
@@ -319,21 +361,27 @@ __u32 Img_GetItemSize	(HIMAGE hImage, HIMAGEITEM hItem)
 //
 //------------------------------------------------------------------------------------------------------------
 
-static __u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 Length);
+static __u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u64 Length);
 
 // 根据分组进行加速处理的版本 scott 2009-06-22 10:37:17
-__u32 Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 Length)
+__u32 Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u64 Length)
 {
 	__u32 readlen = 0;
 	IMAGE_HANDLE* pImage = (IMAGE_HANDLE *)hImage;
 	ITEM_HANDLE * pItem  = (ITEM_HANDLE  *)hItem;
+    __u64      filelen;
+    __u64      datalen;
+    __u64      offset;
+    __u64      pos=0;
 	__u32 this_read;
-	__u32 pos = 0;
 	__u32 i;
 
     pEnDecode pfDecode = pImage->rc_if_decode[DATA_ID].EnDecode;
-
-	if (pItem->pos >= pImage->ItemTable[pItem->index].filelen) //filelen <= datalen
+	u8* pInPutBuffer = (u8*)buffer;
+	u8* pBufferRead = pInPutBuffer ;
+    filelen  = pImage->ItemTable[pItem->index].filelenLo;
+    filelen |= (__u64)pImage->ItemTable[pItem->index].filelenHi << 32;
+	if (pItem->pos >=filelen) //filelen <= datalen
 	{
 		sprite_wrn("DEC_IMG: file pointer position is larger than file length\n");
 		return 0;
@@ -341,7 +389,9 @@ __u32 Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 Len
 	//------------------------------------------------
 	//约束数据不会超出加密数据的范围
 	//------------------------------------------------
-	Length = min(Length, pImage->ItemTable[pItem->index].datalen - pItem->pos);
+	datalen  = pImage->ItemTable[pItem->index].datalenLo;
+    datalen |= (__u64)pImage->ItemTable[pItem->index].datalenHi << 32;
+	Length = min((__u64)Length, datalen - pItem->pos);
 	//------------------------------------------------
 	//加密后的数据以16byte进行分组，需要处理跨边界的情况
 	//------------------------------------------------
@@ -350,7 +400,11 @@ __u32 Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 Len
 	    __u8 *pin, *pout;
 	    __u32 n;
 
-		pos = pImage->ItemTable[pItem->index].offset + pItem->pos;
+	    offset  = pImage->ItemTable[pItem->index].offsetLo;
+        offset |= (__u64)pImage->ItemTable[pItem->index].offsetHi << 32;
+       // __inf("item offset low=%d\n",pImage->ItemTable[pItem->index].offsetLo);
+       // __inf("item offset high=%d\n",pImage->ItemTable[pItem->index].offsetHi);
+        pos = offset + pItem->pos;
 		File_Seek(pImage->fp, pos, SZ_SEEK_SET);
 		readlen = 0;
 		while(readlen < Length)
@@ -362,32 +416,47 @@ __u32 Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 Len
 			n = (this_read + ENCODE_LEN - 1) / ENCODE_LEN;	//
 			//memset(buffer_encode, 0, n * ENCODE_LEN);
 			//一次读n个分组,速度更快 note has bug
-			if(File_Read(buffer_encode, n * ENCODE_LEN, 1, pImage->fp))	//OK 测试通过，必须读取整个的分组
-            {
-                //如果读不出数据
-                sprite_wrn("DEC_IMG: read ItemData failed\n");
-                return 0;
-            }
-			File_Seek(pImage->fp, 0, SZ_SEEK_CUR);
-			//------------------------------------------------
-			//分组数据解密
-			//------------------------------------------------
-			pin  = buffer_encode;
-			pout = (__u8 *)buffer;
-			pout = pout + readlen;	//实际输出数据的偏移量
-
-			for (i = 0; i < n; i++)	//逐个分组进行解密
+			if(pImage->bWithEncpy == 0)
 			{
+				pBufferRead = pInPutBuffer + readlen;
+				if(File_Read(pBufferRead, n * ENCODE_LEN, 1, pImage->fp))	//OK 测试通过，必须读取整个的分组
+           		 {
+                	//如果读不出数据
+                	sprite_wrn("DEC_IMG: read ItemData failed\n");
+                	return 0;
+            	 }
+			
+			}else
+			{
+			
+			
+				if(File_Read(buffer_encode, n * ENCODE_LEN, 1, pImage->fp))	//OK 测试通过，必须读取整个的分组
+           		 {
+            	    //如果读不出数据
+               		 sprite_wrn("DEC_IMG: read ItemData failed\n");
+               		 return 0;
+            	 }
+				File_Seek(pImage->fp, 0, SZ_SEEK_CUR);
 				//------------------------------------------------
-				//每次解密一个分组
+				//分组数据解密
 				//------------------------------------------------
-				if (OK !=  pfDecode(pImage->rc_if_decode[DATA_ID].handle, pin , pout))
+				pin  = buffer_encode;
+				pout = (__u8 *)buffer;
+				pout = pout + readlen;	//实际输出数据的偏移量
+
+				for (i = 0; i < n; i++)	//逐个分组进行解密
 				{
-					sprite_wrn("DEC_IMG: decode ItemData failed\n");
-					return 0;
+					//------------------------------------------------
+					//每次解密一个分组
+					//------------------------------------------------
+					if (OK !=  pfDecode(pImage->rc_if_decode[DATA_ID].handle, pin , pout))
+					{
+						sprite_wrn("DEC_IMG: decode ItemData failed\n");
+						return 0;
+					}
+					pin += ENCODE_LEN;
+					pout+= ENCODE_LEN;
 				}
-				pin += ENCODE_LEN;
-				pout+= ENCODE_LEN;
 			}
 			//------------------------------------------------
 			//计算实际有效数据长度
@@ -403,6 +472,7 @@ __u32 Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 Len
 		//这里强制只处理分组对齐的情况，对于以前的一些固件包可能会引起不兼容的问题，
 		//那种情况下只好启用原始版本来处理了
 		//------------------------------------------------
+		sprite_wrn("__Img_ReadItemData\n");
 		return  __Img_ReadItemData(hImage, hItem,  buffer, Length);
 	}
 
@@ -411,13 +481,18 @@ __u32 Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 Len
 
 
 //原始的版本，可以运行，不过每次读img文件是16byte，速度不高，需要进行提速
-__u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 Length)
+__u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u64 Length)
 {
-	__u32 readlen = 0;
+
 	IMAGE_HANDLE* pImage = (IMAGE_HANDLE *)hImage;
 	ITEM_HANDLE * pItem  = (ITEM_HANDLE  *)hItem;
+    __u64      filelen;
+    __u64      datalen;
+    __u64      offset;
+    __u64      pos=0;
+    __u64      readlen=0;
 	__u8 buffer_encode[ENCODE_LEN];
-	__u32 pos = 0;
+
 
 	pEnDecode pfDecode = pImage->rc_if_decode[DATA_ID].EnDecode;
 	if (NULL == pImage || NULL == pItem || NULL == buffer || 0 == Length)
@@ -425,14 +500,32 @@ __u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 L
 		return 0;
 	}
 
-	if (pItem->pos >= pImage->ItemTable[pItem->index].filelen) //filelen <= datalen
+   	filelen  = pImage->ItemTable[pItem->index].filelenLo;
+    filelen |= (__u64)pImage->ItemTable[pItem->index].filelenHi << 32;
+	if (pItem->pos >=filelen) //filelen <= datalen
 	{
 		return 0;
 	}
 	//------------------------------------------------
 	//约束数据不会超出加密数据的范围
 	//------------------------------------------------
-	Length = min(Length, pImage->ItemTable[pItem->index].datalen - pItem->pos);
+	datalen = pImage->ItemTable[pItem->index].datalenLo;
+    datalen |= (__u64)pImage->ItemTable[pItem->index].datalenHi << 32;
+	Length = min((__u64)Length, datalen - pItem->pos);
+	if(pImage->bWithEncpy == 0)
+	{
+   		offset = pImage->ItemTable[pItem->index].offsetLo;
+        offset |= (__u64)pImage->ItemTable[pItem->index].offsetHi << 32;
+        pos = offset + pItem->pos;
+		File_Seek(pImage->fp, pos, SZ_SEEK_SET);
+        
+		if(File_Read(buffer, Length, 1, pImage->fp))
+		{
+			return 0;
+		}
+		pItem->pos += Length;
+		return Length;
+	}
 
 	//------------------------------------------------
 	//加密后的数据以16byte进行分组，需要处理跨边界的情况
@@ -441,7 +534,10 @@ __u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 L
 	{
 	    __u8 *pin, *pout;
 
-		pos = pImage->ItemTable[pItem->index].offset + pItem->pos;
+   		 offset = pImage->ItemTable[pItem->index].offsetLo;
+        offset |= (__u64)pImage->ItemTable[pItem->index].offsetHi << 32;
+        pos = offset + pItem->pos;
+
 		File_Seek(pImage->fp, pos, SZ_SEEK_SET);
 
 		while(readlen < Length)
@@ -468,8 +564,10 @@ __u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u32 L
 	else //pos不在边界
 	{
 		//pos不在边界，向头方向seek
-		pos = pImage->ItemTable[pItem->index].offset +
-				  pItem->pos - (pItem->pos % ENCODE_LEN);
+
+        offset = pImage->ItemTable[pItem->index].offsetLo;
+        offset |= (__u64)pImage->ItemTable[pItem->index].offsetHi << 32;		
+		pos = offset +pItem->pos - (pItem->pos % ENCODE_LEN);
 		File_Seek(pImage->fp, pos, SZ_SEEK_SET);
 
 		//-----------------------------------
