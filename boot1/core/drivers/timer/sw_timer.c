@@ -385,12 +385,12 @@ void eGon2_watchdog_enable(void)
 ************************************************************************************************************
 */
 void eGon2_timer_init(void)
-{
-	*(volatile unsigned int *)(0x01c20000 + 0x144) |= (1U << 31);
-	*(volatile unsigned int *)(0x01c20C00 + 0x80 )  = 1;
-	*(volatile unsigned int *)(0x01c20C00 + 0x8C )  = 0x0C;
-	*(volatile unsigned int *)(0x01c20C00 + 0x84 )  = 0;
-	CFG_SW_TIMER_INT_STATS |= 0x03;
+{   //avs timer clk=24M OSC
+//	*(volatile unsigned int *)(0x01c20000 + 0x144) |= (1U << 31);
+//	*(volatile unsigned int *)(0x01c20C00 + 0x80 )  = 1;//enable avs cnt0, source is 24M OSC
+//	*(volatile unsigned int *)(0x01c20C00 + 0x8C )  = 0x0C; //avs cnt0 clk div 12
+//	*(volatile unsigned int *)(0x01c20C00 + 0x84 )  = 0;//clear avs count value
+	CFG_SW_TIMER_INT_STATS |= 0x03;//timer0 and timer1 irq clear
 }
 /*
 ************************************************************************************************************

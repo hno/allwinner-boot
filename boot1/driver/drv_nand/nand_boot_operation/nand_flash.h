@@ -74,7 +74,7 @@ enum
 };
 
 
-#define MAX_PAGE_SIZE         SZ_8K
+#define MAX_PAGE_SIZE         SZ_16K
 #define BAD_BLK_FLAG          0
 
 

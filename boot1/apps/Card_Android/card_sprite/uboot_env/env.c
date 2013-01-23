@@ -247,10 +247,10 @@ int private_fetch_from_flash(void)
 update_flash_env_err:
 	sprite_flash_exit(0);
 #endif
-	if(!env_exist)		//如果在旧的环境变量中没有找到动态数据，则去boot1中寻找
-	{
-		ret = env_fetch_from_boot1();
-	}
+//	if(!env_exist)		//如果在旧的环境变量中没有找到动态数据，则去boot1中寻找
+//	{
+//		ret = env_fetch_from_boot1();
+//	}
 
 	return ret;
 }

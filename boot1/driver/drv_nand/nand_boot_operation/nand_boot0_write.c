@@ -220,7 +220,8 @@ static __s32  burn_boot0_lsb_mode( __u32 read_retry_type, __u32 Boot0_buf )
 
 	/* ¼ì²é page count */
 	page_size = info.pagesize*512;
-
+	if(page_size == 8192*2) //change for h27ucg8t2btr 16k pagesize
+		page_size = 8192;
     for( i = BOOT0_START_BLK_NUM;  i <= BOOT0_LAST_BLK_NUM;  i++ )
     {
 		struct boot_physical_param  para;

@@ -182,8 +182,11 @@ __s32  Nand_Burn_Boot1(__u32 Boot1_buf, __u32 length )
 	__s32               status;
 	__s32				ret = -1;
 
-    NF_open( );                                             // 打开nand flash
-
+    if(NF_ERROR==NF_open( ))                                             // 打开nand flash
+    {
+        __inf("%s: NF_open fail !\n",__FUNCTION__);
+		return -1;
+    }
     if( length <= NF_BLOCK_SIZE )
     {
         for( i = BOOT1_START_BLK_NUM;  i <= BOOT1_LAST_BLK_NUM;  i++ )

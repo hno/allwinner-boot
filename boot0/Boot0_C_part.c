@@ -149,9 +149,9 @@ void set_pll( void )
 {
 	__u32 reg_val, i;
 
-	//切换到24M
+	//CPU切换到24M,AXI_CLK=CPU_CLK,AXI到AHB不分频，这点和23不一样，23 DIV=2
 	CCMU_REG_AXI_MOD = 0x00010000;
-	//设置PLL1到408M
+	//设置PLL1到384M
 	reg_val = (0x00001000) | (0x80000000);
 	CCMU_REG_PLL1_CTRL = reg_val;
 	//延时

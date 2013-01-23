@@ -255,6 +255,7 @@ int sprite_flash_hardware_scan(void *mbr_i,void *flash_info, int erase_flash)
 	int  speed_mode;
 	int  type;
     MBR* mbr_info=(MBR*)mbr_i;
+	int good_block_ratio = 0;
 	//…®√ËNAND
 
 	type = 0;
@@ -282,6 +283,18 @@ int sprite_flash_hardware_scan(void *mbr_i,void *flash_info, int erase_flash)
 			goto __hardware_scan__;
 		}
 	}
+	good_block_ratio = NAND_BadBlockScan((const boot_nand_para_t*)&nand_para);
+	if((good_block_ratio == -1)| (good_block_ratio == 0))
+	{
+			__inf("sprite update error: nand bad block scan failed\n");
+			ret = -2;
+
+			goto __hardware_scan__;
+	}
+	nand_para.good_block_ratio = good_block_ratio;
+	NAND_SetValidBlkRatio(good_block_ratio);
+	__inf("****************************************************************************************** \n");
+	__inf("get the good blk ratio from hwscan : %d \n", good_block_ratio);
 	//…®√ËΩ· ¯
 	if(NAND_HWScanStop())
 	{

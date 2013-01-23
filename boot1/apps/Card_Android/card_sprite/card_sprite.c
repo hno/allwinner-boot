@@ -270,7 +270,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 *
 *****************************************************************************/
 	update_flash_init();
-	flash_sector = NAND_GetDiskSize();
+	flash_sector = NAND_GetDiskSize(); 
 	if(dl_info->download_count > 0)
 	{
 		aver_rage = ((CARD_SPRITE_DOWN_PART - CARD_SPRITE_GET_MAP)/dl_info->download_count);

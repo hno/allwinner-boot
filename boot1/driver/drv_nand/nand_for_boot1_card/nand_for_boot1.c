@@ -3,9 +3,12 @@
 #include "bsp_nand.h"
 #include "string.h"
 
+#define  NAND_FOR_CARD_PHONIX
 #define  OOB_BUF_SIZE                   32
 
 static __u32 nand_good_block_ratio_flag = 0;
+static __u32 nand_good_blk_ratio = 0;
+
 
 extern __s32 NAND_Print(const char * str, ...);
 /*
@@ -145,9 +148,39 @@ __s32 NAND_PhyInit(void)
 		NAND_Print("NB1 : nand scan fail\n");
 		return ret;
 	}
+#ifdef NAND_FOR_CARD_PHONIX
+	if(!nand_good_block_ratio_flag)
+	{
+		NAND_GetParam((void *)&param);
+		nand_good_blk_ratio =  NAND_BadBlockScan((void *)&param);
+		NAND_SetValidBlkRatio(nand_good_blk_ratio);
+	  NAND_Print("get the good blk ratio from bad block scan : %d \n", nand_good_blk_ratio);
+	  nand_good_block_ratio_flag = 1;
+	}
+	else
+	{
+		NAND_Print(" bad blcok has done before,nand good block ratio is : %d \n", nand_good_blk_ratio);
+		NAND_SetValidBlkRatio(nand_good_blk_ratio);	
+	}
+#else
 	//modify ValidBlkRatio
-//    NAND_SetValidBlkRatio(nand_good_blk_ratio);
-
+	if(wBoot_get_para( WBOOT_PARA_NANDFLASH_INFO, (void *)&param))
+  {
+		NAND_Print("get good block ratio info failed.\n");
+		return -1;
+  }
+  else
+  {
+  	nand_good_blk_ratio = param.good_block_ratio;
+  	if(nand_good_blk_ratio == 0)
+  		 NAND_Print("get the good blk ratio is 0,use preset value\n");
+  	else
+  	{
+  		NAND_SetValidBlkRatio(nand_good_blk_ratio);
+  		NAND_Print("get the good blk ratio from hwscan : %d \n", nand_good_blk_ratio);
+		}
+	}
+#endif   
 	NAND_Print("NB1 : nand phy init ok\n");
 	return(PHY_ChangeMode(1));
 }
@@ -800,7 +833,7 @@ __s32  NAND_EraseChip( const boot_nand_para_t *nand_param)
 			if(!die_skip_flag)
 			    para_read.block = j;
 			else
-			    para_read.block = j%block_cnt_of_die + 2*(j/block_cnt_of_die);
+			    para_read.block = j%block_cnt_of_die + 2*block_cnt_of_die*(j/block_cnt_of_die);
 			para_read.mainbuf = page_buf_read;
 			para_read.oobbuf = oob_buf_read;
 
@@ -967,7 +1000,7 @@ __s32 NAND_BadBlockScan(const boot_nand_para_t *nand_param)
 			if(!die_skip_flag)
 			    para.block = j;
 			else
-			    para.block = j%block_cnt_of_die + 2*(j/block_cnt_of_die);
+			    para.block = j%block_cnt_of_die + 2*block_cnt_of_die*(j/block_cnt_of_die);
 			para.mainbuf = page_buf;
 			para.oobbuf = oob_buf;
 
@@ -1072,7 +1105,7 @@ __s32 NAND_BadBlockScan(const boot_nand_para_t *nand_param)
 
 
 	//cal good block num required per 1024 blocks
-	good_block_num = (1024*(info.blk_cnt_per_chip - bad_block_num))/info.blk_cnt_per_chip -20;
+	good_block_num = (1024*(info.blk_cnt_per_chip - bad_block_num))/info.blk_cnt_per_chip -50;
     for(i=0; i<info.chip_cnt; i++)
     {
 		chip = _cal_real_chip( i, nand_param->ChipConnectInfo );
@@ -1082,7 +1115,7 @@ __s32 NAND_BadBlockScan(const boot_nand_para_t *nand_param)
 	NAND_Print("cal good block num is %u \n", good_block_num);
 
     //cal good block ratio
-	for(i=0; i<5; i++)
+	for(i=0; i<10; i++)
 	{
 		if(good_block_num >= (nand_param->good_block_ratio - 32*i))
 		    {
