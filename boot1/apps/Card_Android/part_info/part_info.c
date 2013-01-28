@@ -23,6 +23,6 @@
 
 int  card_mbr_info(void *buf)
 {
-	return wBoot_block_read(0, 2, buf);
+	return wBoot_block_read(0, MBR_SIZE/512, buf);
 }
 

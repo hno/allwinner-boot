@@ -72,7 +72,7 @@ __s32  update_boot0(void *buf0, char *buf, int sprite_type)
 	}
 	//memcpy(&boot0->prvt_head.nand_connect_info, &nand_info->nand_para, sizeof(boot_nand_para_t));
 	memcpy((void *)&boot0->prvt_head.dram_para, (void *)&boot1->prvt_head.dram_para, sizeof(boot_dram_para_t));
-	boot0->boot_head.platform[7] = 1;
+	boot0->boot_head.platform[7] = 1;//0: try dram para.1: read dram para from head.
 	/* regenerate check sum */
 	gen_check_sum( (void *)boot0 );
 
@@ -212,6 +212,7 @@ __s32 update_boot1(void *buf1, char *buf, int sprite_type)
 //		return -1;
 //	}
 	/* regenerate check sum */
+    boot1->boot_head.platform[7]=0xff;                          //boot mode
 	gen_check_sum( (void *)boot1 );
 	length = boot1->boot_head.length;                         // 获取Boot1文件的尺寸
     /* 校验内存中的Boot1文件 */
@@ -249,9 +250,9 @@ __s32 update_boot1(void *buf1, char *buf, int sprite_type)
 *
 ************************************************************************************************************
 */
-__s32 update_flash_init(void)
+__s32 update_flash_init(int *type)
 {
-	return sprite_flash_init();
+	return sprite_flash_init(type);
 }
 /*
 ************************************************************************************************************

@@ -172,31 +172,37 @@ int env_fetch_from_boot1(void)
 */
 int private_fetch_from_flash(void)
 {
-	char mbr_buf[4 * 1024];
+	char *mbr_buf;
 	MBR  *mbr_info;
 	int  crc, i;
 	int  size, start;
 	int  ret = -1;
-
+    int s_type = 0;
 	memset(mac_addr_store, 0, 32);
 	env_flash_dram_base = (char *)ENV_FLASH_DRAM_ADDRESS;
 	private_flash_dram_base = (char *)PRIVATE_FLASH_DRAM_ADDRESS;
 #if 1
-	if(sprite_flash_init())
+	if(sprite_flash_init(&s_type))
 	{
 		__inf("update flash env err: flash init\n");
 
 		return -1;
 	}
-	if(sprite_flash_read(0, 8, mbr_buf))
+    mbr_buf=wBoot_malloc(MBR_SIZE*MBR_COPY_NUM);
+    if(0 == mbr_buf)
+    {
+        __inf("update flash env err: malloc mbr buffer failed!\n");
+        goto update_flash_env_err;
+    }
+	if(sprite_flash_read(0, MBR_SIZE/512, mbr_buf))
 	{
 		__inf("update flash env err: read flash error\n");
 
 		goto update_flash_env_err;
 	}
-	for(i=0;i<4;i++)
+	for(i=0;i<MBR_COPY_NUM;i++)
 	{
-		mbr_info = (MBR *)(mbr_buf + i * 1024);
+		mbr_info = (MBR *)(mbr_buf + i * MBR_SIZE);
 		crc = calc_crc32((void *)&mbr_info->version, sizeof(MBR) - 4);
 		if(crc == mbr_info->crc32)
 		{
@@ -207,7 +213,7 @@ int private_fetch_from_flash(void)
 	{
 		ret = 0;
 		__inf("update flash env err: cant find good flash mbr\n");
-
+        wBoot_free(mbr_buf);
 		goto update_flash_env_err;
 	}
 	for(i=0;i<mbr_info->PartCount;i++)
@@ -221,7 +227,7 @@ int private_fetch_from_flash(void)
 			if(sprite_flash_read(start, size, env_flash_dram_base))
 			{
 				__inf("update flash env err: read env data error\n");
-
+                wBoot_free(mbr_buf);
 				goto update_flash_env_err;
 			}
 			env_exist = 1;
@@ -235,7 +241,7 @@ int private_fetch_from_flash(void)
 			if(sprite_flash_read(start, size, private_flash_dram_base))
 			{
 				__inf("update flash private err: read private data error\n");
-
+                wBoot_free(mbr_buf);
 				goto update_flash_env_err;
 			}
 			private_flash_flash_size = size<<9;
@@ -244,8 +250,9 @@ int private_fetch_from_flash(void)
 	}
 	ret = 0;
 
+wBoot_free(mbr_buf);
 update_flash_env_err:
-	sprite_flash_exit(0);
+	sprite_flash_exit(s_type);
 #endif
 //	if(!env_exist)		//如果在旧的环境变量中没有找到动态数据，则去boot1中寻找
 //	{

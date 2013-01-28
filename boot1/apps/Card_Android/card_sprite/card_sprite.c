@@ -85,6 +85,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
     int         ret = -1;
     int         aver_rage, sprite_ratio, pre_ratio, this_ratio;          //进度标志
     unsigned    i, sprite_type;
+    int         s_type;
     char		flash_info[512];
 
     /*创建一个1M的空间，用于保存临时数据*/
@@ -269,8 +270,21 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 *   根据烧写的map表，找到每个分区应该写的位置
 *
 *****************************************************************************/
-	update_flash_init();
-	flash_sector = NAND_GetDiskSize(); 
+	if(update_flash_init(&s_type))
+	{
+        __inf("update_flash_init error!\n");
+        goto _update_error_;
+    }
+    if(!s_type)
+    {
+        flash_sector = NAND_GetDiskSize(); 
+        __inf("nand flash disk is: %d MB\n",(flash_sector>>11));
+    }else
+    {
+        flash_sector = SDMMC_LogicalDiskSize(2);
+        __inf("SDMMC disk is: %d MB\n",(flash_sector>>11));
+    }
+    
 	if(dl_info->download_count > 0)
 	{
 		aver_rage = ((CARD_SPRITE_DOWN_PART - CARD_SPRITE_GET_MAP)/dl_info->download_count);
@@ -317,7 +331,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    //sprite_wrn("get part file %s size = %d\n", dl_info->one_part_info[i].dl_filename, item_original_size);
 	    item_rest_size = item_original_size;
 	    //检查文件大小是否小于等于分区大小
-		file_sector = (__u32)(item_original_size / 512);
+		file_sector = (__u32)(item_original_size>>9);
 		part_sector = dl_info->one_part_info[i].lenlo;
 		if(file_sector > part_sector)
 		{

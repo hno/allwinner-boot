@@ -9,7 +9,7 @@
 #include "mmc_def.h"
 #include "mmc.h"
 
-static unsigned bootcard_offset;
+static unsigned bootcard_offset=0;
 
 extern int sunxi_mmc_init(int sdc_no, unsigned bus_width);
 extern int sunxi_mmc_exit(int sdc_no);
@@ -23,7 +23,7 @@ __s32 SDMMC_PhyInit(__u32 card_no, __u32 bus_width)
 		return -1;
 	}
 
-	return ret;
+	return 0;
 }
 
 __s32 SDMMC_PhyExit(__u32 card_no)
@@ -34,12 +34,22 @@ __s32 SDMMC_PhyExit(__u32 card_no)
 
 __s32 SDMMC_PhyRead(__u32 start_sector, __u32 nsector, void *buf, __u32 card_no)
 {
-	return mmc_bread(card_no, start_sector, nsector, buf);
+	__u32 sector;
+	sector = mmc_bread(card_no, start_sector, nsector, buf);
+    if(sector!=nsector)
+       return -1;
+    else
+       return 0;
 }
 
 __s32 SDMMC_PhyWrite(__u32 start_sector, __u32 nsector, void *buf, __u32 card_no)
 {
-	return mmc_bwrite(card_no, start_sector, nsector, buf);
+	 __u32 sector;
+	sector = mmc_bwrite(card_no, start_sector, nsector, buf);
+    if(sector!=nsector)
+       return -1;
+    else
+       return 0;
 }
 
 __s32 SDMMC_PhyDiskSize(__u32 card_no)
@@ -50,7 +60,12 @@ __s32 SDMMC_PhyDiskSize(__u32 card_no)
 
 __s32 SDMMC_PhyErase(__u32 block, __u32 nblock, __u32 card_no)
 {
-	return mmc_berase(card_no, block, nblock);
+	 __u32 sector;
+	 sector = mmc_berase(card_no, block, nblock);
+     if(sector!=nblock)
+        return -1;
+     else
+        return 0;
 }
 
 __s32 SDMMC_LogicalInit(__u32 card_no, __u32 card_offset, __u32 bus_width)
@@ -67,12 +82,22 @@ __s32 SDMMC_LogicalExit(__u32 card_no)
 
 __s32 SDMMC_LogicalRead(__u32 start_sector, __u32 nsector, void *buf, __u32 card_no)
 {
-	return mmc_bread(card_no, start_sector + bootcard_offset, nsector, buf);
+	 __u32 sector;
+     sector=mmc_bread(card_no, start_sector + bootcard_offset, nsector, buf);
+     if(sector!=nsector)
+       return -1;
+    else
+       return 0;
 }
 
 __s32 SDMMC_LogicalWrite(__u32 start_sector, __u32 nsector, void *buf, __u32 card_no)
 {
-	return mmc_bwrite(card_no, start_sector + bootcard_offset, nsector, buf);
+     __u32 sector;
+	sector= mmc_bwrite(card_no, start_sector + bootcard_offset, nsector, buf);
+    if(sector!=nsector)
+       return -1;
+    else
+       return 0;
 }
 
 __s32 SDMMC_LogicalDiskSize(__u32 card_no)
@@ -82,7 +107,12 @@ __s32 SDMMC_LogicalDiskSize(__u32 card_no)
 
 __s32 SDMMC_LogicaErase(__u32 block, __u32 nblock, __u32 card_no)
 {
-	return mmc_berase(card_no, block + bootcard_offset, nblock);
+    __u32 sector;
+	sector = mmc_berase(card_no, block + bootcard_offset, nblock);
+    if(sector!=nblock)
+       return -1;
+    else
+       return 0;
 }
 
 void OSAL_SDCARD_CacheRangeFlush(void*Address, __u32 Length, __u32 Flags)

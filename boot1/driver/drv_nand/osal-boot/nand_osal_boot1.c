@@ -368,7 +368,7 @@ int NAND_SetClk(unsigned int nand_clock)
 
 	/*gate on nand clock*/
 	cfg |= (1U << 31);
-	/*take cmu pll as nand src block*/
+	/*take cmu pll5 as nand src block*/
 	cfg &= ~(0x3 << 24);
 	cfg |=  (0x2 << 24);
 	//set divn = 0

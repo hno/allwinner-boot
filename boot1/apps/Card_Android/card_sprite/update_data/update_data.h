@@ -54,7 +54,7 @@
 extern  __s32  update_boot0(void *buf0, char *buf, int sprite_type);
 extern  __s32  update_boot1(void *buf1, char *buf, int sprite_type);
 
-extern  __s32  update_flash_init(void);
+extern  __s32  update_flash_init(int* type);
 extern  __s32  update_flash_exit(int type);
 
 extern  __s32  update_flash_open (__u32 sector_lo, __u32 sector_hi);

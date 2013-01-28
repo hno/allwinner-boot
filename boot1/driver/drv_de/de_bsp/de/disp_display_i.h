@@ -21,10 +21,10 @@
 #define HANDTOID(handle)  ((handle) - 100)
 #define IDTOHAND(ID)  ((ID) + 100)
 
-#define INTC_IRQNO_SCALER0  47
-#define INTC_IRQNO_SCALER1  48
-#define INTC_IRQNO_LCDC0    44
-#define INTC_IRQNO_LCDC1    45
+#define INTC_IRQNO_SCALER0  79
+#define INTC_IRQNO_SCALER1  80
+#define INTC_IRQNO_LCDC0    76
+#define INTC_IRQNO_LCDC1    77
 
 #define MAX_SPRITE_BLOCKS	32
 

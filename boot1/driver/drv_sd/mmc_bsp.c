@@ -134,6 +134,120 @@ struct sunxi_mmc_host {
 struct mmc mmc_dev[MAX_MMC_NUM];
 struct sunxi_mmc_host mmc_host[MAX_MMC_NUM];
 
+u32 ccm_get_pll5_dev_clk(void)
+{
+	u32 rval = 0;
+	u32 n, k,p;
+	u32 pll5_clk = 0;
+	rval = readl(CCMU_PLL5_CLK_BASE);
+	n = (rval >> 8) &  0x1f;
+	k = ((rval >> 4) & 3) + 1;
+	p = 1 << ((rval >> 16) & 3);
+	pll5_clk = 24000000 * n * k / p;
+	return pll5_clk;
+}
+u32 ccm_get_pll6_dev_clk(void)
+{
+	u32 rval = 0;
+	u32 n, k;
+	u32 pll6_clk = 0;
+	rval = readl(CCMU_PLL6_CLK_BASE);
+	n = (rval >> 8) &  0x1f;
+	k = ((rval >> 4) & 3) + 1;
+	pll6_clk = (24000000 * n * k)>>1;
+	return pll6_clk;
+}
+
+
+
+s32 smc_set_card_clk(u32 smc_no, u32 cclk,u32 bus_width)
+{
+	struct sunxi_mmc_host* mmchost = &mmc_host[smc_no];
+	u32 sclk = 24000000;
+	u32 div;
+	u32 rval;
+	u32 src = 0;
+	u32 mclk_base = mmchost->mclkbase;
+	u32 m, n;
+	u32 outclk_pha = 0;
+	u32 samclk_pha = 0;
+	
+	
+	if (cclk > 400000) {
+//		src = 2;//change to you select source
+//		sclk = ccm_get_pll5_dev_clk();	//change to you select source clock
+		src = 0;//change to you select source
+		sclk = 24000000;	//change to you select source clock
+		outclk_pha = 0;
+		samclk_pha = 0;			
+	}else{
+		src = 0;
+		sclk = 24000000;
+		outclk_pha = 0;
+		samclk_pha = 0;	
+	}
+
+	div = (2 * sclk + cclk) / (2 * cclk);
+	div = div==0 ? 1 : div;
+	if (div > 128) {
+		m = 1;
+		n = 0;
+		mmcdbg("Source clock is too high\n");
+	} else if (div > 64) {
+		n = 3;
+		m = div >> 3;
+	} else if (div > 32) {
+		n = 2;
+		m = div >> 2;
+	} else if (div > 16) {
+		n = 1;
+		m = div >> 1;
+	} else {
+		n = 0;
+		m = div;
+	}
+	
+	rval = (1U << 31) | (src << 24) | (samclk_pha << 20)
+	  		| (n << 16) | (outclk_pha << 8) | (m - 1);
+	writel(rval, mclk_base);
+	
+	/* clear internal divider */
+	rval = readl(&mmchost->reg->clkcr) & (~0xff);
+	writel(rval, &mmchost->reg->clkcr);
+ 
+	
+	switch(n)
+	{
+		case 0:
+			mmchost->mclk = sclk/1/m;
+			mmcdbg("Card clock=%d\n",sclk/1/m);
+			break;
+		case 1:
+			mmchost->mclk = sclk/2/m;
+			mmcdbg("Card clock=%d\n",sclk/2/m);
+			break;
+		case 2:
+			mmchost->mclk = sclk/4/m;
+			mmcdbg("Card clock=%d\n",sclk/4/m);
+			break;
+		case 3:
+			mmchost->mclk = sclk/8/m;
+			mmcdbg("Card clock=%d\n",sclk/8/m);
+			break;
+		default:
+			break;
+	}
+	//dumphex32("ccmu", (char*)0x01c20000, 0x100);
+	return cclk;
+}
+
+
+
+
+
+
+
+
 static int mmc_resource_init(int sdc_no)
 {
 	struct sunxi_mmc_host* mmchost = &mmc_host[sdc_no];
@@ -216,8 +330,8 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
     */
 	/* config mod clock */
 	if (onoff) {
-        //fix me: now use 24M OSC, switch to pll5 in the future
-		writel(0x80000000, mmchost->mclkbase);
+        //fix me: now use 24M OSC, switch to pll6 in the future
+		smc_set_card_clk(sdc_no,400000,1);
 		mmcdbg("init mmc mclk %d\n", mmchost->mclk);
 	} else {
 		writel(0, mmchost->mclkbase);
@@ -250,52 +364,14 @@ static int mmc_config_clock(struct mmc *mmc, unsigned clk)
 {
 	struct sunxi_mmc_host* mmchost = (struct sunxi_mmc_host *)mmc->priv;
 	unsigned rval = readl(&mmchost->reg->clkcr);
-	unsigned int clkdiv = 0;
-
+    
 	/* Disable Clock */
 	rval &= ~(1 << 16);
 	writel(rval, &mmchost->reg->clkcr);
 	if(mmc_update_clk(mmc))
 		return -1;
 
-	if (clk <=400000) {
-	    mmchost->mclk = 400000;
-	    writel(0x8012010f, mmchost->mclkbase);
-	} else {
-	    u32 pll6clk = 0;
-	    u32 m, n, k;
-	    u32 pll6v = readl(CCMU_PLL6_CLK_BASE);
-	    mmchost->mclk = clk;
-    	pll6v = readl(CCMU_PLL6_CLK_BASE);
-    	n = (0x1f & (pll6v >> 8)) + 1;
-    	k = (0x3 & (pll6v >> 4)) + 1;
-    	pll6clk = (24000000 * n * k)>>1;
-        clkdiv = pll6clk / clk - 1;
-        if (clkdiv < 16) {
-            n = 0;
-            m = clkdiv;
-        } else if (clkdiv < 32) {
-            n = 1;
-            m = clkdiv>>1;
-        } else {
-            n = 2;
-            m = clkdiv>>2;
-        }
-	    mmchost->mclk = clk;
-	    writel(0x81200200 | (n << 16) | m, mmchost->mclkbase);
-        mmcinfo("init mmc pll6clk %d, clk %d, mclkbase %x\n", pll6clk, mmchost->mclk, readl(mmchost->mclkbase));
-	}
-
-	/*
-	 * CLKCREG[7:0]: divider
-	 * CLKCREG[16]:  on/off
-	 * CLKCREG[17]:  power save
-	 */
-	/* Change Divider Factor */
-	rval &= ~(0xFF);
-	writel(rval, &mmchost->reg->clkcr);
-	if(mmc_update_clk(mmc))
-		return -1;
+	smc_set_card_clk(mmchost->mmc_no,mmc->clock,mmc->bus_width);
 	/* Re-enable Clock */
 	rval |= (3 << 16);
 	writel(rval, &mmchost->reg->clkcr);

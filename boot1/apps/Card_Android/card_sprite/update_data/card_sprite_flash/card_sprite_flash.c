@@ -22,7 +22,7 @@
 #include  "string.h"
 
 static  int  card_sprite_type = 0;
-static  int  sdcard_size;
+
 /*
 ************************************************************************************************************
 *
@@ -96,13 +96,20 @@ __s32 update_boot1_info(void *buf1, char *buf)
 *
 ************************************************************************************************************
 */
-__s32 sprite_flash_init(void)
+__s32 sprite_flash_init(int *type)
 {
 	int  line_sel;
 	int  speed_mode;
 	int  card_offset;
 	int  ret;
+    
+    ret = wBoot_script_parser_fetch("target", "storage_type", type, 1);
+    if(ret)
+	{
+	    *type = 0;
+	}
 
+    card_sprite_type = (*type!=2) ? 0 : 1; 
 	if(!card_sprite_type)
 	{
 		return NAND_Init();
@@ -124,9 +131,9 @@ __s32 sprite_flash_init(void)
 		{
 			card_offset = 40960;
 		}
-		sdcard_size = SDMMC_LogicalInit(2, card_offset, speed_mode, line_sel);
-
-		return sdcard_size;
+        
+		return SDMMC_LogicalInit(2, card_offset, line_sel);
+                    
 	}
 	else
 	{
@@ -418,20 +425,20 @@ int create_stdmbr(void *mbr_i)
 
 	//memcpy(mbr_bufst, tmp_buffer, 13);
 	usize = SDMMC_PhyDiskSize(2) - 20 * 1024 * 1024/512 - size;
-
+    //udisk
 	mbrst->part_info[0].indicator = 0x80;
 	mbrst->part_info[0].part_type = 0x0B;
 	mbrst->part_info[0].start_sectorl  = ((mbr->array[mbr->PartCount-1].addrlo + 20 * 1024 * 1024/512 ) & 0x0000ffff) >> 0;
 	mbrst->part_info[0].start_sectorh  = ((mbr->array[mbr->PartCount-1].addrlo + 20 * 1024 * 1024/512 ) & 0xffff0000) >> 16;
 	mbrst->part_info[0].total_sectorsl = ( usize & 0x0000ffff) >> 0;
 	mbrst->part_info[0].total_sectorsh = ( usize & 0xffff0000) >> 16;
-
+    //bootloader
 	mbrst->part_info[1].part_type = 0x06;
 	mbrst->part_info[1].start_sectorl  = ((mbr->array[0].addrlo + 20 * 1024 * 1024/512) & 0x0000ffff) >> 0;
 	mbrst->part_info[1].start_sectorh  = ((mbr->array[0].addrlo + 20 * 1024 * 1024/512) & 0xffff0000) >> 16;
 	mbrst->part_info[1].total_sectorsl = (mbr->array[0].lenlo  & 0x0000ffff) >> 0;
 	mbrst->part_info[1].total_sectorsh = (mbr->array[0].lenlo  & 0xffff0000) >> 16;
-
+    //ebr
 	mbrst->part_info[2].part_type = 0x05;
 	mbrst->part_info[2].start_sectorl  = 1;
 	mbrst->part_info[2].start_sectorh  = 0;
