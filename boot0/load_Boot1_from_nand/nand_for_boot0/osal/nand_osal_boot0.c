@@ -330,7 +330,7 @@ __u32 NAND_GetCmuClk(void)
 	__u32 factor_k;
 	__u32 clock;
 
-	reg_val  = *(volatile unsigned int *)(0x01c20000 + 0x28);
+	reg_val  = *(volatile unsigned int *)(0x01c20000 + 0x28);//PLL6
 	factor_n = (reg_val >> 8) & 0x1f;
 	factor_k = ((reg_val >> 4) & 0x3) + 1;
 

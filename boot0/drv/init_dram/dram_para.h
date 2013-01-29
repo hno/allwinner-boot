@@ -23,7 +23,7 @@
 #define DRAM_PIN_LIST       ((__u32 *)0)
 #define DRAM_PIN_NUMBER     (0)
 
-#define FPGA_51_TEST
+//#define FPGA_51_TEST
 
 /*
 #define T_WR							0x9
@@ -63,6 +63,7 @@
 	#define MCTL_COL_WIDTH			10
 	#define MCTL_ROW_WIDTH			14
 	#define MCTL_BUS_WIDTH			32
+    #define MCTL_RANK_NUM			2
 	#define	DRAMC_ID				1				//0: DRAMC0, 1: DRAMC1
 //#endif
 

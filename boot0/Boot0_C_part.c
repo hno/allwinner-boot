@@ -34,7 +34,7 @@
 #include <string.h>
 
 extern const boot0_file_head_t  BT0_head;
-
+extern __u32 super_standby_flag;
 __u32 odt_status;
 
 static void move_RW( void );
@@ -76,8 +76,10 @@ void Boot0_C_part( void )
 	mmu_system_init(EGON2_DRAM_BASE, 4 * 1024, EGON2_MMU_BASE);
 	mmu_enable();
 
+	//for A20 super standby
+	boot0_twi_init();
+
 	dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // 初始化DRAM
-	//dram_size = init_DRAM(1, (void *)&BT0_head.prvt_head.dram_para);
 	if(dram_size)
 	{
 		msg("dram size =%d\n", dram_size);
@@ -89,18 +91,14 @@ void Boot0_C_part( void )
 		jump_to( FEL_BASE );
 	}
 
-//	{
-//		__u32 reg_val;
-//
-//		reg_val = *(volatile __u32 *)(0x1c20d20);
-//		*(volatile __u32 *)(0x1c20d20) = 0;
-//		msg("reg_val=%x, %x\n", reg_val, *(volatile __u32 *)(0x1c20d24));
-//		if(reg_val & 0x01)
-//		{
-//			mmu_disable( );
-//			jump_to( 0x40100000 );
-//		}
-//	}
+	msg("%x,%x\n", *(volatile int *)0x40100000, *(volatile int *)(0x40110000-0x4));
+	msg("super_standby_flag = %d\n", super_standby_flag);
+	if(1 == super_standby_flag)
+	{
+		//tmr_enable_watchdog();
+		//disable_icache();
+		jump_to( 0x52000000 );
+	}
 
 	#if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND_FLASH
 		status = load_Boot1_from_nand( );         // 载入Boot1
@@ -149,20 +147,20 @@ void set_pll( void )
 {
 	__u32 reg_val, i;
 
-	//CPU切换到24M,AXI_CLK=CPU_CLK,AXI到AHB不分频，这点和23不一样，23 DIV=2
-	CCMU_REG_AXI_MOD = 0x00010000;
+	//切换到24M
+	CCMU_REG_AHB_APB = 0x00010010;
 	//设置PLL1到384M
-	reg_val = (0x00001000) | (0x80000000);
+	reg_val = (0x21005000) | (0x80000000);
 	CCMU_REG_PLL1_CTRL = reg_val;
 	//延时
 	for(i=0;i<200;i++);
 	//切换到PLL1
-	reg_val = CCMU_REG_AXI_MOD;
+	reg_val = CCMU_REG_AHB_APB;
 	reg_val &= ~(3 << 16);
 	reg_val |=  (2 << 16);
-	CCMU_REG_AXI_MOD = reg_val;
+	CCMU_REG_AHB_APB = reg_val;
 	//打开DMA
-	*(volatile unsigned int *)(0x01c20000 + 0x60) |= 1 << 6;
+	CCMU_REG_AHB_MOD0 |= 1 << 6;
 
 	return ;
 }

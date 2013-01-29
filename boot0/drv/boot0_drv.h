@@ -34,7 +34,7 @@
 #include "debug_uart/debug_uart.h"
 #include "init_dram/init_dram.h"
 #include "jtag/jtag.h"
-
+#include "iic/sw_iic.h"
 
 #endif     //  ifndef __boot0_drv_h
 

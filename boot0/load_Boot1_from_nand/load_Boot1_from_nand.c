@@ -51,7 +51,11 @@ __s32 load_Boot1_from_nand( void )
 	boot_file_head_t  *bfh;
 
 
-	NF_open( );                         // 打开nand flash
+	if(NF_ERROR==NF_open( ))                         // 打开nand flash
+	{
+		msg("can't open nand flash.\n");
+		return ERROR;
+	}
 	msg("Succeed in opening nand flash.\n");
 	msg("block from %d to %d\n", BOOT1_START_BLK_NUM, BOOT1_LAST_BLK_NUM);
     for( i = BOOT1_START_BLK_NUM;  i <= BOOT1_LAST_BLK_NUM;  i++ )
@@ -101,6 +105,7 @@ __s32 load_Boot1_from_nand( void )
         	else if( status == ADV_NF_OK )
         	{
                 msg("Check is correct.\n");
+                bfh->eGON_vsn[2] = 0;
                 NF_close( );                        // 关闭nand flash
                 return OK;
             }
@@ -124,6 +129,7 @@ __s32 load_Boot1_from_nand( void )
             if( check_sum( (__u32 *)BOOT1_BASE, length ) == CHECK_IS_CORRECT )
             {
                 msg("The file stored in start block %u is perfect.\n", i );
+                bfh->eGON_vsn[2] = 0;
                 NF_close( );                        // 关闭nand flash
                 return OK;
             }

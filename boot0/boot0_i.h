@@ -31,8 +31,7 @@
 #define  __boot0_i_h
 
 #define  UBOOT_BASE  0x4a000000
-#define  FPGA_PLATFORM   1
-#define  __FPGA__
+#define  CONFIG_AW_FPGA_PLATFORM
 
 #include "types.h"
 #include "storage_media_cfg.h"
