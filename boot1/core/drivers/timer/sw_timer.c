@@ -120,12 +120,17 @@ __s32 eGon2_timer_start(__u32 hd, __s32 delay_time, __s32 auto_restart)
         return -1;
     }
 
-    reg_val =  (0  << 0)  |            // 不启动TIMER
-               (0  << 1)  |            // 使用单次模式
-               (0  << 2)  |            // 使用32K，仅限FPGA
-               (0  << 4);              // 仅限FPGA，设置除频率系数为5
-    reg_val |= (0  << 0)  |            // 暂时没有start timer
-               (1  << 1);              // 自动更新初始值用于计时
+#ifndef CONFIG_AW_FPGA_PLATFORM
+        reg_val =   (0 << 0)  |            // 不启动TIMER
+                    (1 << 1)  |            // 使用单次模式
+                    (1 << 2)  |            // 使用高频晶振24M
+                    (5 << 4);              // 除频系统32，保证当设置时间是1的时候，触发延时1ms
+#else
+        reg_val =   (0 << 0)  |            // 不启动TIMER
+                    (1 << 1)  |            // 使用单次模式
+                    (0 << 2)  |            // 使用low speed osc
+                    (0 << 4);              //不分频
+#endif
 
     tmp->timer_ctl->control = reg_val; //首先把初始值写到寄存器，但是不启动
     tmp->restart = auto_restart;
@@ -142,8 +147,14 @@ __s32 eGon2_timer_start(__u32 hd, __s32 delay_time, __s32 auto_restart)
     {
         delay_time = SW_TIMER_MAX_TICK;
     }
+    
+#ifndef CONFIG_AW_FPGA_PLATFORM
+        tmp->timer_ctl->init_val = delay_time * (24000 / 32);
+#else
+        tmp->timer_ctl->init_val = delay_time * (32 / 1);   //确保用户输入的数值1就可以代表1ms
+#endif
 
-    tmp->timer_ctl->init_val = delay_time * (32 / 1);   //确保用户输入的数值1就可以代表1ms
+    
     tmp->timer_ctl->control = reg_val;
 
     CFG_SW_TIMER_INT_CTRL |= (1 << tmp->index);    //开启中断

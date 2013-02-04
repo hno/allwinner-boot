@@ -278,11 +278,11 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
     if(!s_type)
     {
         flash_sector = NAND_GetDiskSize(); 
-        __inf("nand flash disk is: %d MB\n",(flash_sector>>11));
+        __inf("nand flash disk size is: %d MB\n",(flash_sector>>11));
     }else
     {
         flash_sector = SDMMC_LogicalDiskSize(2);
-        __inf("SDMMC disk is: %d MB\n",(flash_sector>>11));
+        __inf("SDMMC disk size is: %d MB\n",(flash_sector>>11));
     }
     
 	if(dl_info->download_count > 0)
@@ -396,7 +396,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    {
 	    	continue;
 	    }
-	    if(dl_info->one_part_info[i].vf_filename[0])
+	    if(dl_info->one_part_info[i].verify)
 	    {
 	    	imgitemhd = Img_OpenItem(imghd, "RFSFAT16", (char *)dl_info->one_part_info[i].vf_filename);
 	    	if(!imgitemhd)
@@ -455,7 +455,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 				        	__inf("sparse type verify\n");
 				        	sum = unsparse_checksum();
 				        }
-				        __inf("pc sum=%x, check sum=%x\n", sum, check_sum);
+				        __inf("pc check sum=%x, local check sum=%x\n", check_sum, sum);
 				        if(sum != check_sum)
 			        	{
 			        		sprite_wrn("sprite update error: checksum is error %s\n", dl_info->one_part_info[i].dl_filename);

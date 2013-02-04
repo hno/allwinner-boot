@@ -51,7 +51,7 @@
 
 #define GICD_SGIR			__REG(ARMV7_GIC_BASE + 0xf00)	// 0xf00
 
-#define GICC_CTRL			__REG(ARMV7_CPUIF_BASE + 0x000)	// 0x8000
+#define GICC_CTLR		    __REG(ARMV7_CPUIF_BASE + 0x000) // 0x8000
 #define GICC_PMR			__REG(ARMV7_CPUIF_BASE + 0x004) // 0x8004
 #define GICC_BPR			__REG(ARMV7_CPUIF_BASE + 0x008) // 0x8008
 #define GICC_IAR			__REG(ARMV7_CPUIF_BASE + 0x00c) // 0x800c
@@ -101,8 +101,7 @@
 
 #define GIC_SRC_SPI(_n)		(32 + (_n))
 
-//#ifndef FPGA_PLATFORM	//chip irq mapping
-#if 0
+#ifndef CONFIG_AW_FPGA_PLATFORM	//chip irq mapping
 
 #define GIC_SRC_NMI			GIC_SRC_SPI(0)   // (32)
 #define GIC_SRC_UART0		GIC_SRC_SPI(1)   // (33)
@@ -226,16 +225,16 @@
 #else	//fpga irq mapping
 #define GIC_SRC_NMI			GIC_SRC_SPI(0) 	// (32)
 #define GIC_SRC_UART0		GIC_SRC_SPI(1)	// (33)
-#define GIC_SRC_UART1		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
-#define GIC_SRC_UART2		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
-#define GIC_SRC_UART3		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_UART1		GIC_SRC_SPI(2)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_UART2		GIC_SRC_SPI(3)	// (33)	not exist in fpga, just for compiling
+#define GIC_SRC_UART3		GIC_SRC_SPI(4)	// (33)	not exist in fpga, just for compiling
 #define GIC_SRC_UART4		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
 #define GIC_SRC_UART5		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
 #define GIC_SRC_UART6		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
 #define GIC_SRC_UART7		GIC_SRC_SPI(1)	// (33)	not exist in fpga, just for compiling
 #define GIC_SRC_TWI0		GIC_SRC_SPI(2)	// (34)
-#define GIC_SRC_TWI1		GIC_SRC_SPI(2)	// (34)	not exist in fpga, just for compiling
-#define GIC_SRC_TWI2		GIC_SRC_SPI(2)	// (34)	not exist in fpga, just for compiling
+#define GIC_SRC_TWI1		GIC_SRC_SPI(8)	// (34)	not exist in fpga, just for compiling
+#define GIC_SRC_TWI2		GIC_SRC_SPI(9)	// (34)	not exist in fpga, just for compiling
 #define GIC_SRC_PIO_EINT	GIC_SRC_SPI(2)	// (34)
 #define GIC_SRC_CIR0		GIC_SRC_SPI(2)	// (34)
 #define GIC_SRC_CIR1		GIC_SRC_SPI(2)	// (34)	not exist in fpga, just for compiling
@@ -255,7 +254,7 @@
 #define GIC_SRC_HSTMR2		GIC_SRC_SPI(5)  // (37)	not exist in fpga, just for compiling
 #define GIC_SRC_HSTMR3		GIC_SRC_SPI(5)  // (37)	not exist in fpga, just for compiling
 #define GIC_SRC_TIMER2		GIC_SRC_SPI(6)  // (38)
-#define GIC_SRC_TIMER3		GIC_SRC_SPI(6)  // (38)	not exist in fpga, just for compiling
+#define GIC_SRC_TIMER3		GIC_SRC_SPI(25) // (38)	not exist in fpga, just for compiling
 #define GIC_SRC_TIMER4		GIC_SRC_SPI(6)  // (38)	not exist in fpga, just for compiling
 #define GIC_SRC_TIMER5		GIC_SRC_SPI(6)  // (38)	not exist in fpga, just for compiling
 #define GIC_SRC_DMA			GIC_SRC_SPI(7)  // (38)
@@ -263,9 +262,9 @@
 #define GIC_SRC_CODEC		GIC_SRC_SPI(8)  // (40)
 #define GIC_SRC_LRADC		GIC_SRC_SPI(8)  // (40)
 #define GIC_SRC_MMC0		GIC_SRC_SPI(9)  // (41)
-#define GIC_SRC_MMC1		GIC_SRC_SPI(9)  // (41) not exist in fpga, just for compiling
+#define GIC_SRC_MMC1		GIC_SRC_SPI(33)  // (41) not exist in fpga, just for compiling
 #define GIC_SRC_MMC2		GIC_SRC_SPI(10) // (42)
-#define GIC_SRC_MMC3		GIC_SRC_SPI(10) // (42) not exist in fpga, just for compiling
+#define GIC_SRC_MMC3		GIC_SRC_SPI(35) // (42) not exist in fpga, just for compiling
 #define GIC_SRC_MS			GIC_SRC_SPI(10) // (42)
 #define GIC_SRC_NAND		GIC_SRC_SPI(11) // (43)
 #define GIC_SRC_USB0		GIC_SRC_SPI(12) // (44)

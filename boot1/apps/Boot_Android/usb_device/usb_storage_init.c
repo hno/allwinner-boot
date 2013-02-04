@@ -109,7 +109,7 @@ void usb_params_init(void)
 
 	awxx_usb[0].index = 0;
 	awxx_usb[0].reg_base = 	0x01c13000;
-	awxx_usb[0].irq_no = 38;
+	awxx_usb[0].irq_no = GIC_SRC_USB0;
 	awxx_usb[0].drq_no = 0x04;
 
 	awxx_usb[0].role = USB0_ROLE;  //USB_ROLE_HST; //USB_ROLE_UNK
@@ -364,10 +364,10 @@ void usb_init(pusb_struct pusb)
 
 	usb_struct_init(pusb);
 
-	//usb_set_phytune(pusb);
+	//set the usb-drv pin 
 	usb_drive_vbus(pusb, 0, pusb->index);
 
-	usb_force_id(pusb, 1);
+	usb_force_id(pusb, 1); //set usb to slave mode. 
 
 	if(pusb->speed==USB_SPEED_FS)
 		usb_high_speed_disable(pusb);
@@ -376,9 +376,9 @@ void usb_init(pusb_struct pusb)
 
 	usb_suspendm_enable(pusb);
 
-	usb_vbus_src(pusb, 0x1);
-	usb_release_vbus(pusb);
-	usb_force_vbus(pusb, 1);
+	usb_vbus_src(pusb, 0x1);//detect vbus by the usb vbus but the dp/dm
+	usb_release_vbus(pusb); 
+	usb_force_vbus(pusb, 1);//force usb vbus vaild to high
 
 	usb_select_ep(pusb, 0);
 	usb_ep0_flush_fifo(pusb);
@@ -481,13 +481,14 @@ extern int power_ops_int_status;
 
 static void timer_test_usbdc(void *p_arg)
 {
-	if(power_ops_int_status & 0x08)
+	if(power_ops_int_status & 0x08) //USBΩ”»Î
 	{
-		__inf("usb set pc\n");
+		
 		power_ops_int_status &= ~0x08;
 	}
 	else
 	{
+        __inf("usb set dc\n");
 		usb_clock_exit();
 		wBoot_DisableInt(awxx_usb[0].irq_no);
 		power_set_usbdc();
@@ -519,9 +520,9 @@ static void usb_detect_irq_handler(void *p_arg)
 
 	temp = usb_get_bus_interrupt_status(pusb);
 	usb_clear_bus_interrupt_status(pusb, temp);
-
-	if(temp & 0x04)
-	{
+    __debug("%s,temp=%x\n",__FUNCTION__,temp);
+	if(temp & 0x04) //reset babble detected,set to usb pc
+	{   
 		usb_clock_exit();
 		wBoot_DisableInt(awxx_usb[0].irq_no);
 
@@ -529,6 +530,7 @@ static void usb_detect_irq_handler(void *p_arg)
 		wBoot_timer_stop(tmr_hd);
 		wBoot_timer_release(tmr_hd);
 		tmr_hd = NULL;
+        __inf("usb set pc\n");
 		power_set_usbpc();
 		usb_working = 0;
 	}
@@ -555,7 +557,7 @@ __u32 usb_detect_enter(void)
 {
 	awxx_usb[0].index = 0;
 	awxx_usb[0].reg_base = 	0x01c13000;
-	awxx_usb[0].irq_no = 38;
+	awxx_usb[0].irq_no = GIC_SRC_USB0;
 	awxx_usb[0].drq_no = 0x04;
 
 	__inf("usb start detect\n");

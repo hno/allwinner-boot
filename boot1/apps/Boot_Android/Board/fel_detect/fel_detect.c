@@ -127,7 +127,7 @@ __s32 check_power_status(void)
 	__s32 power_start;
 
 	status = wBoot_power_get_level();
-	if(status == 1)						//低电状态下，无外部电源，直接关机
+	if(status == BATTERY_RATIO_TOO_LOW_WITHOUT_DCIN)						//低电状态下，无外部电源，直接关机
 	{
 		__inf("battery low power with no dc or ac, should set power off\n");
 		ShowPictureEx("c:\\os_show\\low_pwr.bmp", 0);
@@ -136,13 +136,27 @@ __s32 check_power_status(void)
 		return -1;
 	}
 	power_start = 0;
-	//0: 不允许插火牛直接开机，必须通过判断：满足以下条件可以直接开机：长按power按键，前次是系统状态，如果电池电量过低，则不允许开机
-	//1: 任意状态下，允许插火牛直接开机，同时要求电池电量足够高
-	//2: 不允许插火牛直接开机，必须通过判断：满足以下条件可以直接开机：长按power按键，前次是系统状态，不要求电池电量
-	//3: 任意状态下，允许插火牛直接开机，不要求电池电量
-	wBoot_script_parser_fetch("target", "power_start", &power_start, 1);
-	__inf("power_start=%x\n", (power_start<<8) | status);
-	if(status == 3)					//低电，同时带外部电源状态下
+   // 0: 不允许插火牛直接开机，必须通过判断：满足以下条件可以直接开机：长按power按键，前次是系统状态，如果电池电量过低，则不允许开机
+   // 1: 任意状态下，允许插火牛直接开机，同时要求电池电量足够高
+   // 2: 不允许插火牛直接开机，必须通过判断：满足以下条件可以直接开机：长按power按键，前次是系统状态，不要求电池电量
+   // 3: 任意状态下，允许插火牛直接开机，不要求电池电量
+	if(wBoot_script_parser_fetch("target", "power_start", &power_start, 1))
+	{
+      power_start=0;
+	}
+    __debug("status=%d\n",status);
+    switch(status)
+    {
+        case BATTERY_RATIO_ENOUGH:
+            __inf("battery enough\n"); break;
+        case BATTERY_RATIO_TOO_LOW_WITH_DCIN:
+            __inf("battery too low with dc\n"); break;
+        case BATTERY_RATIO_TOO_LOW_WITHOUT_DCIN:
+            __inf("battery too low without dc\n"); break;
+        default: break;
+    }
+    __inf("power_start=%x\n", power_start);
+	if(status == BATTERY_RATIO_TOO_LOW_WITH_DCIN)					//低电，同时带外部电源状态下
 	{
 		if(!(power_start & 0x02))	//需要判断当前电池电量，要求power_start的第1bit的值为0
 		{							//此种情况下，直接关机
@@ -170,20 +184,21 @@ __s32 check_power_status(void)
 
 	status = -1;
 	status = wBoot_power_check_startup();
-	__inf("startup status = %d\n", status);
+#ifdef FORCE_BOOT_STANDBY
+	status = 0;
+#endif
 	if(status)
 	{
 		return 0;
 	}
 	{
+      
 		__u32 dcin, bat_exist;
 		__s32 bat_cal, this_bat_cal;
 		__u32 bat_show_hd = NULL;
 		int   i, j;
 		int   bat_full_status = 0;
-
 		//当前可以确定是火牛开机，但是是否开机还不确定，需要确认电池是否存在
-		//当电池不存在即开机，电池存在则关机
 		power_int_reg();
 		usb_detect_enter();
 		bat_show_hd = ShowBatteryCharge_init(0);
@@ -290,7 +305,7 @@ __s32 check_power_status(void)
 ******************************************************************/
 		do
 		{
-			__inf("enter standby\n");
+			
 			if(power_ops_int_status & 0x04)
 			{
 				status = 8;
@@ -303,8 +318,11 @@ __s32 check_power_status(void)
 				usb_detect_exit();
 				wlibc_int_enable();
 				De_CloseLayer(board_res.layer_hd);
+                wBoot_EnableInt(GIC_SRC_NMI);
+                __inf("enter standby\n");
 				status = wBoot_standby();
 				__inf("exit standby by %d\n", status);
+                wBoot_DisableInt(GIC_SRC_NMI);
 
 				wlibc_int_disable();
 				bat_cal = wBoot_power_get_cal();

@@ -379,11 +379,11 @@ void NAND_SetClk(__u32 nand_max_clock)
 
 	/*gate on nand clock*/
 	cfg |= (1U << 31);
-	/*take cmu pll as nand src block*/
+	/*take cmu pll6 as nand src block*/
 	cfg &= ~(0x3 << 24);
-	cfg |=  (0x2 << 24);
+	cfg |=  (0x1 << 24);
 	//set divn = 0
-	cfg &= ~(0x03 << 12);
+	cfg &= ~(0x03 << 16);
 
 	/*set ratio*/
 	cfg &= ~(0x0f << 0);

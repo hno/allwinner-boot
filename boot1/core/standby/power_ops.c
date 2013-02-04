@@ -196,13 +196,13 @@ __s32 eGon2_power_init(void *power_para)
     __u32 bat_vol;
 
     //try to check if the pmu is AXP199
-    reg_addr = 0x03;
+    reg_addr = BOOT_POWER20_VERSION;
     if(!core_para->user_set_core_vol)
     {
         core_para->user_set_core_vol = DCDC2_VALUE_FOR_BOOT;
     }
     trans_dcdc2_user_set = core_para->user_set_core_vol;
-    if(!BOOT_TWI_Read(AXP19_ADDR, &reg_addr, &value))
+    if(!BOOT_TWI_Read(AXP20_ADDR, &reg_addr, &value))
     {
     	value &= 0xf;
         if(value == 0x01)
@@ -234,27 +234,26 @@ __s32 eGon2_power_init(void *power_para)
     {
     	reg_addr1 = BOOT_POWER20_COULOMB_CAL;
     	BOOT_TWI_Read(AXP20_ADDR, &reg_addr1, &value1);
-    	value1 |= 0x80;//open lock
+    	value1 |= 0x80;//open lock,pouse ocv.
     	BOOT_TWI_Write(AXP20_ADDR, &reg_addr1, &value1);
     	value1 = 0xBA;
     	BOOT_TWI_Read(AXP20_ADDR, &reg_addr1, &value1);
-    	value1 &= 0x7F;
+    	value1 &= 0x7F;//start ocv
     	BOOT_TWI_Write(AXP20_ADDR, &reg_addr1, &value1);
-			reg_addr1 = BOOT_POWER20_COULOMB_CAL;
+		reg_addr1 = BOOT_POWER20_COULOMB_CAL;
     	BOOT_TWI_Read(AXP20_ADDR, &reg_addr1, &value1);
-    	value1 &= 0x7F;//lock
+    	value1 &= 0x7F;//lock  start ocv
     	BOOT_TWI_Write(AXP20_ADDR, &reg_addr1, &value1);
     }
 
-    //Evan add 20120610
-	reg_addr1 = 0xB8;
+	reg_addr1 = BOOT_POWER20_COULOMB_CTL;
 	if(BOOT_TWI_Read(AXP20_ADDR, &reg_addr1, &value1))
 	{
     	return -1;
 	}
-	if(!(value1 & 0x80))
+	if(!(value1 & 0x80)) // coulomb conuter on off control
 	{
-		_axp_clr_status();
+		_axp_clr_status(); //clear the data buffer
 	}
 
     //使能库仑计
@@ -263,19 +262,22 @@ __s32 eGon2_power_init(void *power_para)
     eGon2_power_get_dcin_battery_exist(&dcin_exist, &bat_exist);
 	//先判断条件，如果上次关机记录的电量百分比<=5%,同时库仑计值小于5mAh，则关机，否则继续判断
 	eGon2_power_get_battery_vol(&bat_vol);
-	eGon2_printf("bat vol = %d\n", bat_vol);
+	eGon2_printf("bat vol = %d mv\n", bat_vol);
 	if((bat_vol < 3400) && (!dcin_exist))
 	{
-		eGon2_set_power_off_vol();
+		eGon2_set_power_off_vol(); //到此步骤应该关机，不会继续运行。
 	}
+    __debug("core_para->vol_threshold =%d\n",core_para->vol_threshold);
+    __debug("core_para->user_set_core_vol =%d\n",core_para->user_set_core_vol);
+    __debug("core_para->user_set_clock =%d\n",core_para->user_set_clock);
     reg_addr1 = BOOT_POWER20_DATA_BUFFER1;										//读之前的比分比记录
     BOOT_TWI_Read(AXP20_ADDR, &reg_addr1, &value1);
-	if(value1 & 0x80)																	//检测标志位
+	if(value1 & 0x80)				            //检测标志位，1有效
 	{
 		int bat_cou;
 		int bat_value;
 
-		bat_value = value1 & 0x7f;
+		bat_value = value1 & 0x7f;  //电池百分比
 		bat_cou = ABS(Get_Bat_Coulomb_Count());
 		if((bat_value <= 0) && bat_cou < 30)     //比例小于5%同时库仑计值小于6，则不开机
 		{
@@ -285,60 +287,70 @@ __s32 eGon2_power_init(void *power_para)
 				if(bat_vol > 3900)
 				{
 					_axp_clr_status();
-					power_step_level = 2;
+					power_step_level = BATTERY_RATIO_ENOUGH;
 					eGon2_printf("dcin_exist\n");
 				}
 				else
 				{
-					power_step_level = 3;
+					power_step_level = BATTERY_RATIO_TOO_LOW_WITH_DCIN;
 				}
 			}
 			else
 			{
 				if(bat_vol > 3800)
 				{
-					power_step_level = 2;
+					power_step_level = BATTERY_RATIO_ENOUGH;
 					_axp_clr_status();
 					eGon2_printf("bat_vol > 3800\n");
 				}
 				else
 				{
-					power_step_level = 1;
+					power_step_level = BATTERY_RATIO_TOO_LOW_WITHOUT_DCIN;
 				}
 			}
 			eGon2_printf("power_step_level =%x, bat_vol = %x\n", power_step_level,bat_vol);
 		}
 		else															//其中一个条件不满足，就可以开机
 		{
-			power_step_level = 2;
+			power_step_level = BATTERY_RATIO_ENOUGH;
 		}
 	}
 	else
 	{
 		if(dcin_exist)
 		{
-			power_step_level = 2;
-		}
-		else
-		{
-			if(!core_para->vol_threshold)
+			if(bat_vol > 3900)
 			{
-				core_para->vol_threshold = 3600;
-			}
-			if(bat_vol >= core_para->vol_threshold)
-			{
-				power_step_level = 2;
+				_axp_clr_status();
+				power_step_level = BATTERY_RATIO_ENOUGH;
+				eGon2_printf("dcin_exist\n");
 			}
 			else
 			{
-				power_step_level = 1;
+				power_step_level = BATTERY_RATIO_TOO_LOW_WITH_DCIN;
 			}
 		}
-	}
-
+    	else
+    	{
+    		if(!core_para->vol_threshold)
+    		{
+    			core_para->vol_threshold = 3600;
+    		}
+    		if(bat_vol >= core_para->vol_threshold)
+    		{
+    			power_step_level = BATTERY_RATIO_ENOUGH;
+    		}
+    		else
+    		{
+    			power_step_level = BATTERY_RATIO_TOO_LOW_WITHOUT_DCIN;
+    		}
+    	}
+        
+}
+     __debug("after set,power_step_level=%d\n",power_step_level);
     //set dcdc2 value
     eGon2_power_set_dcdc2(core_para->user_set_core_vol);
-    eGon2_power_set_dcdc3(1250);
+    //eGon2_power_set_dcdc3(1250);
     if(PMU_type == PMU_TYPE_AXP209)
     {
 		// open bat acin vbus voltage and current adc
@@ -442,7 +454,7 @@ __s32 eGon2_power_enable_coulomb(void)
     __u8   reg_addr;
     __u8   tmp_value;
 
-	reg_addr = 0xB8;
+	reg_addr = BOOT_POWER20_COULOMB_CTL;
 	tmp_value = 0x80;
 	if(BOOT_TWI_Write(AXP20_ADDR, &reg_addr, &tmp_value))
     {
@@ -595,8 +607,8 @@ __s32 eGon2_power_check_startup(void)
         //dc_in = ((value >> 4) & 0x01) |  ((value >> 6) & 0x01);
         startup_trigger  = (value >> 0) & 0x01;
 
-		reg_addr = 0xf;
-        if(startup_trigger)    //如果ACIN/VBUS存在且由ACIN/VBUS触发开机，则power_off
+		reg_addr = BOOT_POWER20_DATA_BUFFER11;
+        if(startup_trigger==AXP_POWER_ON_BY_POWER_TRIGGER)    //如果ACIN/VBUS存在且由ACIN/VBUS触发开机，则power_off
         {
         	eGon2_printf("power trigger\n");
 	        tmp_value = 0x0f;
@@ -604,6 +616,7 @@ __s32 eGon2_power_check_startup(void)
 	    }
 	    else
 	    {
+            eGon2_printf("key trigger\n");
 	    	tmp_value = 0x0e;
 	    	ret = 1;
 	    }
@@ -773,7 +786,7 @@ __s32 eGon2_set_power_off_vol(void) //设置关机之后，PMU硬件下次开机电压为3.3V
 	__u8  reg_value;
 	__s32 vol_value, ret;
 
-	eGon2_config_charge_current(1);
+	eGon2_config_charge_current(1);//config shutdown charge current
 	ret = eGon2_script_parser_fetch("pmu_para", "pmu_pwroff_vol", &vol_value, 1);
 	if(ret)
 	{
@@ -790,11 +803,11 @@ __s32 eGon2_set_power_off_vol(void) //设置关机之后，PMU硬件下次开机电压为3.3V
 		}
 		else if(vol_value <= 2600)
 		{
-			reg_value |= 0x00;
+			reg_value |= 0x00;  // 2.9v
 		}
 		else
 		{
-			reg_value |= 0x07;
+			reg_value |= 0x07;  // 3.3v
 		}
 		if(BOOT_TWI_Write(AXP20_ADDR, &reg_addr, &reg_value))
     	{
@@ -879,7 +892,7 @@ __s32 eGon2_set_charge_current(int current)
 		{
 			current = 300;
 		}
-		step   = (current/100) - 3;
+		step   = (current-300)/100 ;//before is (current/100-3)
 		value |= (step & 0x0f);
 		if(BOOT_TWI_Write(AXP20_ADDR, &reg_addr, &value))
         {

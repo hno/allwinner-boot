@@ -25,7 +25,10 @@
 static void  print_version(void);
 static __s32 reserved_init(void);
 static __s32 reserved_exit(void);
-static void eGon2_storage_type_set(void);
+#ifdef SCRIPT_INSTALL_EARLY
+static int script_relocation(void);
+#endif
+static int eGon2_storage_type_set(void);
 /*******************************************************************************
 *函数名称: eGon2_start
 *函数原型：void Boot1_C_part( void )
@@ -41,7 +44,6 @@ void eGon2_start( void )
 	__s32   exception;
 	__u32   boot_heap_base;
 	__s32   force_to_card0 = 0;
-	void    *script_buf = NULL;
 	H_FILE  hfile = NULL;
 	FS_PART_OPTS_t   fs_ops;
 
@@ -71,9 +73,20 @@ void eGon2_start( void )
 	//初始化UART
     serial_init(BT1_head.prvt_head.uart_port, (normal_gpio_cfg *)BT1_head.prvt_head.uart_ctrl, 115200, 24000000);
     print_version();
+
+    #ifdef SCRIPT_INSTALL_EARLY
+    if(!script_relocation())
+    {
+    	eGon2_printf("script installed early ok\n");
+    }
+    else
+    {
+    	eGon2_printf("script installed early failed\n");
+    }
+    #endif
     //初始化IIC, 现在还没有调整过频率，运行在384M
     eGon2_twi_init(BT1_head.prvt_head.twi_port, (normal_gpio_cfg *)BT1_head.prvt_head.twi_ctrl, 24000000, 400000);
-#ifndef CONFIG_SUN7I_FPGA
+#ifndef CONFIG_AW_FPGA_PLATFORM
     //初始化POWER，调整核心电压
     if(!eGon2_power_init((void *)&BT1_head.prvt_head.core_para))
     {
@@ -82,11 +95,11 @@ void eGon2_start( void )
         {
         	default_clock = eGon2_clock_set_ext(BT1_head.prvt_head.core_para.user_set_clock, BT1_head.prvt_head.core_para.user_set_core_vol);
     		//default_clock = eGon2_clock_set_ext(k, BT1_head.prvt_head.core_para.user_set_core_vol);
-    		eGon2_printf("set dcdc2=%d, clock=%d successed\n", BT1_head.prvt_head.core_para.user_set_core_vol, default_clock);
+    		eGon2_printf("set dcdc2=%dmv, clock=%dM successed\n", BT1_head.prvt_head.core_para.user_set_core_vol, default_clock);
         }
         else
         {
-        	eGon2_printf("set default clock=384\n");
+        	eGon2_printf("set default clock=384M\n");
         }
     }
     else
@@ -122,6 +135,12 @@ void eGon2_start( void )
 
     	force_to_card0 = 1;
     }
+    
+	//设置电压
+	eGon2_set_power_on_vol();
+	eGon2_power_set_vol();
+	eGon2_config_charge_current(0);//开机状态下充电电流，300MA
+
 	eGon2_printf("flash init start\n");
     if(!eGon2_block_device_init())
     {
@@ -153,77 +172,45 @@ void eGon2_start( void )
     	eGon2_jump_Fel( );
     }
     eGon2_printf("fs mount ok\n");
-	//加载配置文件
-	script_buf = (void *)SCRIPT_BASE;
+	
+#ifndef SCRIPT_INSTALL_EARLY
 	hfile = FS_fopen("c:\\script.bin", "r");
-	if(!hfile)
-	{
-		hfile = FS_fopen("c:\\script0.bin", "r");
-	}
 	if(hfile)
 	{
 		__u32 length;
 
 		length = FS_filelen(hfile);
-		FS_fread(script_buf, length, 1, hfile);
+		FS_fread((void *)SCRIPT_BASE, length, 1, hfile);
 		FS_fclose(hfile);
-		eGon2_script_parser_init((char *)script_buf);
+		eGon2_script_parser_init((char *)SCRIPT_BASE);
 	}
 	else
 	{
 		eGon2_printf("unable to open script file, check it carefully\n");
 	}
 	eGon2_printf("script finish\n");
-#if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
-//	eGon2_dynamic();
-//	{
-//		char  buf[32];
-//
-//		eGon2_printf("test for dynamic\n");
-//		if(!eGon2_script_parser_fetch("dynamic", "MAC", (int *)buf, 32/4))
-//		{
-//			eGon2_printf("mac addr= %s\n", buf);
-//		}
-//	}
 #endif
-	//设置电压
-	eGon2_set_power_on_vol();
-	eGon2_power_set_vol();
-	eGon2_config_charge_current(0);
-	//设置nand参数到脚本中
-	eGon2_printf("power finish\n");
-//	{
-//		while((*(int *)(0x40000000)) != 0x55);
-//	}
-#if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
-	eGon2_block_ratio();
-	eGon2_storage_type_set();
-#endif
+
 	if(force_to_card0 == 1)
 	{
 		eGon2_force_to_debug();
 	}
     {
-    	char  *str_pointer_array[1];
-#if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
-		char  str_array0[32] = "c:\\boot.axf";
 
-		str_pointer_array[0] = str_array0;
-#elif SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_SD_CARD
+        char  *str_pointer_array[1];
 		char  str_array0[32] = "c:\\boot.axf";
 		char  str_array1[32] = "c:\\sprite.axf";
 
 		str_pointer_array[0] = str_array0;
 
-		if(!BT1_head.boot_head.platform[7])
+		if(eGon2_storage_type_set() == 1)
 		{
-			str_pointer_array[0] = str_array1;
+			if(!BT1_head.boot_head.platform[7])
+			{
+				str_pointer_array[0] = str_array1;
+			}
 		}
-		else
-		{
-			eGon2_storage_type_set();
-		}
-#endif
+
         eGon2_run_app(1, str_pointer_array);
     }
 
@@ -280,7 +267,7 @@ static __s32 reserved_exit(void)
 {
     return 0;
 }
-static void eGon2_storage_type_set(void)
+static int eGon2_storage_type_set(void)
 {
 	boot_file_head_t  *bfh;
 	int  type;
@@ -293,5 +280,53 @@ static void eGon2_storage_type_set(void)
 		eGon2_printf("storage_type=%d\n", type);
 	}
 
-	return ;
+	return type ;
 }
+
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    函数名称：
+*
+*    参数列表：
+*
+*    返回值  ：
+*
+*    说明    ：
+*
+*
+************************************************************************************************************
+*/
+
+#ifdef SCRIPT_INSTALL_EARLY
+static int script_relocation(void)
+{
+	char *start;
+	__u32 size;
+
+	start = (char *)BOOT1_BASE + BT1_head.boot_head.boot1_length;
+    size  = BT1_head.boot_head.length - BT1_head.boot_head.boot1_length;
+#ifdef BOOT1_DEBUG
+    eGon2_printf("total boot1 file length = %d\n", BT1_head.boot_head.length);
+	eGon2_printf("boot1 length = %d\n", BT1_head.boot_head.boot1_length);
+	eGon2_printf("script start addr = %x, size = %d\n", (__u32)start, size);
+
+	eGon2_printf("script dest buffer = %x\n", SCRIPT_BASE);
+
+	eGon2_printf("size=%d\n", size);
+#endif
+	if(size)
+	{
+		memcpy((void *)SCRIPT_BASE, start, size);
+    	eGon2_script_parser_init((char *)SCRIPT_BASE);
+	}
+	else
+	{
+		return -1;
+	}
+
+    return 0;
+}
+#endif

@@ -19,6 +19,14 @@
 #define   POWER_KEY_EXIST                                1
 #define   POWER_KEY_NOTEXIST                             0
 
+#define   BATTERY_RATIO_DEFAULT                          0
+#define   BATTERY_RATIO_TOO_LOW_WITHOUT_DCIN             1
+#define   BATTERY_RATIO_TOO_LOW_WITH_DCIN                2
+#define   BATTERY_RATIO_ENOUGH                           3
+
+#define   AXP_POWER_ON_BY_POWER_KEY       				 0
+#define   AXP_POWER_ON_BY_POWER_TRIGGER   				 1
+
 typedef enum
 {
     WBOOT_POWER_DCIN_BAT_STATUS,                         //获取power相关状态，是否存在dcin，是否存在电池连接, pbuffer = {power_dcin_bat_status_t}

@@ -104,7 +104,7 @@ void usb_params_init(void)
 
 	awxx_usb[0].index = 0;
 	awxx_usb[0].reg_base = 	0x01c13000;
-	awxx_usb[0].irq_no = 38;
+	awxx_usb[0].irq_no = GIC_SRC_USB0;
 	awxx_usb[0].drq_no = 0x04;
 
 	awxx_usb[0].role = USB0_ROLE;  //USB_ROLE_HST; //USB_ROLE_UNK

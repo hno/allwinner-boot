@@ -1227,17 +1227,17 @@ __s32 Disp_lcdc_init(__u32 sel)
     
     if(sel == 0)
     {        
-        OSAL_RegISR(INTC_IRQNO_LCDC0,0,Disp_lcdc_event_proc,(void*)sel,0,0);
+        OSAL_RegISR(GIC_SRC_LCD0,0,Disp_lcdc_event_proc,(void*)sel,0,0);
 #ifndef __LINUX_OSAL__
-        OSAL_InterruptEnable(INTC_IRQNO_LCDC0);
+        OSAL_InterruptEnable(GIC_SRC_LCD0);
         LCD_get_panel_funs_0(&lcd_panel_fun[sel]);
 #endif
     }
     else
     {        
-        OSAL_RegISR(INTC_IRQNO_LCDC1,0,Disp_lcdc_event_proc,(void*)sel,0,0);
+        OSAL_RegISR(GIC_SRC_LCD1,0,Disp_lcdc_event_proc,(void*)sel,0,0);
 #ifndef __LINUX_OSAL__
-        OSAL_InterruptEnable(INTC_IRQNO_LCDC1);
+        OSAL_InterruptEnable(GIC_SRC_LCD1);
         LCD_get_panel_funs_1(&lcd_panel_fun[sel]);
 #endif
     }

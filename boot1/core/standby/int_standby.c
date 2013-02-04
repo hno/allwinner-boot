@@ -39,12 +39,12 @@
 *
 ************************************************************************************************************
 */
-static int int_reggroup_value[36];
+//static int int_reggroup_value[36];
 
 int standby_int_init(void)
 {
-	int	  i;
-	int   *addr;
+//	int	  i;
+//	int   *addr;
 
 	asm("mrs r0, cpsr");
 	asm("orr r0, r0, #(0x40|0x80)");

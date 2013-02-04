@@ -21,6 +21,11 @@
 #include "include.h"
 #include  "axp_i.h"
 
+#define NMI_CTL_REG            (0x01c00030)
+#define NMI_IRG_PENDING_REG    (0x01c00034)
+#define NMI_INT_ENABLE_REG     (0x01c00038)
+
+#define writel(v, addr)	(*((volatile unsigned long  *)(addr)) = (unsigned long)(v))
 
 static  __u8  power_int_value[5];
 static  __u32 power_int_working = 0;
@@ -73,6 +78,57 @@ __s32  BOOT_TWI_Write(__u32 arg1, __u8 *arg2, __u8 *arg3)
 *
 ************************************************************************************************************
 */
+void boot_power_nmi_enable(void)
+{
+
+    writel(0x01,NMI_CTL_REG); //nagative edge trigger
+    writel(0x01,NMI_IRG_PENDING_REG); //clean the NMI pendding
+    writel(0x01,NMI_INT_ENABLE_REG); //enable the NMI irq
+    
+}
+
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    函数名称：
+*
+*    参数列表：
+*
+*    返回值  ：
+*
+*    说明    ：
+*
+*
+************************************************************************************************************
+*/
+void boot_power_nmi_disable(void)
+{
+
+    writel(0x01,NMI_CTL_REG);
+    writel(0x01,NMI_IRG_PENDING_REG);
+    writel(0x00,NMI_INT_ENABLE_REG);
+
+}
+
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    函数名称：
+*
+*    参数列表：
+*
+*    返回值  ：
+*
+*    说明    ：
+*
+*
+************************************************************************************************************
+*/
+
 __s32 boot_power_int_enable(void)
 {
     __u8  reg_addr;
@@ -104,6 +160,9 @@ __s32 boot_power_int_enable(void)
         	return -1;
     	}
     }
+    
+    boot_power_nmi_enable();
+
 
 	return 0;
 }
@@ -137,7 +196,8 @@ __s32 boot_power_int_disable(void)
         	return -1;
     	}
     }
-
+    
+    boot_power_nmi_disable();
 	return 0;
 }
 /*
@@ -175,7 +235,9 @@ __s32 eGon2_power_int_query(__u8 *int_status)
         	return -1;
     	}
     }
-//    INTC_REG_IRQ_PENDCLR0 |= 1;
+
+    writel(0x01,NMI_IRG_PENDING_REG);
+
 
 	return 0;
 }
@@ -200,6 +262,7 @@ void power_int_handler(void *p_arg)
 	__u8 status[5];
 
 	status[0] = 0;
+    __debug("%s\n",__FUNCTION__);
 	eGon2_power_int_query(status);
 	if(status[0] & 0x04)		//vbus移除
 	{
@@ -223,6 +286,7 @@ void power_int_handler(void *p_arg)
 		power_ops_int_status |= 0x01;
 	}
 }
+
 /*
 ************************************************************************************************************
 *
@@ -248,8 +312,8 @@ void power_int_reg(void)
 		power_ops_int_status = 0;
 		power_int_working = 1;
 		boot_power_int_enable();
-		wBoot_InsINT_Func(0, (int *)power_int_handler, 0);
-		wBoot_EnableInt(0);
+		wBoot_InsINT_Func(GIC_SRC_NMI, (int *)power_int_handler, 0);
+		
 	}
 }
 /*
@@ -271,9 +335,10 @@ void power_int_reg(void)
 void power_int_rel(void)
 {
 	__inf("power exit detect\n");
-	wBoot_DisableInt(0);
 	boot_power_int_disable();
+    wBoot_DisableInt(GIC_SRC_NMI);
 	power_int_working = 0;
 	power_ops_int_status = 0;
+
 }
 

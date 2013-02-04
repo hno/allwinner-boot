@@ -54,6 +54,7 @@ int eGon2_standby_mode(void)
 
 	status = -1;
 	//检查是否有按键按下
+	__debug("at the start of %s\n",__FUNCTION__);
 	key_status = eGon2_power_get_key();
 	if(key_status & 0x01)			//长按键的情况下，不管电源是否移除，直接进入系统
 	{
@@ -160,20 +161,25 @@ static int eGon2_enter_standby(void)
 //	//清除power的中断pending
 //	eGon2_power_int_query(power_int_status);
 	//处理中断
+	__debug("standby int init\n");
 	standby_int_init();
 	//处理clock
 	standby_clock_store();
+    __debug("after standby_clock_store\n");
+    #ifndef CONFIG_AW_FPGA_PLATFORM
 	//处理dram，之后不允许再访问dram
 	dram_power_save_process();
 	//禁止drampll输出使能
 	standby_clock_drampll_ouput(0);
+    #endif
 	//切换到24M
 	standby_clock_to_source(24000000);
 	//关闭所有pll输出
 	standby_clock_plldisable();
+    
 	//降低电源电压输出
 	eGon2_power_set_dcdc2(DCDC2_STANDBY_VOL);
-//	eGon2_power_set_dcdc3(DCDC3_STANDBY_VOL);
+	//eGon2_power_set_dcdc3(DCDC3_STANDBY_VOL);
 	//使能电源中断，等待唤醒
 	eGon2_power_int_enable();
 	//切换分频比全为0
@@ -185,7 +191,6 @@ static int eGon2_enter_standby(void)
 	standby_clock_to_source(32000);
 	//关闭24M晶振
 	standby_clock_24m_op(0);
-
 	return 0;
 }
 /*
@@ -214,16 +219,19 @@ static int eGon2_exit_standby(void)
 	eGon2_power_set_dcdc2(-1);
 //	eGon2_power_set_dcdc3(-1);
 	//还原所有pll，原来打开的则打开，原来关闭的不处理
+	
 	standby_clock_restore();
 	for(i=0;i<80000;i++);//0x100000
 	//切换时钟到PLL1
 	standby_clock_to_source(0);
+    #ifndef CONFIG_AW_FPGA_PLATFORM
 	//打开dram输出使能
 	standby_clock_drampll_ouput(1);
 	//激活dram
 	standby_tmr_enable_watchdog();
 	dram_power_up_process();
 	standby_tmr_disable_watchdog();
+    #endif
 	//还原中断状态
 	standby_int_exit();
 	//还原充电电流
@@ -266,7 +274,7 @@ static int eGon2_standby_detect(void)
 	//检查中断触发
 	eGon2_power_int_query(power_int_status);
 	//清除中断控制器的pending
-	standby_int_query();
+//	standby_int_query();
 //	if(eGon2_key_get_status() == 1)			//普通ADC按键按下
 //	{
 //		return 1;

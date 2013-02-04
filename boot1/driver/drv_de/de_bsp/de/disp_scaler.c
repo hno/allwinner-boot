@@ -289,16 +289,16 @@ __s32 Scaler_Init(__u32 sel)
     
     if(sel == 0)
     {
-        OSAL_RegISR(INTC_IRQNO_SCALER0,0,Scaler_event_proc, (void *)sel,0,0);
+        OSAL_RegISR(GIC_SRC_DEBE0_DEFE0,0,Scaler_event_proc, (void *)sel,0,0);
 #ifndef __LINUX_OSAL__
-        OSAL_InterruptEnable(INTC_IRQNO_SCALER0);
+        OSAL_InterruptEnable(GIC_SRC_DEBE0_DEFE0);
 #endif
     }
     else if(sel == 1)
     {
-        OSAL_RegISR(INTC_IRQNO_SCALER1,0,Scaler_event_proc, (void *)sel,0,0);
+        OSAL_RegISR(GIC_SRC_DEBE1_DEFE1,0,Scaler_event_proc, (void *)sel,0,0);
 #ifndef __LINUX_OSAL__
-        OSAL_InterruptEnable(INTC_IRQNO_SCALER1);
+        OSAL_InterruptEnable(GIC_SRC_DEBE1_DEFE1);
 #endif
     }
    	return DIS_SUCCESS;

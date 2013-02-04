@@ -90,7 +90,7 @@ void power_set_usbpc(void)
 */
 void power_set_usbdc(void)
 {
-	__inf("set dc\n");
+	
 	wBoot_power_cur_limit(usbdc_cur);
 	wBoot_power_vol_limit(usbdc_vol);
 }

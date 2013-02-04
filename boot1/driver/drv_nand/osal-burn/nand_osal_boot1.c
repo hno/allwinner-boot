@@ -313,17 +313,15 @@ void NAND_ClkDisable(void)
 __u32 _GetCmuClk(void)
 {
 	__u32 reg_val;
-	__u32 div_p, factor_n;
-	__u32 factor_k, factor_m;
+	__u32 factor_n;
+	__u32 factor_k;
 	__u32 clock;
 
-	reg_val  = *(volatile unsigned int *)(0x01c20000 + 0x20);
-	div_p    = (reg_val >> 16) & 0x3;
+	reg_val  = *(volatile unsigned int *)(0x01c20000 + 0x28);//PLL6
 	factor_n = (reg_val >> 8) & 0x1f;
 	factor_k = ((reg_val >> 4) & 0x3) + 1;
-	factor_m = ((reg_val >> 0) & 0x3) + 1;
 
-	clock = 24 * factor_n * factor_k/div_p/factor_m;
+	clock = 24 * factor_n * factor_k/2;
 
 	return clock;
 }
@@ -368,11 +366,11 @@ int NAND_SetClk(unsigned int nand_clock)
 
 	/*gate on nand clock*/
 	cfg |= (1U << 31);
-	/*take cmu pll as nand src block*/
+	/*take cmu pll6 as nand src block*/
 	cfg &= ~(0x3 << 24);
-	cfg |=  (0x2 << 24);
+	cfg |=  (0x1 << 24);
 	//set divn = 0
-	cfg &= ~(0x03 << 12);
+	cfg &= ~(0x03 << 16);
 
 	/*set ratio*/
 	cfg &= ~(0x0f << 0);

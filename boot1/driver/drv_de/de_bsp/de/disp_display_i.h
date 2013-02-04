@@ -21,10 +21,10 @@
 #define HANDTOID(handle)  ((handle) - 100)
 #define IDTOHAND(ID)  ((ID) + 100)
 
-#define INTC_IRQNO_SCALER0  79
-#define INTC_IRQNO_SCALER1  80
-#define INTC_IRQNO_LCDC0    76
-#define INTC_IRQNO_LCDC1    77
+#define INTC_IRQNO_SCALER0  (32+47)
+#define INTC_IRQNO_SCALER1  (32+48)
+#define INTC_IRQNO_LCDC0    (32+44)
+#define INTC_IRQNO_LCDC1    (32+45)
 
 #define MAX_SPRITE_BLOCKS	32
 
@@ -55,7 +55,7 @@ enum
    DIS_PRIO_COLLSION = -11
 };
 
-#define BIT0      0x00000001  
+#define BIT0          0x00000001  
 #define BIT1		  0x00000002  
 #define BIT2		  0x00000004  
 #define BIT3		  0x00000008  

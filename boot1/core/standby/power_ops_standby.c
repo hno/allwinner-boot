@@ -145,7 +145,7 @@ __s32 eGon2_power_set_dcdc2(int set_vol)
             vol     = tmp * 25 + 700;
         }
     }
-
+    __debug("after set dcdc2,the value =%dmv\n",vol);
     return 0;
 }
 /*
@@ -199,7 +199,7 @@ __s32 eGon2_power_set_dcdc3(int set_vol)
 			reg_value &= ~(1<<1);
 			if(BOOT_TWI_Write(AXP20_ADDR, &reg_addr, &reg_value))
 			{
-				eGon2_printf("boot power:unable to set ldo2\n");
+				eGon2_printf("boot power:unable to close dcdc3\n");
 
 				return -1;
 			}
@@ -933,6 +933,13 @@ static  __u8  power_int_value[5];
 *
 ************************************************************************************************************
 */
+
+#define NMI_CTL_REG            (0x01c00030)
+#define NMI_IRG_PENDING_REG    (0x01c00034)
+#define NMI_INT_ENABLE_REG     (0x01c00038)
+    
+#define writel(v, addr)	(*((volatile unsigned long  *)(addr)) = (unsigned long)(v))
+
 __s32 eGon2_power_int_enable(void)
 {
     __u8  reg_addr;
@@ -960,6 +967,10 @@ __s32 eGon2_power_int_enable(void)
     	}
     }
 
+    writel(0x1,NMI_CTL_REG);
+    writel(0x1,NMI_IRG_PENDING_REG);
+    writel(0x1,NMI_INT_ENABLE_REG);
+    
 	return 0;
 }
 /*
@@ -991,7 +1002,10 @@ __s32 eGon2_power_int_disable(void)
         	return -1;
     	}
     }
-
+    writel(0x1,NMI_CTL_REG);
+    writel(0x1,NMI_IRG_PENDING_REG);
+    writel(0x0,NMI_INT_ENABLE_REG);
+    
 	return 0;
 }
 
@@ -1011,6 +1025,8 @@ __s32 eGon2_power_int_disable(void)
 *
 ************************************************************************************************************
 */
+
+
 __s32 eGon2_power_int_query(__u8 *int_status)
 {
     __u8  reg_addr;
@@ -1037,6 +1053,8 @@ __s32 eGon2_power_int_query(__u8 *int_status)
         	return -1;
     	}
     }
+
+     writel(0x01,NMI_IRG_PENDING_REG);
 
 	return 0;
 }

@@ -79,6 +79,16 @@ void Boot0_C_part( void )
 	//for A20 super standby
 	boot0_twi_init();
 
+#ifdef CONFIG_AW_FPGA_PLATFORM
+	dram_size=*((volatile unsigned int*)(0x8000-0x4));
+	msg("sram data=%x\n",dram_size);
+	if(dram_size==0x12345678)
+	{
+			msg("force jump to superstandby!\n");
+			jump_to( 0x52000000 );
+	}
+#endif
+
 	dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // 初始化DRAM
 	if(dram_size)
 	{
@@ -90,8 +100,7 @@ void Boot0_C_part( void )
 		mmu_disable( );
 		jump_to( FEL_BASE );
 	}
-
-	msg("%x,%x\n", *(volatile int *)0x40100000, *(volatile int *)(0x40110000-0x4));
+	msg("%x\n", *(volatile int *)0x52000000);
 	msg("super_standby_flag = %d\n", super_standby_flag);
 	if(1 == super_standby_flag)
 	{
@@ -161,6 +170,11 @@ void set_pll( void )
 	CCMU_REG_AHB_APB = reg_val;
 	//打开DMA
 	CCMU_REG_AHB_MOD0 |= 1 << 6;
+
+	//打开PLL6，设置到默认频率600M
+	reg_val = CCMU_REG_PLL6_CTRL;
+	reg_val |= 1<<31;
+	CCMU_REG_PLL6_CTRL = reg_val;
 
 	return ;
 }

@@ -111,20 +111,20 @@ int BootMain(int argc, char **argv)
 		goto jump_to_parameters_fail;
 	}
     //填充自定义数据
-    strcpy(board_res.fel_file_name, OS_FOR_USB_UPDATE_FILE_NAME);
+//    strcpy(board_res.fel_file_name, OS_FOR_USB_UPDATE_FILE_NAME);
     //检查，用户是否有进入fel的需求
     //首先检查文件形式升级
-    if(!check_file_to_fel(board_res.fel_file_name))
-    {
-        __inf("jump to fel because of update file found\n");
-        goto jump_to_fel;
-    }
+//    if(!check_file_to_fel(board_res.fel_file_name))
+//    {
+//        __inf("jump to fel because of update file found\n");
+//        goto jump_to_fel;
+//    }
     //如果是量产完成，直接关机
-    if(!check_natch_time("c:\\natch.ini", boot1_priv_para.work_mode))
-    {
-        goto jump_to_power_off;
-    }
-    power_set_init();
+//    if(!check_natch_time("c:\\natch.ini", boot1_priv_para.work_mode))
+//    {
+//        goto jump_to_power_off;
+//    }
+    
 //    memset(product, 0, 64);
 //    ret = wBoot_script_parser_fetch("target", "product", (int *)product, 64/4);
 //    if(!ret)
@@ -180,6 +180,7 @@ int BootMain(int argc, char **argv)
 #endif
 //	check_private_part(boot1_priv_para.uart_port);
 //	check_private_part(11);
+    power_set_init();
 	__inf("init to usb pc\n");
 	power_set_usbpc();
     //申请内存，填充第一个启动脚本

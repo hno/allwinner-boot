@@ -99,46 +99,38 @@ __s32 update_boot1_info(void *buf1, char *buf)
 __s32 sprite_flash_init(int *type)
 {
 	int  line_sel;
-	int  speed_mode;
 	int  card_offset;
 	int  ret;
-    
-    ret = wBoot_script_parser_fetch("target", "storage_type", type, 1);
-    if(ret)
-	{
-	    *type = 0;
-	}
 
-    card_sprite_type = (*type!=2) ? 0 : 1; 
-	if(!card_sprite_type)
-	{
-		return NAND_Init();
-	}
-	else if(card_sprite_type == 1)
-	{
-		ret = wBoot_script_parser_fetch("card2_boot_para", "card_line", &line_sel, 1);
-		if(ret)
-		{
-			line_sel = 4;
-		}
-		ret = wBoot_script_parser_fetch("card2_boot_para", "card_high_speed", &speed_mode, 1);
-		if(ret)
-		{
-			speed_mode = 1;
-		}
-		ret = wBoot_script_parser_fetch("card_boot", "logical_start", &card_offset, 1);
-		if(ret)
-		{
-			card_offset = 40960;
-		}
+//    if(!card_sprite_type)
+//	{
+//		return NAND_Init();
+//	}
+    if(0==NAND_Init())
+    {
+        card_sprite_type=0;
+        *type=card_sprite_type;
+        return 0;
+    }
+    else
+    {
+        card_sprite_type=1;
+        *type=card_sprite_type;
+    	ret = wBoot_script_parser_fetch("card2_boot_para", "card_line", &line_sel, 1);
+    	if(ret)
+    	{
+    		line_sel = 4;
+    	}
+    	ret = wBoot_script_parser_fetch("card_boot", "logical_start", &card_offset, 1);
+    	if(ret)
+    	{
+    		card_offset = 40960;
+    	}
         
-		return SDMMC_LogicalInit(2, card_offset, line_sel);
-                    
-	}
-	else
-	{
-		return -1;
-	}
+    	return SDMMC_LogicalInit(2, card_offset, line_sel);
+
+    }
+
 }
 
 /*
@@ -266,54 +258,57 @@ int sprite_flash_hardware_scan(void *mbr_i,void *flash_info, int erase_flash)
 	//É¨ÃèNAND
 
 	type = 0;
-	ret = wBoot_script_parser_fetch("target", "storage_type", &type, 1);
-	__inf("storage type = %d\n", type);
-	if(type == 2)
-	{
-		goto __hardware_scan__;
-	}
-	if(NAND_HWScanStart(&nand_para))
-	{
-		__inf("sprite update error: hwscan start failed\n");
-		ret = -1;
+//	ret = wBoot_script_parser_fetch("target", "storage_type", &type, 1);
+//	__inf("storage type = %d\n", type);
+//	if(type == 2)
+//	{
+//		goto __hardware_scan__;
+//	}
 
-		goto __hardware_scan__;
-	}
+    if(0==card_sprite_type)
+    {
+        if(NAND_HWScanStart(&nand_para))
+    	{
+    		__inf("sprite update error: hwscan start failed\n");
+    		ret = -1;
 
-	if(erase_flash)
-	{
-		if(NAND_EraseChip((const boot_nand_para_t*)&nand_para))
-		{
-			__inf("sprite update error: erase flash failed\n");
-			ret = -2;
+    		goto __hardware_scan__;
+    	}
+    	if(erase_flash)
+    	{
+    		if(NAND_EraseChip((const boot_nand_para_t*)&nand_para))
+    		{
+    			__inf("sprite update error: erase flash failed\n");
+    			ret = -2;
 
-			goto __hardware_scan__;
-		}
-	}
-	good_block_ratio = NAND_BadBlockScan((const boot_nand_para_t*)&nand_para);
-	if((good_block_ratio == -1)| (good_block_ratio == 0))
-	{
-			__inf("sprite update error: nand bad block scan failed\n");
-			ret = -2;
+    			goto __hardware_scan__;
+    		}
+    	}
+    	good_block_ratio = NAND_BadBlockScan((const boot_nand_para_t*)&nand_para);
+    	if((good_block_ratio == -1)| (good_block_ratio == 0))
+    	{
+    			__inf("sprite update error: nand bad block scan failed\n");
+    			ret = -2;
 
-			goto __hardware_scan__;
-	}
-	nand_para.good_block_ratio = good_block_ratio;
-	NAND_SetValidBlkRatio(good_block_ratio);
-	__inf("****************************************************************************************** \n");
-	__inf("get the good blk ratio from hwscan : %d \n", good_block_ratio);
-	//É¨Ãè½áÊø
-	if(NAND_HWScanStop())
-	{
-		__inf("sprite update error: hwscan stop failed\n");
-		ret = -3;
+    			goto __hardware_scan__;
+    	}
+    	nand_para.good_block_ratio = good_block_ratio;
+    	NAND_SetValidBlkRatio(good_block_ratio);
+    	__inf("****************************************************************************************** \n");
+    	__inf("get the good blk ratio from hwscan : %d \n", good_block_ratio);
+    	//É¨Ãè½áÊø
+    	if(NAND_HWScanStop())
+    	{
+    		__inf("sprite update error: hwscan stop failed\n");
+    		ret = -3;
 
-		goto __hardware_scan__;
-	}
+    		goto __hardware_scan__;
+    	}
 
-	memcpy(flash_info, &nand_para, sizeof(boot_nand_para_t));
+    	memcpy(flash_info, &nand_para, sizeof(boot_nand_para_t));
 
-	return 0;
+    	return 0;
+    }
 __hardware_scan__:
 	//nand²Ù×÷Ê§°Ü£¬³¢ÊÔ²Ù×÷¿¨
 	ret = wBoot_script_parser_fetch("card2_boot_para", "card_line", &line_sel, 1);
