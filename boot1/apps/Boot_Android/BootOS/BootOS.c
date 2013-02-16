@@ -300,15 +300,15 @@ __s32 BootOS_detect_os_type(__u32 *para_addr, __u32 *kernal_addr, void *os_info,
     memset(&os_img_info, 0, sizeof(boot_sys_img_set_t));
     //增加 fast boot 功能, 通过组合按键的方式
 	recovery = check_key_to_recovery();
-	if(recovery > 0)
+	//if(recovery > 0)
     {
-        char   buffer[1024];
+        char   buffer[MBR_SIZE];
         char   data[2048];
         MBR    *mbr;
         int    start = 0, i;
         bootloader_msg  *bt_msg;
 
-        wBoot_block_read(0, 2, buffer);
+        wBoot_block_read(0, MBR_SIZE>>9, buffer);
         mbr = (MBR *)buffer;
         for(i=0;i<mbr->PartCount;i++)
         {
@@ -317,19 +317,29 @@ __s32 BootOS_detect_os_type(__u32 *para_addr, __u32 *kernal_addr, void *os_info,
                 start = mbr->array[i].addrlo;
                 wBoot_block_read(start, 1, data);
                 bt_msg = (bootloader_msg *)data;
+                
+				if(!strcmp(bt_msg->command, "efex"))
+				{
+					memset((char *)bt_msg->command, 0, 32);
+					wBoot_block_write(start, 1, data);
 
-				memset((char *)bt_msg->command, 0, 32);
-				if(recovery == ANDROID_FASTBOOT_MODE)
-				{
-					strcpy((char *)bt_msg->command, "boot-fastboot");
-					__inf("fastboot mode\n");
+					wBoot_jump_fel();
 				}
-				else if(recovery == ANDROID_RECOVERY_MODE)
-				{
-					strcpy((char *)bt_msg->command, "boot-recovery");
-					__inf("recovery mode\n");
-				}
-				wBoot_block_write(start, 1, data);
+                if(recovery > 0)
+                {
+				    memset((char *)bt_msg->command, 0, 32);
+    				if(recovery == ANDROID_FASTBOOT_MODE)
+    				{
+    					strcpy((char *)bt_msg->command, "boot-fastboot");
+    					__inf("fastboot mode\n");
+    				}
+    				else if(recovery == ANDROID_RECOVERY_MODE)
+    				{
+    					strcpy((char *)bt_msg->command, "boot-recovery");
+    					__inf("recovery mode\n");
+    				}
+    				wBoot_block_write(start, 1, data);
+                }
 
 				break;
             }
