@@ -1,0 +1,442 @@
+#!/usr/bin/python
+#
+# (c) Copyright 2013
+# Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+# James Deng <csjamesdeng@allwinnertech.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+import sys
+import os
+
+from optparse import OptionParser
+
+# global variable
+version = "script_parse 0.9.1"
+mainkey_list = []
+
+def error_msg(msg):
+    print "\033[0;31;1m[Error] %s\033[0m" % msg
+
+def is_empty_line(line):
+    if len(line) > 0:
+        return False
+    return True
+
+def is_comment_line(line):
+    if line[0] == ';':
+        return True
+    return False
+
+def is_mainkey_line(line):
+    if line[0] == '[' and line.find(']') == len(line) - 1:
+        return True
+    return False
+
+def is_int_type(value):
+    if value.startswith('-'):
+        value = value[1:]
+    if value.startswith("0x"):
+        value = value[2:]
+    if value.isdigit():
+        return True
+    return False
+
+def _is_pio_conf(conf, minv, maxv):
+    if cmp(conf, "default"):
+        if conf.isdigit():
+            confv = int(conf)
+            if confv < minv or confv > maxv:
+                return False
+            else:
+                return True
+        else:
+            return False
+    else:
+        return True
+
+def is_pio_conf(value):
+    offset = value.find('<')
+    if offset <= 0:
+        return False
+
+    # check pio number
+    num = value[0:offset]
+    if not num.isdigit():
+        return False
+    num = int(num)
+    if num < 0 or num > 31:
+        return False
+
+    # check pio function
+    rest = value[offset+1:]
+    offset = rest.find('>')
+    if offset <= 0:
+        return False
+
+    func = rest[0:offset]
+    if not func.isdigit():
+        return False
+    func = int(func)
+    if func < 0 or func > 7:
+        return False
+
+    # pull, drive, data
+    minv = [0, 0, 0]
+    maxv = [2, 3, 1]
+    for i in range(3):
+        rest = rest[offset+1:]
+        offset = rest.find('<')
+        if offset < 0:
+            return True
+        if offset > 0:
+            return False
+
+        rest = rest[1:]
+        offset = rest.find('>')
+        if offset <= 0:
+            return False
+
+        conf = rest[0:offset]
+        if not _is_pio_conf(conf, minv[i], maxv[i]):
+            return False
+
+    return True
+
+# Returns 0: pio type
+#        -1: format error
+#        -2: not pio type
+def is_pio_type(value):
+    if value.startswith("port:"):
+        if cmp(value[5:10], "power") == 0:
+            if is_pio_conf(value[10:]):
+                return 0
+            else:
+                return -1
+
+        if value[5].upper() != 'P':
+            return -1
+        if not value[6].isalpha():
+            return -1
+        if is_pio_conf(value[7:]):
+            return 0
+        else:
+            return -1
+
+    return -2
+
+def is_str_type(value):
+    if value.startswith('"') and value.endswith('"'):
+        return (True, "valid")
+    if value.startswith("string:"):
+        return (True, "valid")
+
+    if value.startswith('"') and not value.endswith('"'):
+        return (False, "invalid key value, '\"' must come in pairs")
+
+    for ch in value:
+        if not ch.isdigit() and not ch.isalpha() and ch != '_':
+            return (False, "invalid character in key value, using '\"' or 'string:' defines a string instead")
+
+    return (True, "valid")
+
+def check_mainkey_valid(line):
+    mainkey = line[1:-1]
+    if len(mainkey) > 0 and len(mainkey) < 32:
+        for ch in mainkey:
+            if not ch.isalpha() and not ch.isdigit() and ch != '_':
+                return (False, "null", "invalid character in main key name, must a combination of character, number or '_'")
+        return (True, mainkey, "valid")
+    return (False, "null", "invalid length of main key name, 1 ~ 31 characters is recommended")
+
+def _check_subkey_valid(line):
+    offset = line.find('=')
+    if offset <= 0:
+        if line.startswith('['):
+            return (False, "null", offset, "invalid main key format, '[' and ']' must come in pairs")
+        return (False, "null", offset, "invalid subkey format, '=' must exist")
+
+    subkey = line[0:offset].strip()
+    if len(subkey) < 1 or len(subkey) > 31:
+        return (False, "null", offset, "invalid length of subkey name, 1 ~ 31 characters is recommended")
+
+    for ch in subkey:
+        if not ch.isalpha() and not ch.isdigit() and ch != '_':
+            return (False, "null", offset, "invalid character in subkey name, must a combination of character, number or '_'")
+
+    return (True, subkey, offset, "valid")
+
+def check_subkey_valid(line):
+    (ret, subkey, offset, msg) = _check_subkey_valid(line)
+    if not ret:
+        return (False, msg)
+
+    value = line[offset+1:].strip()
+    if len(value) == 0:
+        return (True, "valid")
+
+    if is_int_type(value):
+        return (True, "valid")
+    ret = is_pio_type(value)
+    if ret ==  0:
+        return (True, "valid")
+    if ret == -1:
+        return (False, "invalid pio config")
+    (ret, msg) = is_str_type(value)
+    if ret:
+        return (True, "valid")
+    else:
+        return (False, msg)
+
+    return (False, "invalid line format")
+
+def check_line_format(conf_lines):
+    global mainkey_list
+
+    print ">>> check sys_config line format"
+    for i, line in enumerate(conf_lines):
+        # omit empty line
+        if is_empty_line(line):
+            continue
+
+        # omit comment line
+        if is_comment_line(line):
+            continue
+
+        # check mainkey valid
+        if is_mainkey_line(line):
+            (ret, mainkey, msg) = check_mainkey_valid(line)
+            if ret:
+                mainkey_list.append(mainkey)
+                continue
+            else:
+                error_msg("L%d: %s" % (i+1, line))
+                error_msg(msg)
+                return False
+
+        # check subkey valid
+        (ret, msg) = check_subkey_valid(line)
+        if ret:
+            continue
+        else:
+            error_msg("L%d: %s" % (i+1, line))
+            error_msg(msg)
+            return False
+
+    print ">>> done."
+    return True
+
+def check_part_name_valid(name):
+    if len(name) > 0 and len(name) <= 12:
+        for ch in name:
+            if not ch.isalpha() and not ch.isdigit() and ch != '_':
+                return (False, "invalid character in main key name, must a combination of character, number or '_'")
+        return (True, "valid")
+    return (False, "invalid length of partition name, 1 ~ 12 characters is recommended")
+
+def check_part_size_valid(size):
+    if not size.isdigit():
+        return (False, "invalid partition size, must be decimal base digit, unit: 512Bytes")
+    if int(size) % 32768:
+        return (False, "invalid partition size, must 16MB align, unit: 512Bytes")
+    return (True, "valid")
+
+def check_part_keydata_valid(keydata):
+    if not keydata.isdigit() or int(keydata) != 0 and int(keydata) != 1:
+        return (False, "invalid keydata value, using 0(normal partition) or 1(private partition) instead")
+    return (True, "valid")
+
+def check_part_encrypt_valid(encrypt):
+    if not encrypt.isdigit() or int(encrypt) != 0 and int(encrypt) != 1:
+        return (False, "invalid encrypt value, using 0(no encrypt), 1(encrypt) instead")
+    return (True, "valid")
+
+def check_part_verify_valid(verify):
+    if not verify.isdigit() or int(verify) != 0 and int(verify) != 1:
+        return (False, "invalid verify value, using 0(skip partition) or 1(do verify) instead")
+    return (True, "valid")
+
+def check_part_config(conf_lines):
+    print ">>> check partition config"
+
+    part_conf_mainkey_list = ["mbr", "partition_start", "partition"]
+    parts_name = []
+    j = 0
+    k = 0
+    for i, line in enumerate(conf_lines):
+        # omit empty line
+        if is_empty_line(line):
+            continue
+
+        # omit comment line
+        if is_comment_line(line):
+            continue
+
+        # check mainkey valid
+        if is_mainkey_line(line):
+            mainkey = line[1:-1]
+            if cmp(mainkey, "partition") == 0:
+                if k and len(parts_name[k-1]) <= 0:
+                    error_msg("L%d: %s" % (i+1, line))
+                    error_msg("invalid new partition, last partition required a name")
+                    return False
+                k += 1
+                parts_name.append("")
+
+            if cmp(mainkey, part_conf_mainkey_list[j]):
+                error_msg("L%d: %s" % (i+1, line))
+                error_msg("invalid main key sequence")
+                return False
+            elif j < len(part_conf_mainkey_list) - 1:
+                j += 1
+                continue
+            else:
+                continue
+
+        # check subkey valid
+        (ret, subkey, offset, msg) = _check_subkey_valid(line)
+        if not ret:
+            error_msg("L%d %s" % (i+1, line))
+            error_msg(msg)
+            return False
+
+        value = line[offset+1:].strip()
+        if cmp(mainkey, "mbr") == 0:
+            if cmp(subkey, "size"):
+                error_msg("L%d: %s" % (i+1, line))
+                error_msg("invalid subkey name, [%s] only takes the following subkey:" % mainkey)
+                error_msg("    size")
+                return False
+
+            if not value.isdigit():
+                error_msg("L%d: %s" % (i+1, line))
+                error_msg("invalid partition size, must be decimal base digit, unit: KB")
+                return False
+            if int(value) % 16384:
+                error_msg("L%d: %s" % (i+1, line))
+                error_msg("invalid partition size, must 16MB align, unit: KB")
+                return False
+
+        elif cmp(mainkey, "partition_start") == 0:
+            error_msg("L%d: %s" % (i+1, line))
+            error_msg("[%s] takes none subkey" % mainkey)
+            return False
+
+        elif cmp(mainkey, "partition") == 0:
+            if cmp(subkey, "name") == 0:
+                (ret, msg) = check_part_name_valid(value)
+                if not ret:
+                    error_msg("L%d: %s" % (i+1, line))
+                    error_msg(msg)
+                    return False
+                for m in range(k):
+                    if cmp(value, parts_name[m]) == 0:
+                        error_msg("L%d: %s" % (i+1, line))
+                        error_msg("partition name is reduplication, keep unique partition name in config")
+                        return False
+                parts_name[k-1] = value
+
+            elif cmp(subkey, "size") == 0:
+                (ret, msg) = check_part_size_valid(value)
+                if not ret:
+                    error_msg("L%d: %s" % (i+1, line))
+                    error_msg(msg)
+                    return False
+
+            elif cmp(subkey, "downloadfile") == 0:
+                (ret, msg) = is_str_type(value)
+                if not ret:
+                    error_msg("L%d: %s" % (i+1, line))
+                    error_msg(msg)
+                    return False
+
+            elif cmp(subkey, "keydata") == 0:
+                (ret, msg) = check_part_keydata_valid(value)
+                if not ret:
+                    error_msg("L%d: %s" % (i+1, line))
+                    error_msg(msg)
+                    return False
+
+            elif cmp(subkey, "encrypt") == 0:
+                (ret, msg) = check_part_encrypt_valid(value)
+                if not ret:
+                    error_msg("L%d: %s" % (i+1, line))
+                    error_msg(msg)
+                    return False
+
+            elif cmp(subkey, "verify") == 0:
+                (ret, msg) = check_part_verify_valid(value)
+                if not ret:
+                    error_msg("L%d: %s" % (i+1, line))
+                    error_msg(msg)
+                    return False
+
+        else:
+            error_msg("L%d: %s" % (i+1, line))
+            error_msg("unknown error")
+            return False
+
+    if len(parts_name[k-1]) <= 0:
+        error_msg("L%d: %s" % (i+1, line))
+        error_msg("the last partition is required a name")
+        return False
+
+    print ">>> done."
+    return True
+
+def check_mainkey_unique():
+    print ">>> check mainkey unique"
+    if len(mainkey_list) == len(set(mainkey_list)):
+        print ">>> done."
+        return True
+    else:
+        error_msg("main key is reduplication, keep unique main key in config")
+        return False
+
+def check_module_rule(conf_lines):
+    print ">>> check module rule"
+    print ">>> not implement yet"
+    return True
+
+def main():
+    global version
+    print ">>> %s" % version
+    parser = OptionParser()
+    parser.add_option("-f", "--file", dest="filename", help="the path of sys_config.fex", metavar="FILE")
+
+    (options, args) = parser.parse_args()
+    if options.filename == None:
+        error_msg("the path of sys_config.fex is needed")
+        sys.exit(1)
+
+    if not os.path.exists(options.filename):
+        error_msg("File not exist: %s" % options.filename)
+        sys.exit(1)
+
+    if options.filename.endswith("sys_partition.fex"):
+        is_part_conf = True
+    else:
+        is_part_conf = False
+
+    sys_config = open(options.filename, "r")
+    conf_lines = [ line.strip() for line in sys_config.readlines() ]
+    sys_config.close()
+
+    if not check_line_format(conf_lines):
+        sys.exit(1)
+    if is_part_conf:
+        if not check_part_config(conf_lines):
+            sys.exit(1)
+    else:
+        if not check_mainkey_unique():
+            sys.exit(1)
+        if not check_module_rule(conf_lines):
+            sys.exit(1)
+
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
