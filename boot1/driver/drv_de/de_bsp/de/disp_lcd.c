@@ -684,7 +684,7 @@ void LCD_get_sys_config(__u32 sel, __disp_lcd_cfg_t *lcd_cfg)
 
 //init_bright
     sprintf(primary_key, "disp_init");
-    sprintf(sub_name, "lcd%d_bright", sel);
+    sprintf(sub_name, "lcd%d_backlight", sel);
     
     ret = OSAL_Script_FetchParser_Data(primary_key, sub_name, &value, 1);
     if(ret < 0)
