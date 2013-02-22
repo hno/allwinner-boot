@@ -31,8 +31,10 @@ OBJS=$(SRCCS:.c=.o) $(SRCSS:.S=.o)
 
 #生成输出目标文件
 all:$(LOCALTARGET)
-	$(LOAD) $(LDFLAGS) $(LOCALTARGET) $(TARGET)
-	-rm $(OBJS)
+	$(LOAD) $(LDFLAGS) $(LOCALTARGET) $(LTARGET)
+	-cp $(LTARGET) $(TARGET0)
+	cp  $(LTARGET) $(TARGET1)
+	-rm $(OBJS) $(LOCALTARGET) $(LTARGET)
 	@echo ----------------------------
 	@echo target make finish
 	@echo ----------------------------
