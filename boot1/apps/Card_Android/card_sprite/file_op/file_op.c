@@ -256,7 +256,7 @@ CSzFile *File_Open(Sector_t sector, __u32 size_low, __u32 size_high, __u32 write
     p->SectorNr 	     = sector;
     p->CurSec   	     = sector;
     p->CurPos   	     = 0;
-    p->Size     	     = size_low | (((__int64)size_high) << 32);
+    p->Size     	     = size_low | (((__s64)size_high) << 32);
     p->writeMode         = writeMode;
     p->Buffer_t.Buffer   = (__u8 *)sprite_malloc(512 * 1024);
 //    p->Buffer_t.Buffer   = //DFB_Malloc(DEC_SECTOR_SIZE);
@@ -339,7 +339,7 @@ WRes File_Write(const void *data, __u32 size, __u32 size_cnt, CSzFile *p)
 }
 
 
-WRes File_Seek(CSzFile *p, __int64 pos, ESzSeek origin)
+WRes File_Seek(CSzFile *p, __s64 pos, ESzSeek origin)
 {
     Int64 Offset;
     Int64 SeekPos;

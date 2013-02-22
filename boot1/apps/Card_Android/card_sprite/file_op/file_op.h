@@ -55,8 +55,8 @@ typedef struct  __CSzFile
   int   		writeMode;		/* write open mode falg 			*/
   Sector_t 		SectorNr;		/* begin sector number 				*/
   Sector_t 		CurSec;			/* current sector number 			*/
-  __int64   	CurPos;			/* file current postion 			*/
-  __int64   	Size;			/* total size (just for read open) 	*/
+  __s64   	CurPos;			/* file current postion 			*/
+  __s64   	Size;			/* total size (just for read open) 	*/
   DecBuffer_t	Buffer_t;		/* data buffer 						*/
 } CSzFile;
 
@@ -65,6 +65,6 @@ extern  WRes File_Close (CSzFile *p);
 
 extern  WRes File_Read  (void *data, __u32 size, __u32 size_cnt, CSzFile *p);
 extern  WRes File_Write (const void *data, __u32 size, __u32 size_cnt, CSzFile *p);
-extern  WRes File_Seek  (CSzFile *p, __int64 pos, ESzSeek origin);
+extern  WRes File_Seek  (CSzFile *p, __s64 pos, ESzSeek origin);
 
 #endif	/* __FILE_OP_H__ */

@@ -40,7 +40,7 @@ const boot0_file_head_t  BT0_head = {
 	      /* jump_instruction */          ( 0xEA000000 | ( ( ( sizeof( boot0_file_head_t ) + sizeof( int ) - 1 ) / sizeof( int ) - 2 ) & 0x00FFFFFF ) ),
 							   		      BOOT0_MAGIC,
 							   		      STAMP_VALUE,
-							   		      BOOT0_ALIGN_SIZE,
+							   		      0x2000,
 							   		      sizeof( boot_file_head_t ),
 							   		      BOOT_PUB_HEAD_VERSION,
 							   		      BOOT0_FILE_HEAD_VERSION,

@@ -158,9 +158,6 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
 {
 	struct sunxi_mmc_host* mmchost = &mmc_host[sdc_no];
 	u32 rval;
-	u32 pll5_clk;
-	u32 divider;
-	u32 n, k, m;
 	u32 gpioc_base = 0x01c20800 + 0x48;
 	u32 gpiof_base = 0x01c20800 + 0xb4;
 //	u32 pll5_base = CCMU_PLL5_CLK_BASE;
@@ -252,7 +249,6 @@ static int mmc_config_clock(struct mmc *mmc, unsigned clk)
 {
 	struct sunxi_mmc_host* mmchost = (struct sunxi_mmc_host *)mmc->priv;
 	unsigned rval = readl(&mmchost->reg->clkcr);
-	unsigned int clkdiv = 0;
 
 	/*
 	 * CLKCREG[7:0]: divider
@@ -265,7 +261,6 @@ static int mmc_config_clock(struct mmc *mmc, unsigned clk)
 	if(mmc_update_clk(mmc))
 		return -1;
 
-	clkdiv = mmchost->mclk/clk/2;
 	if (clk <=400000) {
 	    mmchost->mclk = 400000;
 	    writel(0x8012010f, mmchost->mclkbase);
