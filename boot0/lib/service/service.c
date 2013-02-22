@@ -67,6 +67,13 @@ void set_dram_para(void *dram_addr )
 	return;
 }
 
+void set_nand_good_block_ratio_para(void *nand_info_boot0)
+{
+    boot1_file_head_t  *boot1_buf = (boot1_file_head_t *)BOOT1_BASE;
+    boot_nand_para_t *nand_info_boot1 = (boot_nand_para_t *)(boot1_buf->prvt_head.storage_data);
+	nand_info_boot1->good_block_ratio = ((boot_nand_para_t *)(nand_info_boot0))->good_block_ratio;
+}
+
 //void  delay( __u32 ms )       // CPU frequence is 120Mhz
 //{
 //	__u32 count;

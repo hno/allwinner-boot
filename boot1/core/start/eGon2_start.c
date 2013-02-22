@@ -191,6 +191,9 @@ void eGon2_start( void )
 	eGon2_printf("script finish\n");
 #endif
 
+#if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
+    eGon2_block_ratio();
+#endif
 	if(force_to_card0 == 1)
 	{
 		eGon2_force_to_debug();

@@ -130,7 +130,14 @@ void Boot0_C_part( void )
 		//跳转boot1之前，把dram的大小写进去
 		//set_dram_size(dram_size );
 		//跳转之前，把所有的dram参数写到boot1中
-		//set_dram_para((void *)&BT0_head.prvt_head.dram_para);
+		#if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_SD_CARD
+		set_dram_para((void *)&BT0_head.prvt_head.dram_para);
+        #endif
+        
+        #if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND_FLASH
+        set_nand_good_block_ratio_para((void *)&BT0_head.prvt_head.storage_data);
+        #endif
+        
 		msg("Succeed in loading Boot1.\n"
 		    "Jump to Boot1.\n");
 		jump_to( BOOT1_BASE );                    // 如果载入Boot1成功，跳转到Boot1处执行

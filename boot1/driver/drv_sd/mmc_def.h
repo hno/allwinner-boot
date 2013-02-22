@@ -15,7 +15,7 @@
 
 #define MMC_SUN6I
 #define MAX_MMC_NUM			4
-//#define MMC_TRANS_BY_DMA
+#define MMC_TRANS_BY_DMA
 //#define MMC_DEBUG
 #undef  MMC_DEBUG
 
