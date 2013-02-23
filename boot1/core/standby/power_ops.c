@@ -319,16 +319,16 @@ __s32 eGon2_power_init(void *power_para)
 	{
 		if(dcin_exist)
 		{
-			if(bat_vol > 3900)
-			{
-				_axp_clr_status();
+//			if(bat_vol > 3900)
+//			{
+//				_axp_clr_status();
 				power_step_level = BATTERY_RATIO_ENOUGH;
-				eGon2_printf("dcin_exist\n");
-			}
-			else
-			{
-				power_step_level = BATTERY_RATIO_TOO_LOW_WITH_DCIN;
-			}
+				__debug("no baterry ratio flag,dcin_exist,set BATTERY_RATIO_ENOUGH\n");
+//			}
+//			else
+//			{
+//				power_step_level = BATTERY_RATIO_TOO_LOW_WITH_DCIN;
+//			}
 		}
     	else
     	{
