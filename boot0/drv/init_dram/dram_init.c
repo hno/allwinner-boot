@@ -927,7 +927,7 @@ __s32 init_DRAM(int type)
 #ifndef CONFIG_AW_FPGA_PLATFORM
 
 	get_boot0_dram_para( &boot0_para );
-
+    print_boot0_dram_para(&boot0_para);
 	if(boot0_para.dram_clk > 2000)
 	{
 		boot0_para.dram_clk /= 1000000;
@@ -945,7 +945,8 @@ __s32 init_DRAM(int type)
 	boot0_para.dram_emr1			=0;
 	boot0_para.dram_emr2			=8;
 	boot0_para.dram_emr2			=0;
-	boot0_para.dram_clk			=24000000;
+	boot0_para.dram_clk			    =24000000;
+    print_boot0_dram_para(&boot0_para);
 #endif
 
 #ifndef CONFIG_AW_FPGA_PLATFORM

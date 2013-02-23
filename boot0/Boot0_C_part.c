@@ -100,6 +100,17 @@ void Boot0_C_part( void )
 		mmu_disable( );
 		jump_to( FEL_BASE );
 	}
+
+#ifdef CONFIG_AW_FPGA_PLATFORM
+	dram_size=*((volatile unsigned int*)(0x7000-0x4));
+	msg("sram data=%x\n",dram_size);
+	if(dram_size==0x12345678)
+	{
+			msg("force jump to superstandby!\n");
+			jump_to( 0x52000000 );
+	}
+#endif
+
 	msg("%x\n", *(volatile int *)0x52000000);
 	msg("super_standby_flag = %d\n", super_standby_flag);
 	if(1 == super_standby_flag)

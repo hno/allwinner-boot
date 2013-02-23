@@ -49,7 +49,24 @@ __u8  *get_page_buf( void )
 
 void   get_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p )
 {
+ 
 	memcpy( boot0_dram_para_p, &(BT0_head.prvt_head.dram_para), sizeof(boot_dram_para_t) );
+}
+void   print_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p )
+{
+    msg("boot0_para->dram_type			= %d\n",boot0_dram_para_p->dram_type);
+	msg("boot0_para->dram_io_width		= %d\n",boot0_dram_para_p->dram_io_width);
+	msg("boot0_para->dram_chip_density	= %d\n",boot0_dram_para_p->dram_chip_density);
+	msg("boot0_para->dram_cas		    = %d\n",boot0_dram_para_p->dram_cas);
+	msg("boot0_para->dram_bus_width		= %d\n",boot0_dram_para_p->dram_bus_width);
+	msg("boot0_para->dram_rank_num		= %d\n",boot0_dram_para_p->dram_rank_num);
+	msg("boot0_para->dram_tpr0			= %d\n",boot0_dram_para_p->dram_tpr0);
+	msg("boot0_para.dram_tpr1			= %d\n",boot0_dram_para_p->dram_tpr1);
+	msg("boot0_para->dram_tpr2			= %d\n",boot0_dram_para_p->dram_tpr2);
+	msg("boot0_para->dram_emr1			= %d\n",boot0_dram_para_p->dram_emr1);
+	msg("boot0_para->dram_emr2			= %d\n",boot0_dram_para_p->dram_emr2);
+	msg("boot0_para->dram_emr2			= %d\n",boot0_dram_para_p->dram_emr2);
+	msg("boot0_para->dram_clk			= %d\n",boot0_dram_para_p->dram_clk);
 }
 
 void   set_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p )
