@@ -90,7 +90,10 @@ void Boot0_C_part( void )
 #endif
 
 	dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // ≥ı ºªØDRAM
-	if(dram_size)
+
+    boot0_twi_exit();
+
+    if(dram_size)
 	{
 		msg("dram size =%d\n", dram_size);
 	}

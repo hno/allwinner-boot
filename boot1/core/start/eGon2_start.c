@@ -282,7 +282,23 @@ static int eGon2_storage_type_set(void)
 	{
 		eGon2_printf("storage_type=%d\n", type);
 	}
-
+    #if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
+        eGon2_script_parser_patch("nand_para", "nand_used", 1);
+        eGon2_script_parser_patch("mmc2_para", "sdc_used", 0);
+    #elif SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_SD_CARD
+    if(1 == type)
+    {
+        eGon2_script_parser_patch("mmc0_para", "sdc_used", 1);
+        eGon2_script_parser_patch("mmc0_para", "sdc_detmode", 3);
+    }else
+    if(2 == type)
+    {
+        eGon2_script_parser_patch("mmc2_para", "sdc_used", 1);
+        eGon2_script_parser_patch("mmc2_para", "sdc_detmode", 3);
+        eGon2_script_parser_patch("nand_para", "nand_used", 0);
+    }
+    #endif
+    
 	return type ;
 }
 
