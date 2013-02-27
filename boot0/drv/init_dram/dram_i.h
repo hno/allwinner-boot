@@ -2,12 +2,10 @@
 *********************************************************************************************************
 * File    : dram_i.h
 * By      : Berg.Xing
-* Date    : 2011-06-01
-* Descript: dram csp for AW1623 chipset;
+* Date    : 2011-12-07
+* Descript: dram for AW1625 chipset
 * Update  : date                auther      ver     notes
-*           2011-06-01      	Berg        1.0     create file
-*			2011-07-01			Berg        1.1     add extern function description		
-*			2011-08-05			Berg		1.2		add CPU_CFIG_REG in timer module
+*			2011-12-07			Berg        1.0     create file from aw1623
 *********************************************************************************************************
 */
 #ifndef __DRAM_I_H__
@@ -71,9 +69,15 @@
 
 #define DRAM_CCM_SDRAM_PLL_REG          (DRAM_CCM_BASE + 0x20)
 #define DRAM_CCM_AHB_GATE_REG           (DRAM_CCM_BASE + 0x60)
+#define DRAM_CCM_SS_CLK_REG		        (DRAM_CCM_BASE + 0x9c)
 #define DRAM_CCM_GPS_CLK_REG            (DRAM_CCM_BASE + 0xd0)
 #define DRAM_CCM_SDRAM_CLK_REG          (DRAM_CCM_BASE + 0x100)
+#define DRAM_CCM_MUS_CLK_REG          	(DRAM_CCM_BASE + 0x15c)
 
+
+//SS register for system
+#define DRAM_SS_BASE    				0x01c15000
+#define DRAM_SS_CTRL_REG          		(DRAM_SS_BASE + 0x00)
 //TIMER register for system
 #define DRAM_TIMER_BASE    0x01c20c00
 #define TIMER_CPU_CFG_REG          		(DRAM_TIMER_BASE + 0x13c)
@@ -82,13 +86,14 @@
 extern void 	DRAMC_clock_output_en(__u32 on);
 extern void 	DRAMC_set_autorefresh_cycle(__u32 clk);
 extern int  	DRAMC_scan_readpipe(void);
+extern __s32    DRAMC_scan_dll_para(void);
 extern unsigned DRAMC_get_dram_size(void);
 extern void mctl_delay(__u32 dly);
 
 extern void mctl_itm_disable(void);
 extern void mctl_itm_enable(void);
-extern void mctl_enable_dll0(void);
-extern void mctl_enable_dllx(void);
+extern void mctl_enable_dll0(__u32 phase);
+extern void mctl_enable_dllx(__u32 phase);
 extern void mctl_disable_dll(void);
 
 #endif  //__DRAM_REG_H__

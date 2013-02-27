@@ -43,6 +43,12 @@ static int  check_bootid(void);
 static void timer_init(void);
 static void print_version(void);
 static __u32 check_odt(int ms);
+
+static __u32 cpu_freq = 0;
+static __u32 overhead = 0;
+#define CCU_REG_VA (0xF1c20000)
+#define CCU_REG_PA (0x01c20000)
+
 /*******************************************************************************
 *函数名称: Boot0_C_part
 *函数原型：void Boot0_C_part( void )
@@ -75,10 +81,15 @@ void Boot0_C_part( void )
 
 	mmu_system_init(EGON2_DRAM_BASE, 4 * 1024, EGON2_MMU_BASE);
 	mmu_enable();
+    
+	init_perfcounters(1, 0);
+	change_runtime_env(0);
 
+    #ifdef CONFIG_HOLD_SUPERSTANDBY_DATA_BY_PMU
 	//for A20 super standby
 	boot0_twi_init();
-
+    #endif
+    
 #ifdef CONFIG_AW_FPGA_PLATFORM
 	dram_size=*((volatile unsigned int*)(0x8000-0x4));
 	msg("sram data=%x\n",dram_size);
@@ -91,8 +102,9 @@ void Boot0_C_part( void )
 
 	dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // 初始化DRAM
 
+    #ifdef CONFIG_HOLD_SUPERSTANDBY_DATA_BY_PMU
     boot0_twi_exit();
-
+    #endif
     if(dram_size)
 	{
 		msg("dram size =%d\n", dram_size);
@@ -336,3 +348,119 @@ static void clear_ZI( void )
 		*p8++ = 0;
 	}
 }
+
+
+__u32 get_cyclecount (void)
+{
+	__u32 value;
+	// Read CCNT Register
+	__asm{MRC p15, 0, value, c9, c13, 0}
+	return value;
+}
+
+void init_perfcounters (__u32 do_reset, __u32 enable_divider)
+{
+	// in general enable all counters (including cycle counter)
+	__u32 value = 1;
+
+	// peform reset:
+	if (do_reset)
+	{
+		value |= 2;     // reset all counters to zero.
+		value |= 4;     // reset cycle counter to zero.
+	}
+
+	if (enable_divider)
+		value |= 8;     // enable "by 64" divider for CCNT.
+
+	value |= 16;
+
+	// program the performance-counter control-register:
+	__asm {MCR p15, 0, value, c9, c12, 0}
+
+	// enable all counters:
+	value = 0x8000000f;
+	__asm {MCR p15, 0, value, c9, c12, 1}
+
+	// clear overflows:
+	__asm {MCR p15, 0, value, c9, c12, 3}
+
+	return;
+}
+
+void change_runtime_env(__u32 mmu_flag)
+{
+	__u32 factor_n = 0;
+	__u32 factor_k = 0;
+	__u32 factor_m = 0;
+	__u32 factor_p = 0;
+	__u32 start = 0;
+	__u32 cmu_reg = 0;
+	volatile __u32 reg_val = 0;
+
+	if(mmu_flag){
+		cmu_reg = CCU_REG_VA;
+	}else{
+		cmu_reg = CCU_REG_PA;
+	}
+	//init counters:
+	//init_perfcounters (1, 0);
+	// measure the counting overhead:
+	start = get_cyclecount();
+	overhead = get_cyclecount() - start;
+	//busy_waiting();
+	//get runtime freq: clk src + divider ratio
+	//src selection
+	reg_val = *(volatile int *)(cmu_reg + 0x54);
+	reg_val >>= 16;
+	reg_val &= 0x3;
+	if(0 == reg_val){
+		//32khz osc
+		cpu_freq = 32;
+
+	}else if(1 == reg_val){
+		//hosc, 24Mhz
+		cpu_freq = 24000; 			//unit is khz
+	}else if(2 == reg_val){
+		//get pll_factor
+		reg_val = *(volatile int *)(cmu_reg + 0x00);
+		factor_p = 0x3 & (reg_val >> 16);
+		factor_p = 1 << factor_p;		//1/2/4/8
+		factor_n = 0x1f & (reg_val >> 8); 	//the range is 0-31
+		factor_k = (0x3 & (reg_val >> 4)) + 1; 	//the range is 1-4
+		factor_m = (0x3 & (reg_val >> 0)) + 1; 	//the range is 1-4
+
+		cpu_freq = (24000*factor_n*factor_k)/(factor_p*factor_m);
+		//cpu_freq = raw_lib_udiv(24000*factor_n*factor_k, factor_p*factor_m);
+		//msg("cpu_freq = dec(%d). \n", cpu_freq);
+		//busy_waiting();
+	}
+
+}
+
+/*
+ * input para range: 1-1000 us, so the max us_cnt equal = 1008*1000;
+ */
+void delay_us(__u32 us)
+{
+	__u32 us_cnt = 0;
+	__u32 cur = 0;
+	__u32 target = 0;
+
+	//us_cnt = ((raw_lib_udiv(cpu_freq, 1000)) + 1)*us;
+	us_cnt = ((cpu_freq/1000) + 1)*us;
+	cur = get_cyclecount();
+	target = cur - overhead + us_cnt;
+
+#if 1
+	while(!counter_after_eq(cur, target))
+	{
+		cur = get_cyclecount();
+		//cnt++;
+	}
+#endif
+
+
+	return;
+}
+
