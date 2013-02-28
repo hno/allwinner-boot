@@ -295,6 +295,11 @@ __s32 DRAMC_init(__dram_para_t *para)
 	reg_val |= ((0x1)&0x3)<<13;
 	mctl_write_w(SDR_DCR, reg_val);
 
+    //SDR_ZQCR1 set bit24 to 1
+    reg_val  = mctl_read_w(SDR_ZQCR1);
+    reg_val |= 0x1<<24;
+    mctl_write_w(SDR_ZQCR1, reg_val);
+
 	//set odt impendance divide ratio
 	reg_val=((para->dram_zq)>>8)&0xfffff;
 	reg_val |= ((para->dram_zq)&0xff)<<20;
