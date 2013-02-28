@@ -399,7 +399,7 @@ __s32 DRAMC_init(__dram_para_t *para)
         
         #else
            reg_val = mctl_read_w(SDR_GP_REG0);
-           reg_val &= 0x00ffffff;
+           reg_val &= 0x000fffff;
            reg_val |= 0x17b00000;
         #endif
         
