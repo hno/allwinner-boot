@@ -431,7 +431,12 @@ extern  __s32 boot_set_gpio(void  *user_gpio_list, __u32 group_count_max, __s32 
 
 void NAND_PIORequest(void)
 {
-	boot_set_gpio((void *)BOOT_STORAGE_CODE1, 0, 1);
+//	boot_set_gpio((void *)BOOT_STORAGE_CODE1, 0, 1);
+*(volatile uint *)(0x01c20800 + 0x48) = 0x22222222;
+*(volatile uint *)(0x01c20800 + 0x4C) = 0x22222222;
+*(volatile uint *)(0x01c20800 + 0x50) = 0x2222222;
+*(volatile uint *)(0x01c20800 + 0x54) = 0x2;
+
 }
 /*
 **********************************************************************************************************************
