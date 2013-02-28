@@ -31,7 +31,7 @@
 #define  __boot0_i_h
 
 #define  UBOOT_BASE  0x4a000000
-#define  CONFIG_AW_FPGA_PLATFORM
+//#define  CONFIG_AW_FPGA_PLATFORM
 //#define  CONFIG_HOLD_SUPERSTANDBY_DATA_BY_PMU
 
 #include "types.h"

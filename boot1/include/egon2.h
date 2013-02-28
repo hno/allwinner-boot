@@ -23,7 +23,7 @@
 #ifndef _EGON2_H_
 #define _EGON2_H_
 
-#define  CONFIG_AW_FPGA_PLATFORM
+//#define  CONFIG_AW_FPGA_PLATFORM
 #define  BOOT1_DEBUG
 #define  SCRIPT_INSTALL_EARLY
 //#define  FORCE_BOOT_STANDBY

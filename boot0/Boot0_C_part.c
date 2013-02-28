@@ -90,16 +90,6 @@ void Boot0_C_part( void )
 	boot0_twi_init();
     #endif
     
-#ifdef CONFIG_AW_FPGA_PLATFORM
-	dram_size=*((volatile unsigned int*)(0x8000-0x4));
-	msg("sram data=%x\n",dram_size);
-	if(dram_size==0x12345678)
-	{
-			msg("force jump to superstandby!\n");
-			jump_to( 0x52000000 );
-	}
-#endif
-
 	dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // ≥ı ºªØDRAM
 
     #ifdef CONFIG_HOLD_SUPERSTANDBY_DATA_BY_PMU
