@@ -89,7 +89,13 @@ void Boot0_C_part( void )
 	//for A20 super standby
 	boot0_twi_init();
     #endif
-    
+    if(BT0_head.boot_head.platform[7])
+    {
+        msg("read dram para.\n");
+    }else
+    {
+        msg("try dram para.\n");
+    }
 	dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // ≥ı ºªØDRAM
 
     #ifdef CONFIG_HOLD_SUPERSTANDBY_DATA_BY_PMU
