@@ -76,9 +76,11 @@ void   set_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p )
 	memcpy( &(boot0_buf->prvt_head.dram_para), boot0_dram_para_p, sizeof(boot_dram_para_t) );
 }
 
-void set_dram_para(void *dram_addr )
+void set_dram_para(void *dram_addr, __u32 dram_size)
 {
+    boot_dram_para_t  *dram_para = (boot_dram_para_t *)dram_addr;
 	boot1_file_head_t  *boot1_buf = (boot1_file_head_t *)BOOT1_BASE;
+    dram_para->dram_size = dram_size;
 	memcpy((void *)&boot1_buf->prvt_head.dram_para, dram_addr, sizeof(boot_dram_para_t));
 
 	return;

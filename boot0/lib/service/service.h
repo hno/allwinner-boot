@@ -37,7 +37,7 @@ extern __s32  BOOT_GetPid( void );
 extern __bool STATE_SingleChipOp( void );
 extern void   get_boot0_dram_para( boot_dram_para_t *boot_dram_para_p );
 extern void   delay( __u32 ms );
-extern void   set_dram_para(void *dram_addr );
+extern void   set_dram_para(void *dram_addr, __u32 dram_size);
 
 extern void   set_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p );
 extern void set_nand_good_block_ratio_para(void *nand_info_boot0);

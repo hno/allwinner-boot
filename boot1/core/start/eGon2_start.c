@@ -29,6 +29,8 @@ static __s32 reserved_exit(void);
 static int script_relocation(void);
 #endif
 static int eGon2_storage_type_set(void);
+static void dram_para_set(void);
+
 /*******************************************************************************
 *函数名称: eGon2_start
 *函数原型：void Boot1_C_part( void )
@@ -190,6 +192,7 @@ void eGon2_start( void )
 	}
 	eGon2_printf("script finish\n");
 #endif
+    dram_para_set();
 
 #if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
     eGon2_block_ratio();
@@ -349,3 +352,32 @@ static int script_relocation(void)
     return 0;
 }
 #endif
+
+static void dram_para_set(void)
+{
+    __u32 *addr = (__u32 *)&BT1_head.prvt_head.dram_para;
+
+    __inf("dram_para_set start\n");
+    eGon2_script_parser_patch("dram_para", "dram_baseaddr", addr[0]);
+    eGon2_script_parser_patch("dram_para", "dram_clk", addr[1]);
+    eGon2_script_parser_patch("dram_para", "dram_type", addr[2]);
+    eGon2_script_parser_patch("dram_para", "dram_rank_num", addr[3]);
+    eGon2_script_parser_patch("dram_para", "dram_chip_density", addr[4]);
+    eGon2_script_parser_patch("dram_para", "dram_io_width", addr[5]);
+    eGon2_script_parser_patch("dram_para", "dram_bus_width", addr[6]);
+    eGon2_script_parser_patch("dram_para", "dram_cas", addr[7]);
+    eGon2_script_parser_patch("dram_para", "dram_zq", addr[8]);
+    eGon2_script_parser_patch("dram_para", "dram_odt_en", addr[9]);
+    eGon2_script_parser_patch("dram_para", "dram_size", addr[10]);
+    eGon2_script_parser_patch("dram_para", "dram_tpr0", addr[11]);
+    eGon2_script_parser_patch("dram_para", "dram_tpr1", addr[12]);
+    eGon2_script_parser_patch("dram_para", "dram_tpr2", addr[13]);
+    eGon2_script_parser_patch("dram_para", "dram_tpr3", addr[14]);
+    eGon2_script_parser_patch("dram_para", "dram_tpr4", addr[15]);
+    eGon2_script_parser_patch("dram_para", "dram_tpr5", addr[16]);
+    eGon2_script_parser_patch("dram_para", "dram_emr1", addr[17]);
+    eGon2_script_parser_patch("dram_para", "dram_emr2", addr[18]);
+    eGon2_script_parser_patch("dram_para", "dram_emr3", addr[19]);
+    __inf("dram_para_set end\n");
+}
+
