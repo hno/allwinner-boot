@@ -411,7 +411,7 @@ __s32 DRAMC_init(__dram_para_t *para)
 		mctl_write_w(SDR_ZQCR0, reg_val);
 
 		//dram pad hold off
-		mctl_write_w(SDR_DPCR, 0x0);
+		mctl_write_w(SDR_DPCR, 0x16510000);
 	}
 
 	//scan read pipe value
