@@ -1,22 +1,25 @@
 /*
-**********************************************************************************************************************
-*											        eGon
-*						           the Embedded GO-ON Bootloader System
-*									       eGON arm boot sub-system
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*						  Copyright(C), 2006-2010, SoftWinners Microelectronic Co., Ltd.
-*                                           All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File    :
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* By      : Jerry
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version : V2.00
-*
-* Date	  :
-*
-* Descript:
-**********************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
 #include "types.h"
 #include "osal_de.h"
@@ -27,11 +30,23 @@ __s32 OSAL_CCMU_SetSrcFreq(__u32 nSclkNo, __u32 nFreq)
 
     if(nSclkNo == AW_SYS_CLK_PLL3)
     {
-        sys_put_wvalue(0x01c20010,0x8010d000 | (nFreq/3000000));
+        if (nFreq == 270000000) {
+            sys_put_wvalue(0x01c20010, 0x80101063);
+        } else if (nFreq == 297000000) {
+            sys_put_wvalue(0x01c20010, 0x80105063);
+        } else {
+            sys_put_wvalue(0x01c20010,0x8010d000 | (nFreq/3000000));
+        }
     }
     else if(nSclkNo == AW_SYS_CLK_PLL7)
     {
-        sys_put_wvalue(0x01c20030,0x8010d000 | (nFreq/3000000));
+        if (nFreq == 270000000) {
+            sys_put_wvalue(0x01c20030, 0x80101063);
+        } else if (nFreq == 297000000) {
+            sys_put_wvalue(0x01c20030, 0x80105063);
+        } else {
+            sys_put_wvalue(0x01c20030,0x8010d000 | (nFreq/3000000));
+        }
     }
     else if(nSclkNo == AW_SYS_CLK_PLL6)
     {

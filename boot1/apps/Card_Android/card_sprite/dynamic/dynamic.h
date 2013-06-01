@@ -1,31 +1,25 @@
 /*
-************************************************************************************************************************
-*                                                         eGon2
-*                                         the Embedded GO-ON Bootloader System
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*                             Copyright(C), 2006-2008, SoftWinners Microelectronic Co., Ltd.
-*											       All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File Name   : dynamic.c
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* Author      : Jerry.Wang
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version     : 1.1.0
-*
-* Date        : 2011-11-22
-*
-* Description :
-*
-* Others      : None at present.
-*
-*
-* History     :
-*
-*  <Author>        <time>       <version>      <description>
-*
-* Jerry.Wang      2010-3-30       1.1.0        build the file
-*
-************************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
 #ifndef   __DYNAMIC_H__
 #define   __DYNAMIC_H__

@@ -1,14 +1,71 @@
-#include "dec_img.h"
+/*
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
+*
+* See file CREDITS for list of people who contributed to this
+* project.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
+*/
+//----------------------------------------------------------------------------------------------------------//
+//                                                                                                          //
+//                                                                                                          //
+//                                                                                                          //
+//                                                                                                          //
+//    I MMMMMMMMMMI                                                                                         //
+//      I FF      BBI                                                                                       //
+//      I FF      I EE  FFMMFFI MMMMLL  I MMMMMMEE          EEMMBBLLBBFF    FFMMMMBBI   I MMBBBBMMMMI       //
+//      I FF        EEI   I BBBBI   I     I     LLFF      EELL  I BBFF    FFFF    I BBI   I BBI   I EE      //
+//      I FF        EEI   I FF          I BBMMMMMMFF      FF      I FF  I EE        I LL  I FF      EEI     //
+//      I FF      I EE    I FF          EEI     I FF      FF      I FF  I EE        I LL  I FF      EEI     //
+//      I FF      FFI     I FF          EEI     BBFF      FFI     EEFF    FFI       FFI   I FF      EEI     //
+//    I MMMMMMMMMMFF    BBMMMMMMMMFF    LLMMMMMMFFMMFF    I BBMMMMFFFF    I BBMMMMMMLL  I MMMMFF  BBMMBBI   //
+//                                                                I FF                                      //
+//                                                                FFLL                                      //
+//                                                          BBMMMMEE                                        //
+//                                                                                                          //
+//                                                                                                          //
+//----------------------------------------------------------------------------------------------------------//
+//                                                                                                          //
+//                                              Dragon System                                               //
+//                                                                                                          //
+//                               (c) Copyright 2006-2007, Scottyu China                                     //
+//                                                                                                          //
+//                                           All Rights Reserved                                            //
+//                                                                                                          //
+// File    : ImgDecode.cpp                                                                                  //
+// By      : scottyu                                                                                        //
+// Version : V1.00                                                                                          //
+// Time    : 2008-11-03 9:57:52                                                                             //
+//                                                                                                          //
+//----------------------------------------------------------------------------------------------------------//
+//                                                                                                          //
+// HISTORY                                                                                                  //
+//                                                                                                          //
+// 1 2008-11-03 9:57:55                                                                                     //
+//                                                                                                          //
+//                                                                                                          //
+//                                                                                                          //
+//----------------------------------------------------------------------------------------------------------//
 
+#include  "../card_sprite_i.h"
 
-#include "../imgencodedecode/encode.h"
-#include "../fileformat/imagefile.h"				//private head file
-
-#define ITEM_PHOENIX_TOOLS 	  "PXTOOLS "
-
-
-#define min( x, y )          ( (x) < (y) ? (x) : (y) )
-#define max( x, y )          ( (x) > (y) ? (x) : (y) )
+//#include "imgdecode.h"
+#include "imagefile_new.h"
 
 #define HEAD_ID				0		//头加密接口索引
 #define TABLE_ID			1		//表加密接口索引
@@ -20,29 +77,35 @@
 typedef struct tag_IMAGE_HANDLE
 {
 
-	CSzFile      * fp;			//文件句柄
+//	HANDLE  fp;			//
 
 	ImageHead_t  ImageHead;		//img头信息
 
 	ImageItem_t *ItemTable;		//item信息表
 
-	RC_ENDECODE_IF_t rc_if_decode[IF_CNT];//解密接口
-	
-	__bool			bWithEncpy; // 是否加密
-	
+//	RC_ENDECODE_IF_t rc_if_decode[IF_CNT];//解密接口
+
+//	BOOL			bWithEncpy; // 是否加密
 }IMAGE_HANDLE;
 
 #define INVALID_INDEX		0xFFFFFFFF
 
-#pragma pack(push, 1)
-typedef struct tag_ITEM_HANDLE{
-	__u32	index;					//在ItemTable中的索引
-	__u64 pos;
-}ITEM_HANDLE;
-#pragma pack(pop)
 
-static  __u8 *buffer_encode;
-static  int   buffer_encode_size;
+typedef struct tag_ITEM_HANDLE{
+	uint	index;					//在ItemTable中的索引
+	uint    reserved[3];
+//	long long pos;
+}ITEM_HANDLE;
+
+#define ITEM_PHOENIX_TOOLS 	  "PXTOOLS "
+#define   TEST_BLK_BYTES      (512 * 1024)
+
+char *img_file_buffer;
+uint img_file_start;			//固件的起始位置
+//------------------------------------------------------------------------------------------------------------
+//image解析插件的接口
+//------------------------------------------------------------------------------------------------------------
+
 
 //------------------------------------------------------------------------------------------------------------
 //
@@ -59,200 +122,80 @@ static  int   buffer_encode_size;
 //    无
 //
 //------------------------------------------------------------------------------------------------------------
-HIMAGE 	Img_Open	(__u32 start_sector, int size)
+HIMAGE 	Img_Open	(__u32 start)
 {
-	IMAGE_HANDLE  *pImage;
-	ImageHead_t ImageHead;
-	char	seed[]	= "img";
-	char key_buff[MAX_KEY_SIZE];
-	__u32 key_len = MAX_KEY_SIZE;
-	__u32 ItemTableSize;
-	__u8 * ItemTableBuf, * pItemTableDecode;
-	__u32 i;
+	IMAGE_HANDLE * pImage = NULL;
+	uint ItemTableSize;					//固件索引表的大小
 
-    pImage = (IMAGE_HANDLE *)sprite_malloc(sizeof(IMAGE_HANDLE));
-    if(!pImage)
-    {
-        sprite_wrn("DEC_IMG: fail to get memory for pImage\n");
-
-        return NULL;
-    }
-	memset(pImage, 0, sizeof(IMAGE_HANDLE));
-	buffer_encode_size = size;
-	//------------------------------------------------
-	//初始化解密接口
-	//------------------------------------------------
-	for (i = 0; i< IF_CNT; i++)
+	img_file_start = start;
+	__inf("img start = %x\n", img_file_start);
+	pImage = (IMAGE_HANDLE *)wBoot_malloc(sizeof(IMAGE_HANDLE));
+	if (NULL == pImage)
 	{
-		pImage->rc_if_decode[i].handle 		= NULL;
-		pImage->rc_if_decode[i].Initial		= Initial;
-		pImage->rc_if_decode[i].EnDecode	= Decode;
-		pImage->rc_if_decode[i].UnInitial	= UnInitial;
-		memset(key_buff, i, key_len);		//前面的数据初始化为0 note
-		key_buff[key_len - 1] = seed[i];	//最后一个字节修改    note
-
-		pImage->rc_if_decode[i].handle = pImage->rc_if_decode[i].Initial(key_buff, &key_len, i);
-		if (NULL == pImage->rc_if_decode[i].handle)
-		{
-		    sprite_free(pImage);
-		    sprite_wrn("DEC_IMG: pImage->rc_if_decode[i].handle is NULL\n");
-
-			return NULL;
-		}
-	}
-	//------------------------------------------------
-	//打开img文件
-	//------------------------------------------------
-	pImage->fp = File_Open(start_sector, 0, 4, 0);
-	if (NULL == pImage->fp)
-	{
-	    sprite_free(pImage);
-		sprite_wrn("DEC_IMG: open img file failed\n");
+		__inf("sunxi sprite error: fail to wBoot_malloc memory for img head\n");
 
 		return NULL;
 	}
-
+	memset(pImage, 0, sizeof(IMAGE_HANDLE));
 	//------------------------------------------------
 	//读img头
 	//------------------------------------------------
-	if(File_Read(&ImageHead, sizeof(ImageHead_t), 1, pImage->fp))
+	//__inf("try to read mmc start %d\n", img_file_start);
+	if(wBoot_block_read(img_file_start, IMAGE_HEAD_SIZE/512, &pImage->ImageHead))
 	{
-        
-	    sprite_free(pImage);
-		sprite_wrn("DEC_IMG: read imagehead fail!\n");
+		__inf("sunxi sprite error: read image head fail\n");
 
-        return  NULL;
-
-    }
-     
-	if(memcmp(ImageHead.magic, IMAGE_MAGIC, 8) == 0)
-	{
-		pImage->bWithEncpy = 0;
-       // sprite_wrn("DEC_IMG: no encpy used!\n");
+		goto _img_open_fail_;
 	}
-	else
-	{
-		pImage->bWithEncpy = 1;
-       // sprite_wrn("DEC_IMG:  encpy used!\n");
-	}
-	
-	if(pImage->bWithEncpy)
-	{
-    	__u8 * pHead = (__u8 *) &ImageHead;
-    	__u8 * pHeadDecode = (__u8 *)&pImage->ImageHead;
-    	__u8 * pin, *pout;
-
-    	for (i = 0; i < sizeof(ImageHead_t); i+= ENCODE_LEN)
-    	{
-    		pin = pHead + i;
-    		pout= pHeadDecode + i;
-    		if (OK  != pImage->rc_if_decode[HEAD_ID].EnDecode(pImage->rc_if_decode[HEAD_ID].handle, pin , pout))
-    		{
-    		    sprite_free(pImage);
-    			File_Close(pImage->fp);
-    			sprite_wrn("DEC_IMG: decode img file head failed\n");
-
-    			return NULL;
-    		}
-    	}
-    }
-    else
-    {
-        memcpy((void *)(&(pImage->ImageHead)), (void*)&ImageHead, sizeof(ImageHead_t));
-    }
 	//------------------------------------------------
 	//比较magic
 	//------------------------------------------------
-	//sprite_wrn("DEC_IMG: img header magic:%s\n",pImage->ImageHead.magic);
-	if (memcmp(pImage->ImageHead.magic, IMAGE_MAGIC, 8))
+	if (memcmp(pImage->ImageHead.magic, IMAGE_MAGIC, 8) != 0)
 	{
-	    sprite_free(pImage);
-		File_Close(pImage->fp);
-		sprite_wrn("DEC_IMG: img header magic error\n");
+		__inf("sunxi sprite error: image magic is bad\n");
 
-		return NULL;
+		goto _img_open_fail_;
 	}
+	//------------------------------------------------
+	//为索引表开辟空间
+	//------------------------------------------------
 	ItemTableSize = pImage->ImageHead.itemcount * sizeof(ImageItem_t);
-	pImage->ItemTable = (ImageItem_t*)sprite_malloc(ItemTableSize);
-	if(!pImage->ItemTable)
+	pImage->ItemTable = (ImageItem_t*)wBoot_malloc(ItemTableSize);
+	if (NULL == pImage->ItemTable)
 	{
-	    sprite_free(pImage);
-		File_Close(pImage->fp);
-		sprite_wrn("DEC_IMG: fail to get memory for ItemTable\n");
+		__inf("sunxi sprite error: fail to wBoot_malloc memory for item table\n");
 
-		return NULL;
+		goto _img_open_fail_;
 	}
-
 	//------------------------------------------------
-	//read ItemTable
+	//读出索引表
 	//------------------------------------------------
-	ItemTableBuf = (__u8 *)sprite_malloc(ItemTableSize);
-	if(!ItemTableBuf)
+	if(wBoot_block_read(img_file_start + (IMAGE_HEAD_SIZE/512), ItemTableSize/512, pImage->ItemTable))
 	{
-	    sprite_free(pImage->ItemTable);
-	    sprite_free(pImage);
-		File_Close(pImage->fp);
-		sprite_wrn("DEC_IMG: fail to get memory for ItemTableBuf\n");
+		__inf("sunxi sprite error: read iamge item table fail\n");
 
-		return NULL;
+		goto _img_open_fail_;
 	}
-  //  sprite_wrn("DEC_IMG: pImage->ImageHead.itemoffset=0x%x\n",pImage->ImageHead.itemoffset);
-  // sprite_wrn("DEC_IMG: pImage->ImageHead.itemSize=0x%x\n",pImage->ImageHead.itemsize);
-  //  sprite_wrn("DEC_IMG: pImage->ImageHead.itemcount=%d\n",pImage->ImageHead.itemcount);
-    
-	File_Seek(pImage->fp, pImage->ImageHead.itemoffset, SZ_SEEK_SET);
-	if(File_Read(ItemTableBuf, ItemTableSize, 1, pImage->fp))
-	{
-		sprite_wrn("DEC_IMG: read ItemTable failed\n");
-	    return 0;
-	}
-	File_Seek(pImage->fp, 0, SZ_SEEK_CUR);
-	//------------------------------------------------
-	// decode ItemTable
-	//------------------------------------------------
-	pItemTableDecode = (__u8 *)pImage->ItemTable;
-    if(pImage->bWithEncpy)
-	{
-	    __u8 *pin, *pout;
-
-    	for (i = 0; i < ItemTableSize; i+= ENCODE_LEN)
-    	{
-    		pin = ItemTableBuf + i;
-    		pout= pItemTableDecode + i;
-
-    		if (OK  != pImage->rc_if_decode[TABLE_ID].EnDecode(pImage->rc_if_decode[TABLE_ID].handle, pin , pout))
-    		{
-    		    sprite_free(pImage->ItemTable);
-    		    sprite_free(ItemTableBuf);
-    			File_Close(pImage->fp);
-    			sprite_free(pImage);
-    			sprite_wrn("DEC_IMG: decode img file ItemTable failed\n");
-
-    			return NULL;
-    		}
-    	}
-    }else
-	{
-	
-		memcpy(pItemTableDecode, ItemTableBuf, ItemTableSize);
-	
-	}
-	
-    sprite_free(ItemTableBuf);
-
-    buffer_encode = (__u8 *)sprite_malloc(buffer_encode_size);
-    if(!buffer_encode)
+    img_file_buffer = (char *)wBoot_malloc(TEST_BLK_BYTES);
+    if(!img_file_buffer)
     {
-        sprite_free(pImage->ItemTable);
-	    sprite_free(ItemTableBuf);
-		File_Close(pImage->fp);
-		sprite_free(pImage);
-		sprite_wrn("DEC_IMG: fail to get memory for buffer_encode\n");
+        __inf("sunxi sprite error: fail to wBoot_malloc memory for item buffer");
+        goto _img_open_fail_;
 
-		return NULL;
     }
-
 	return pImage;
+
+_img_open_fail_:
+	if(pImage->ItemTable)
+	{
+		wBoot_free(pImage->ItemTable);
+	}
+	if(pImage)
+	{
+		wBoot_free(pImage);
+	}
+
+	return NULL;
 }
 
 
@@ -276,39 +219,60 @@ HIMAGEITEM 	Img_OpenItem	(HIMAGE hImage, char * MainType, char * subType)
 {
 	IMAGE_HANDLE* pImage = (IMAGE_HANDLE *)hImage;
 	ITEM_HANDLE * pItem  = NULL;
-	__u32 i;
+	uint          i;
 
-	pItem = (ITEM_HANDLE *)sprite_malloc(sizeof(ITEM_HANDLE));
-	if(!pItem)
+	if (NULL == pImage || NULL == MainType || NULL == subType)
 	{
-		sprite_wrn("DEC_IMG: fail to get memory for pItem\n");
-	    return NULL;
+		return NULL;
 	}
 
+	pItem = (ITEM_HANDLE *) wBoot_malloc(sizeof(ITEM_HANDLE));
+	if (NULL == pItem)
+	{
+		__inf("sunxi sprite error : cannot wBoot_malloc memory for item\n");
+
+		return NULL;
+	}
 	pItem->index = INVALID_INDEX;
-	pItem->pos = 0;
 
 	for (i = 0; i < pImage->ImageHead.itemcount ; i++)
 	{
-    //  sprite_wrn("pImage->ItemTable[%d].mainType=%s,subType=%s\n",i,pImage->ItemTable[i].mainType,\
-    //    pImage->ItemTable[i].subType);
-        if (memcmp(ITEM_PHOENIX_TOOLS, MainType, MAINTYPE_LEN) == 0)//
-		{
-			if (memcmp(MainType, pImage->ItemTable[i].mainType, MAINTYPE_LEN) == 0 )
-			{
-				pItem->index = i;
-				return pItem;
-			}
-		}
-		else if (memcmp(MainType, pImage->ItemTable[i].mainType, MAINTYPE_LEN) == 0 &&
-		         memcmp(subType,  pImage->ItemTable[i].subType,  SUBTYPE_LEN)  == 0)
+//		int nCmp = memcmp(ITEM_PHOENIX_TOOLS, MainType, MAINTYPE_LEN);
+//
+//		if (nCmp == 0)//
+//		{
+//			if (memcmp(MainType, pImage->ItemTable[i].mainType, MAINTYPE_LEN) == 0 )
+//			{
+//				pItem->index = i;
+//
+//				return pItem;
+//			}
+//		}
+//		else
+//		{
+//			nCmp = memcmp(MainType, pImage->ItemTable[i].mainType, MAINTYPE_LEN);
+//			if(nCmp == 0)
+//			{
+//				nCmp = memcmp(subType,  pImage->ItemTable[i].subType,  SUBTYPE_LEN);
+//				if( nCmp == 0)
+//				{
+//					pItem->index = i;
+//
+//					return pItem;
+//				}
+//			}
+//		}
+		if(!memcmp(subType,  pImage->ItemTable[i].subType,  SUBTYPE_LEN))
 		{
 			pItem->index = i;
+
 			return pItem;
 		}
 	}
 
-	sprite_free(pItem);
+	__inf("sunxi sprite error : cannot find item %s %s\n", MainType, subType);
+
+	wBoot_free(pItem);
 	pItem = NULL;
 
 	return NULL;
@@ -333,18 +297,59 @@ HIMAGEITEM 	Img_OpenItem	(HIMAGE hImage, char * MainType, char * subType)
 //------------------------------------------------------------------------------------------------------------
 __u64 Img_GetItemSize	(HIMAGE hImage, HIMAGEITEM hItem)
 {
-    IMAGE_HANDLE *pImage = (IMAGE_HANDLE *)hImage;
-    ITEM_HANDLE  *pItem  = (ITEM_HANDLE  *)hItem;
-    __u64      nItemSize;
+	IMAGE_HANDLE* pImage = (IMAGE_HANDLE *)hImage;
+	ITEM_HANDLE * pItem  = (ITEM_HANDLE  *)hItem;
+	long long       size;
 
- 	nItemSize  = pImage->ItemTable[pItem->index].filelenLo;
-    nItemSize |= (__u64)pImage->ItemTable[pItem->index].filelenHi << 32;
-//	return pImage->ItemTable[pItem->index].filelen;
-  	return nItemSize;
-    //由于有第一层加密，因此都会按照分组进行
+	if (NULL == pItem)
+	{
+		__inf("sunxi sprite error : item is NULL\n");
+
+		return 0;
+	}
+
+	size = pImage->ItemTable[pItem->index].filelenHi;
+	size <<= 32;
+	size |= pImage->ItemTable[pItem->index].filelenLo;
+
+	return size;
 }
 
+//------------------------------------------------------------------------------------------------------------
+//
+// 函数说明
+//
+//
+// 参数说明
+//
+//
+// 返回值
+//
+//
+// 其他
+//    无
+//
+//------------------------------------------------------------------------------------------------------------
+uint Img_GetItemStart	(HIMAGE hImage, HIMAGEITEM hItem)
+{
+	IMAGE_HANDLE* pImage = (IMAGE_HANDLE *)hImage;
+	ITEM_HANDLE * pItem  = (ITEM_HANDLE  *)hItem;
+	long long       start;
+	long long		offset;
 
+	if (NULL == pItem)
+	{
+		__inf("sunxi sprite error : item is NULL\n");
+
+		return 0;
+	}
+	offset = pImage->ItemTable[pItem->index].offsetHi;
+	offset <<= 32;
+	offset |= pImage->ItemTable[pItem->index].offsetLo;
+	start = offset/512;
+
+	return ((uint)start + img_file_start);
+}
 //------------------------------------------------------------------------------------------------------------
 //
 // 函数说明
@@ -360,336 +365,53 @@ __u64 Img_GetItemSize	(HIMAGE hImage, HIMAGEITEM hItem)
 //    无
 //
 //------------------------------------------------------------------------------------------------------------
-
-static __u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u64 Length);
-
-// 根据分组进行加速处理的版本 scott 2009-06-22 10:37:17
-__u32 Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u64 Length)
+uint Img_ReadItem(HIMAGE hImage, HIMAGEITEM hItem, void *buffer, uint buffer_size)
 {
-	__u32 readlen = 0;
 	IMAGE_HANDLE* pImage = (IMAGE_HANDLE *)hImage;
 	ITEM_HANDLE * pItem  = (ITEM_HANDLE  *)hItem;
-    __u64      filelen;
-    __u64      datalen;
-    __u64      offset;
-    __u64      pos=0;
-	__u32 this_read;
-	__u32 i;
+	long long     start;
+	long long	  offset;
+	uint	      file_size;
 
-    pEnDecode pfDecode = pImage->rc_if_decode[DATA_ID].EnDecode;
-	u8* pInPutBuffer = (u8*)buffer;
-	u8* pBufferRead = pInPutBuffer ;
-    filelen  = pImage->ItemTable[pItem->index].filelenLo;
-    filelen |= (__u64)pImage->ItemTable[pItem->index].filelenHi << 32;
-	if (pItem->pos >=filelen) //filelen <= datalen
+	if (NULL == pItem)
 	{
-		sprite_wrn("DEC_IMG: file pointer position is larger than file length\n");
+		__inf("sunxi sprite error : item is NULL\n");
+
 		return 0;
 	}
-	//------------------------------------------------
-	//约束数据不会超出加密数据的范围
-	//------------------------------------------------
-	datalen  = pImage->ItemTable[pItem->index].datalenLo;
-    datalen |= (__u64)pImage->ItemTable[pItem->index].datalenHi << 32;
-	Length = min((__u64)Length, datalen - pItem->pos);
-	//------------------------------------------------
-	//加密后的数据以16byte进行分组，需要处理跨边界的情况
-	//------------------------------------------------
-	if ((pItem->pos % ENCODE_LEN) == 0)	//pos正好是分组的边界的情况
+	if(pImage->ItemTable[pItem->index].filelenHi)
 	{
-	    __u8 *pin, *pout;
-	    __u32 n;
+		__inf("sunxi sprite error : the item too big\n");
 
-	    offset  = pImage->ItemTable[pItem->index].offsetLo;
-        offset |= (__u64)pImage->ItemTable[pItem->index].offsetHi << 32;
-       // __inf("item offset low=%d\n",pImage->ItemTable[pItem->index].offsetLo);
-       // __inf("item offset high=%d\n",pImage->ItemTable[pItem->index].offsetHi);
-        pos = offset + pItem->pos;
-		File_Seek(pImage->fp, pos, SZ_SEEK_SET);
-		readlen = 0;
-		while(readlen < Length)
-		{
-			//------------------------------------------------
-			//每次读取n个分组
-			//------------------------------------------------
-			this_read = min(buffer_encode_size, (Length - readlen));
-			n = (this_read + ENCODE_LEN - 1) / ENCODE_LEN;	//
-			//memset(buffer_encode, 0, n * ENCODE_LEN);
-			//一次读n个分组,速度更快 note has bug
-			if(pImage->bWithEncpy == 0)
-			{
-				pBufferRead = pInPutBuffer + readlen;
-				if(File_Read(pBufferRead, n * ENCODE_LEN, 1, pImage->fp))	//OK 测试通过，必须读取整个的分组
-           		 {
-                	//如果读不出数据
-                	sprite_wrn("DEC_IMG: read ItemData failed\n");
-                	return 0;
-            	 }
-			
-			}else
-			{
-			
-			
-				if(File_Read(buffer_encode, n * ENCODE_LEN, 1, pImage->fp))	//OK 测试通过，必须读取整个的分组
-           		 {
-            	    //如果读不出数据
-               		 sprite_wrn("DEC_IMG: read ItemData failed\n");
-               		 return 0;
-            	 }
-				File_Seek(pImage->fp, 0, SZ_SEEK_CUR);
-				//------------------------------------------------
-				//分组数据解密
-				//------------------------------------------------
-				pin  = buffer_encode;
-				pout = (__u8 *)buffer;
-				pout = pout + readlen;	//实际输出数据的偏移量
-
-				for (i = 0; i < n; i++)	//逐个分组进行解密
-				{
-					//------------------------------------------------
-					//每次解密一个分组
-					//------------------------------------------------
-					if (OK !=  pfDecode(pImage->rc_if_decode[DATA_ID].handle, pin , pout))
-					{
-						sprite_wrn("DEC_IMG: decode ItemData failed\n");
-						return 0;
-					}
-					pin += ENCODE_LEN;
-					pout+= ENCODE_LEN;
-				}
-			}
-			//------------------------------------------------
-			//计算实际有效数据长度
-			//------------------------------------------------
-			readlen += this_read;
-		}
-		pItem->pos += readlen;
-		return readlen;
-	}
-	else
-	{
-		//------------------------------------------------
-		//这里强制只处理分组对齐的情况，对于以前的一些固件包可能会引起不兼容的问题，
-		//那种情况下只好启用原始版本来处理了
-		//------------------------------------------------
-		sprite_wrn("__Img_ReadItemData\n");
-		return  __Img_ReadItemData(hImage, hItem,  buffer, Length);
+		return 0;
 	}
 
-	//return 0;
+	file_size = pImage->ItemTable[pItem->index].filelenLo;
+	// __inf("%s:buffer_size=%d,file_size=%d\n",__FUNCTION__,buffer_size,file_size);
+	file_size = (file_size + 1023) & (~(1024 - 1)); 
+//      __inf("%s:after modefiy, file_size=%d\n",__FUNCTION__,file_size);
+//	if(file_size > buffer_size)
+//	{
+//		__inf("sunxi sprite error : buffer is smaller than data size\n");
+
+//		return 0;
+//	}
+
+	offset = pImage->ItemTable[pItem->index].offsetHi;
+	offset <<= 32;
+	offset |= pImage->ItemTable[pItem->index].offsetLo;
+	start = offset/512;
+
+	if(wBoot_block_read((uint)start + img_file_start, file_size/512, img_file_buffer))
+	{
+		__inf("sunxi sprite error : read item data failed\n");
+
+		return 0;
+	}
+    memcpy(buffer,img_file_buffer,buffer_size);
+    
+	return file_size;
 }
-
-
-//原始的版本，可以运行，不过每次读img文件是16byte，速度不高，需要进行提速
-__u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u64 Length)
-{
-
-	IMAGE_HANDLE* pImage = (IMAGE_HANDLE *)hImage;
-	ITEM_HANDLE * pItem  = (ITEM_HANDLE  *)hItem;
-    __u64      filelen;
-    __u64      datalen;
-    __u64      offset;
-    __u64      pos=0;
-    __u64      readlen=0;
-	__u8 buffer_encode[ENCODE_LEN];
-
-
-	pEnDecode pfDecode = pImage->rc_if_decode[DATA_ID].EnDecode;
-	if (NULL == pImage || NULL == pItem || NULL == buffer || 0 == Length)
-	{
-		return 0;
-	}
-
-   	filelen  = pImage->ItemTable[pItem->index].filelenLo;
-    filelen |= (__u64)pImage->ItemTable[pItem->index].filelenHi << 32;
-	if (pItem->pos >=filelen) //filelen <= datalen
-	{
-		return 0;
-	}
-	//------------------------------------------------
-	//约束数据不会超出加密数据的范围
-	//------------------------------------------------
-	datalen = pImage->ItemTable[pItem->index].datalenLo;
-    datalen |= (__u64)pImage->ItemTable[pItem->index].datalenHi << 32;
-	Length = min((__u64)Length, datalen - pItem->pos);
-	if(pImage->bWithEncpy == 0)
-	{
-   		offset = pImage->ItemTable[pItem->index].offsetLo;
-        offset |= (__u64)pImage->ItemTable[pItem->index].offsetHi << 32;
-        pos = offset + pItem->pos;
-		File_Seek(pImage->fp, pos, SZ_SEEK_SET);
-        
-		if(File_Read(buffer, Length, 1, pImage->fp))
-		{
-			return 0;
-		}
-		pItem->pos += Length;
-		return Length;
-	}
-
-	//------------------------------------------------
-	//加密后的数据以16byte进行分组，需要处理跨边界的情况
-	//------------------------------------------------
-	if ((pItem->pos % ENCODE_LEN) == 0)	//pos正好是分组的边界的情况
-	{
-	    __u8 *pin, *pout;
-
-   		 offset = pImage->ItemTable[pItem->index].offsetLo;
-        offset |= (__u64)pImage->ItemTable[pItem->index].offsetHi << 32;
-        pos = offset + pItem->pos;
-
-		File_Seek(pImage->fp, pos, SZ_SEEK_SET);
-
-		while(readlen < Length)
-		{
-			//每次读取一个分组
-			//memset(buffer_encode, 0, ENCODE_LEN);
-			if(File_Read(buffer_encode, ENCODE_LEN, 1, pImage->fp))
-			{
-			    return 0;
-			}
-			File_Seek(pImage->fp, 0, SZ_SEEK_CUR);
-			//分组数据解密
-			pin = buffer_encode;
-			pout= (__u8 *)buffer;
-			pout= pout + readlen;
-			if (OK != pfDecode(pImage->rc_if_decode[DATA_ID].handle, pin , pout))
-				return 0;
-			//计算实际有效数据长度
-			readlen += min(Length- readlen, ENCODE_LEN);
-		}
-		pItem->pos += readlen;
-		return readlen;
-	}
-	else //pos不在边界
-	{
-		//pos不在边界，向头方向seek
-
-        offset = pImage->ItemTable[pItem->index].offsetLo;
-        offset |= (__u64)pImage->ItemTable[pItem->index].offsetHi << 32;		
-		pos = offset +pItem->pos - (pItem->pos % ENCODE_LEN);
-		File_Seek(pImage->fp, pos, SZ_SEEK_SET);
-
-		//-----------------------------------
-		//**********************OOOOOOOOOOOOO     *表示已经读取得数据 O表示未读取得数据
-		//-----------------------------------
-		if ((0 < Length) && (Length < ENCODE_LEN)) //读取的数据不足一个分组长度
-		{
-		    __u8 *pin, *pout;
-			__u32 read = ENCODE_LEN - (pItem->pos % ENCODE_LEN); //分组中未读取的数据长度
-			if (Length <= read)	//需要读取得数据小于等于分组中未读取的数据长度 只用读一个分组即可
-			{
-				//memset(buffer_encode, 0, ENCODE_LEN);
-				if(File_Read(buffer_encode, ENCODE_LEN, 1, pImage->fp))
-				{
-				    return 0;
-				}
-				//分组数据解密
-				pin = buffer_encode;
-				pout= (__u8 *)buffer;
-				pout     = pout + readlen;
-				if (OK != pfDecode(pImage->rc_if_decode[DATA_ID].handle, pin , pout))
-					return 0;
-
-				readlen = Length;
-				pItem->pos += readlen;
-				return readlen;
-			}
-			else //需要读两个分组的数据
-			{
-				//第一个分组
-				__u8 *pin, *pout;
-				__u32 Left_Length;
-				__u32 read = ENCODE_LEN - pItem->pos % ENCODE_LEN;
-				//memset(buffer_encode, 0, ENCODE_LEN);
-				if(File_Read(buffer_encode, ENCODE_LEN, 1, pImage->fp))
-				{
-				    return 0;
-				}
-				//分组数据解密
-				pin  = buffer_encode;
-				pout = (__u8 *)buffer;
-				pout = pout + readlen;
-				if (OK != pfDecode(pImage->rc_if_decode[DATA_ID].handle, pin , pout))
-					return 0;
-
-				readlen += read;
-
-				//第二个分组
-				Left_Length = Length - read;			//剩余的数据
-				//memset(buffer_encode, 0, ENCODE_LEN);
-				if(File_Read(buffer_encode, ENCODE_LEN, 1, pImage->fp))
-				{
-				    return 0;
-				}
-				File_Seek(pImage->fp, 0, SZ_SEEK_CUR);
-				//分组数据解密
-				pin = buffer_encode;
-				pout= (__u8 *)buffer;
-				pout     = pout + readlen;
-				if (OK != pfDecode(pImage->rc_if_decode[DATA_ID].handle, pin , pout))
-					return 0;
-				readlen += Left_Length;
-
-				pItem->pos += readlen;
-				return readlen;
-			}
-		}
-		else if (Length >= ENCODE_LEN) //读取的数据不少于一个分组长度
-		{
-			__u8 *pin, *pout;
-			__u32 Left_Length, Left_readlen;
-			__u32 read = ENCODE_LEN - pItem->pos % ENCODE_LEN;
-			//memset(buffer_encode, 0, ENCODE_LEN);
-			if(File_Read(buffer_encode, ENCODE_LEN, 1, pImage->fp))
-			{
-			    return 0;
-			}
-			//分组数据解密
-			pin = buffer_encode;
-			pout= (__u8 *)buffer;
-			pout     = pout + readlen;
-			if (OK != pfDecode(pImage->rc_if_decode[DATA_ID].handle, pin , pout))
-				return 0;
-
-			readlen += read;
-
-			//------------------------------------------------
-			//剩余的数据按照分组进行处理
-			//------------------------------------------------
-			Left_Length = Length - read;
-			Left_readlen= 0;
-			while(Left_readlen < Left_Length)
-			{
-				//每次读取一个分组
-				//memset(buffer_encode, 0, ENCODE_LEN);
-				if(File_Read(buffer_encode, ENCODE_LEN, 1, pImage->fp))
-				{
-				    return 0;
-				}
-				File_Seek(pImage->fp, 0, SZ_SEEK_CUR);
-				//分组数据解密
-				pin = buffer_encode;
-				pout= (__u8 *)buffer;
-				pout     = pout + readlen;
-				if (OK != pfDecode(pImage->rc_if_decode[DATA_ID].handle, pin , pout))
-					return 0;
-				//计算实际有效数据长度
-				Left_readlen += min(Left_Length - Left_readlen, ENCODE_LEN);
-			}
-
-			readlen += Left_readlen;
-		}
-
-		pItem->pos += readlen;
-		return readlen;
-	}
-
-//	return 0;
-}
-
-
-
 //------------------------------------------------------------------------------------------------------------
 //
 // 函数说明
@@ -705,15 +427,20 @@ __u32 __Img_ReadItemData(HIMAGE hImage, HIMAGEITEM hItem, void * buffer, __u64 L
 //    无
 //
 //------------------------------------------------------------------------------------------------------------
-__u32 Img_CloseItem	(HIMAGE hImage, HIMAGEITEM hItem)
+int Img_CloseItem	(HIMAGE hImage, HIMAGEITEM hItem)
 {
 	ITEM_HANDLE * pItem = (ITEM_HANDLE *)hItem;
-	if (NULL == pItem)
-		return __LINE__;
 
+	if (NULL == pItem)
+	{
+		__inf("sunxi sprite error : item is null when close it\n");
+
+		return -1;
+	}
+	wBoot_free(pItem);
 	pItem = NULL;
 
-	return OK;
+	return 0;
 }
 
 
@@ -737,31 +464,24 @@ void  Img_Close	(HIMAGE hImage)
 {
 	IMAGE_HANDLE * pImage = (IMAGE_HANDLE *)hImage;
 
-	if (NULL != pImage->fp)
+	if (NULL == pImage)
 	{
-		File_Close(pImage->fp);
-		pImage->fp = NULL;
+		__inf("sunxi sprite error : imghead is null when close it\n");
+
+		return ;
 	}
 
 	if (NULL != pImage->ItemTable)
 	{
+		wBoot_free(pImage->ItemTable);
 		pImage->ItemTable = NULL;
 	}
 
 	memset(pImage, 0, sizeof(IMAGE_HANDLE));
+	wBoot_free(pImage);
 	pImage = NULL;
 
-	if(buffer_encode)
-	{
-	    sprite_free(buffer_encode);
-    }
 	return ;
 }
-
-
-//------------------------------------------------------------------------------------------------------------
-// THE END !
-//------------------------------------------------------------------------------------------------------------
-
 
 

@@ -1,3 +1,26 @@
+/*
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
+*
+* See file CREDITS for list of people who contributed to this
+* project.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
+*/
 #include "disp_lcd.h"
 #include "disp_display.h"
 #include "disp_event.h"
@@ -1113,17 +1136,28 @@ __s32 LCD_GPIO_init(__u32 sel)
 
 __s32 LCD_GPIO_exit(__u32 sel)
 {
-    __u32 i = 0;
+	__u32 i = 0;
 
-    for(i=0; i<6; i++)
-    {
-        if(gdisp.screen[sel].gpio_hdl[i])
-        {
-            OSAL_GPIO_Release(gdisp.screen[sel].gpio_hdl[i], 2);
-        }
-    }
-    
-    return 0;
+	for(i=0; i<6; i++)
+	{
+		if(gdisp.screen[sel].gpio_hdl[i])
+		{
+			OSAL_GPIO_Release(gdisp.screen[sel].gpio_hdl[i], 2);
+		}
+	}
+	for(i=0; i<6; i++)
+	{
+		gdisp.screen[sel].gpio_hdl[i] = 0;
+	    	if(gdisp.screen[sel].lcd_cfg.lcd_gpio_used[i])
+	        {
+			user_gpio_set_t  gpio_info[1];
+			memcpy(gpio_info, &(gdisp.screen[sel].lcd_cfg.lcd_gpio[i]), sizeof(user_gpio_set_t));
+			gpio_info->mul_sel = 0;
+			gdisp.screen[sel].gpio_hdl[i] = OSAL_GPIO_Request(gpio_info, 1);
+			OSAL_GPIO_Release(gdisp.screen[sel].gpio_hdl[i], 2);
+	        }
+	}
+    	return 0;
 }
 
 void LCD_CPU_register_irq(__u32 sel, void (*Lcd_cpuisr_proc) (void))
@@ -1271,9 +1305,7 @@ __s32 Disp_lcdc_init(__u32 sel)
             }
             pwm_set_para(gpanel_info[sel].lcd_pwm_ch, &pwm_info);
         }
-        LCD_GPIO_init(sel);
     }
-
     return DIS_SUCCESS;
 }
 
@@ -1292,11 +1324,7 @@ __s32 Disp_lcdc_exit(__u32 sel)
     }
 
     LCDC_exit(sel);
-
     lcdc_clk_exit(sel);
-
-    LCD_GPIO_exit(sel);
-
     return DIS_SUCCESS;
 }
 
@@ -1652,6 +1680,7 @@ __s32 BSP_disp_lcd_open_before(__u32 sel)
 {    
     disp_clk_cfg(sel, DISP_OUTPUT_TYPE_LCD, DIS_NULL);
     lcdc_clk_on(sel);
+    LCD_GPIO_init(sel);
     image_clk_on(sel);
     Image_open(sel);//set image normal channel start bit , because every de_clk_off( )will reset this bit
     Disp_lcdc_pin_cfg(sel, DISP_OUTPUT_TYPE_LCD, 1);
@@ -1696,7 +1725,7 @@ __s32 BSP_disp_lcd_close_befor(__u32 sel)
 {    
 	close_flow[sel].func_num = 0;
 	lcd_panel_fun[sel].cfg_close_flow(sel);
-
+	
 	gdisp.screen[sel].status &= LCD_OFF;
 	gdisp.screen[sel].output_type = DISP_OUTPUT_TYPE_NONE;
 	return DIS_SUCCESS;
@@ -1704,14 +1733,12 @@ __s32 BSP_disp_lcd_close_befor(__u32 sel)
 
 __s32 BSP_disp_lcd_close_after(__u32 sel)
 {    
-    Image_close(sel);
-
-    Disp_lcdc_pin_cfg(sel, DISP_OUTPUT_TYPE_LCD, 0);
+    	Image_close(sel);
+    	Disp_lcdc_pin_cfg(sel, DISP_OUTPUT_TYPE_LCD, 0);
 	image_clk_off(sel);
 	lcdc_clk_off(sel);
-
 	gdisp.screen[sel].pll_use_status &= ((gdisp.screen[sel].pll_use_status == VIDEO_PLL0_USED)? VIDEO_PLL0_USED_MASK : VIDEO_PLL1_USED_MASK);
-	
+	LCD_GPIO_exit(sel);
 	return DIS_SUCCESS;
 }
 

@@ -1,22 +1,25 @@
 /*
-**********************************************************************************************************************
-*											        eGon
-*						           the Embedded GO-ON Bootloader System
-*									       eGON arm boot sub-system
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*						  Copyright(C), 2006-2010, SoftWinners Microelectronic Co., Ltd.
-*                                           All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File    :
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* By      : Jerry
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version : V2.00
-*
-* Date	  :
-*
-* Descript:
-**********************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
 #include "include.h"
 #include "common_res.h"
@@ -203,6 +206,7 @@ __s32 check_power_status(void)
 		int   i, j;
 		int   bat_full_status = 0;
 		//当前可以确定是火牛开机，但是是否开机还不确定，需要确认电池是否存在
+		WaitForDeInitFinish();//等 LCD init结束，release hard timer.
 		power_int_reg();
 		usb_detect_enter();
 		bat_show_hd = ShowBatteryCharge_init(0);

@@ -1,3 +1,26 @@
+/*
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
+*
+* See file CREDITS for list of people who contributed to this
+* project.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
+*/
 //----------------------------------------------------------------------------------------------------------//
 //                                                                                                          //
 //                                                                                                          //
@@ -18,22 +41,22 @@
 //                                                                                                          //
 //----------------------------------------------------------------------------------------------------------//
 //                                                                                                          //
-//                                              Dragon System                                               //
+//                                              Phonex System                                               //
 //                                                                                                          //
-//                               (c) Copyright 2007-2008, Scottyu China                                     //
+//                               (c) Copyright 2011-2012, Sam Liu 																					//
 //                                                                                                          //
 //                                           All Rights Reserved                                            //
 //                                                                                                          //
 // File    : imagefile.h                                                                                    //
-// By      : scottyu                                                                                        //
-// Version : V1.00                                                                                          //
-// Time    : 2008-11-03 9:36:12                                                                             //
+// By      : Sam Liu                                                                                        //
+// Version : V3.00                                                                                          //
+// Time    : 2011-07-02 10:35:12                                                                             //
 //                                                                                                          //
 //----------------------------------------------------------------------------------------------------------//
 //                                                                                                          //
 // HISTORY                                                                                                  //
 //                                                                                                          //
-// 1 2008-11-03 9:36:16                                                                                     //
+// 1 2011-07-02 10:35:12	                                                                                  //
 //                                                                                                          //
 //                                                                                                          //
 //                                                                                                          //
@@ -42,73 +65,41 @@
 #ifndef __IMAGE_FORMAT__H__
 #define __IMAGE_FORMAT__H__	1
 
-
-//------------------------------------------------------------------------------------------------------------
-//
-//------------------------------------------------------------------------------------------------------------
-/*
-#define ITEM_COMMON 		  "COMMON  "
-#define ITEM_INFO   		  "INFO    "
-#define ITEM_BOOTROM 		  "BOOTROM "
-#define ITEM_FES 			  "FES     "
-#define ITEM_FET 			  "FET     "
-#define ITEM_FED 			  "FED     "
-#define ITEM_FEX 			  "FEX     "
-#define ITEM_BOOT0 			  "BOOT0   "
-#define ITEM_BOOT1 			  "BOOT1   "
-#define ITEM_ROOTFSFAT12	  "RFSFAT12"
-#define ITEM_ROOTFSFAT16	  "RFSFAT16"
-#define ITEM_ROOTFSFAT32	  "FFSFAT32"
-#define ITEM_USERFSFAT12	  "UFSFAT12"
-#define ITEM_USERFSFAT16	  "UFSFAT16"
-#define ITEM_USERFSFAT32	  "UFSFAT32"
-#define ITEM_PHOENIX_SCRIPT   "PXSCRIPT"
-#define ITEM_PHOENIX_TOOLS 	  "PXTOOLS "
-#define ITEM_AUDIO_DSP 		  "AUDIODSP"
-#define ITEM_VIDEO_DSP 		  "VIDEODSP"
-#define ITEM_FONT			  "FONT    "
-#define ITEM_FLASH_DRV 		  "FLASHDRV"
-#define ITEM_OS_CORE 		  "OS_CORE "
-#define ITEM_DRIVER 		  "DRIVER  "
-#define ITEM_PIC 			  "PICTURE "
-#define ITEM_AUDIO 			  "AUDIO   "
-#define ITEM_VIDEO 			  "VIDEO   "
-#define ITEM_APPLICATION 	  "APP     "
-*/
-
+#include  "../card_sprite_i.h"
 //#define IMAGE_VER	100
 //------------------------------------------------------------------------------------------------------------
 #define IMAGE_MAGIC			"IMAGEWTY"
-#define	IMAGE_HEAD_VERSION	0x00000100
+#define	IMAGE_HEAD_VERSION	0x00000300
 
+#define IMAGE_HEAD_SIZE     	  1024
+#define IMAGE_ITEM_TABLE_SIZE     1024
 //------------------------------------------------------------------------------------------------------------
 ///Image文件头数据结构
 //------------------------------------------------------------------------------------------------------------
 #pragma pack(push, 1)
 typedef struct tag_ImageHead
 {
-    __u8  magic[8];                     // IMAGE_MAGIC
-    __u32 version;                      // 本结构的版本号，IMAGE_HEAD_VERSION
-    __u32 size;                         // 本结构的长度
-    __u32 attr;                         // 本结构的属性，格式按照version来确定，加密，压缩等
-    __u32 imagever;                     // image的版本，由脚本指定
-    __u32 lenLo;                        // image文件的总长度，低位
-    __u32 lenHi;                        // image文件的总长度，高位
-    __u32 align;                        // 数据的对齐边界，缺省1024
-    __u32 pid;                          // PID信息
-    __u32 vid;                          // VID信息
-    __u32 hardwareid;                   // 硬件平台ID
-    __u32 firmwareid;                   // 软件平台ID
-    __u32 itemattr;                     // item表的属性,“加密”
-    __u32 itemsize;                     // item数据项的大小
-    __u32 itemcount;                    // item数据项的个数
-    __u32 itemoffset;                   // item表偏移量
-    __u32 imageattr;                    // image文件属性
-    __u32 appendsize;                   // 附加数据的长度
-    __u32 appendoffsetLo;               // 附加数据的偏移量
-    __u32 appendoffsetHi;               // 附加数据的偏移量
-    __u8  res[12];                      // 保留
-
+	u8	magic[8];		//IMAGE_MAGIC
+	u32 version;		//本结构的版本号，IMAGE_HEAD_VERSION
+	u32	size;			//本结构的长度
+	u32 attr;			//本结构的属性，格式按照version来确定，加密，压缩等
+	u32 imagever;		//image的版本，由脚本指定
+	u32 lenLo;			//image文件的总长度 低位
+	u32 lenHi;			//image文件的总长度 高位
+	u32	align;			//数据的对齐边界，缺省1024
+	u32 pid;			//PID信息
+	u32 vid;			//VID信息
+	u32 hardwareid; 	//硬件平台ID
+	u32 firmwareid; 	//软件平台ID
+	u32 itemattr;		//item表的属性,"加密"
+	u32	itemsize;		//item数据项的大小
+	u32	itemcount;		//item数据项的个数
+	u32	itemoffset;		//item表偏移量
+	u32	imageattr;		//image文件属性
+	u32 appendsize;		//附加数据的长度
+	u32 appendoffsetLo;	//附加数据的偏移量
+	u32 appendoffsetHi;	//附加数据的偏移量
+	u8  reserve[980];	//预留
 }ImageHead_t;
 #pragma pack(pop)
 
@@ -116,7 +107,7 @@ typedef struct tag_ImageHead
 //------------------------------------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------------------------------------
-#define ALIGN_SIZE				0x400
+#define IMAGE_ALIGN_SIZE				0x400
 #define HEAD_ATTR_NO_COMPRESS 	0x4d //1001101
 
 //------------------------------------------------------------------------------------------------------------
@@ -124,10 +115,10 @@ typedef struct tag_ImageHead
 //------------------------------------------------------------------------------------------------------------
 #pragma pack(push, 1)
 typedef struct tagImageHeadAttr{
-	__u32	res		: 12;
-	__u32 len		: 8;
-	__u32 encode	: 7;		///HEAD_ATTR_NO_COMPRESS
-	__u32 compress: 5;
+	u32	res		: 12;
+	u32 len		: 8;
+	u32 encode	: 7;		///HEAD_ATTR_NO_COMPRESS
+	u32 compress: 5;
 }ImageHeadAttr_t;
 #pragma pack(pop)
 
@@ -138,34 +129,37 @@ typedef struct tagImageHeadAttr{
 #define MAINTYPE_LEN		8
 #define SUBTYPE_LEN			16
 #define FILE_PATH			256
+#define IMAGE_ITEM_RCSIZE   640 // 数据项预留大小
+
+
 //------------------------------------------------------------------------------------------------------------
 ///数据项数据结构
 //------------------------------------------------------------------------------------------------------------
 #pragma pack(push, 1)
 typedef struct tag_ImageItem
 {
-											// 考虑是否需要加magic
-	__u32 version;						// 本结构的版本号IMAGE_ITEM_VERSION
-	__u32 size; 						// 本结构的长度
-	__u8  mainType[MAINTYPE_LEN];		// 描述的文件的类型
-	__u8  subType[SUBTYPE_LEN]; 		// 描述子类型，默认由image配置脚本指定
-	__u32 attr; 						// 描述的文件的属性,格式按照version来确定，加密，压缩等
-	__u8  name[FILE_PATH];				// 文件名称 260
-	__u32 datalenLo;					// 文件数据在image文件中的长度，低位
-	__u32 datalenHi;					// 文件数据在image文件中的长度，高位
-	__u32 filelenLo;					// 文件的实际长度，低位
-	__u32 filelenHi;					// 文件的实际长度，高位
-	__u32 offsetLo; 					// 文件起始位置偏移量，低位
-	__u32 offsetHi; 					// 文件起始位置偏移量，高位
-	__u8  encryptID[64];				// 加密文件ID
-	__u32 checksum; 					// 描述的文件的校验和
-	__u8  res[640]; 					// 保留
-
+	u32 version;				//本结构的版本号IMAGE_ITEM_VERSION
+	u32	size;					//本结构的长度
+	u8	mainType[MAINTYPE_LEN];	//描述的文件的类型
+	u8	subType[SUBTYPE_LEN];	//描述子类型，默认由image配置脚本指定
+	u32	attr;					//描述的文件的属性,格式按照version来确定，加密，压缩等
+	u8	name[FILE_PATH];		//文件名称 260
+	u32	datalenLo;				//文件数据在image文件中的长度
+	u32	datalenHi;				//高位 文件数据在image文件中的长度
+	u32 filelenLo;				//文件的实际长度
+	u32 filelenHi;				//高位 文件的实际长度
+	u32 offsetLo;				//文件起始位置偏移量
+	u32 offsetHi;				//高位 文件起始位置偏移量
+	u8	encryptID[64];			//加密插件ID，如果该文件不加密，该字段"\0"表示不加密
+	u32 checksum;				//描述的文件的校验和
+	u8	res[IMAGE_ITEM_RCSIZE];	//保留
 }ImageItem_t;
+
 #pragma pack(pop)
 
-
-
+//------------------------------------------------------------------------------------------------------------
+// THE END !
+//------------------------------------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------------------------------------
 // THE END !

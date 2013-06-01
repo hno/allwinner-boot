@@ -1,12 +1,37 @@
+/*
+* (C) Copyright 2007-2012
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Neil Peng<penggang@allwinnertech.com>
+*
+* See file CREDITS for list of people who contributed to this
+* project.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
+*/
+
 #include "egon2.h"
 #include "boot0_v2.h"
 #include "bsp_nand.h"
 #include "string.h"
 
-#define  NAND_FOR_CARD_PHONIX
+
 #define  OOB_BUF_SIZE                   32
 
 static __u32 nand_good_block_ratio_flag = 0;
+static __u32 bad_block_scan_flag = 0;
 static __u32 nand_good_blk_ratio = 0;
 
 
@@ -148,39 +173,21 @@ __s32 NAND_PhyInit(void)
 		NAND_Print("NB1 : nand scan fail\n");
 		return ret;
 	}
-#ifdef NAND_FOR_CARD_PHONIX
-	if(!nand_good_block_ratio_flag)
+
+	if(!bad_block_scan_flag)
 	{
 		NAND_GetParam((void *)&param);
 		nand_good_blk_ratio =  NAND_BadBlockScan((void *)&param);
 		NAND_SetValidBlkRatio(nand_good_blk_ratio);
 	  NAND_Print("get the good blk ratio from bad block scan : %d \n", nand_good_blk_ratio);
-	  nand_good_block_ratio_flag = 1;
+	  bad_block_scan_flag = 1;
 	}
 	else
 	{
 		NAND_Print(" bad blcok has done before,nand good block ratio is : %d \n", nand_good_blk_ratio);
 		NAND_SetValidBlkRatio(nand_good_blk_ratio);	
 	}
-#else
-	//modify ValidBlkRatio
-	if(wBoot_get_para( WBOOT_PARA_NANDFLASH_INFO, (void *)&param))
-  {
-		NAND_Print("get good block ratio info failed.\n");
-		return -1;
-  }
-  else
-  {
-  	nand_good_blk_ratio = param.good_block_ratio;
-  	if(nand_good_blk_ratio == 0)
-  		 NAND_Print("get the good blk ratio is 0,use preset value\n");
-  	else
-  	{
-  		NAND_SetValidBlkRatio(nand_good_blk_ratio);
-  		NAND_Print("get the good blk ratio from hwscan : %d \n", nand_good_blk_ratio);
-		}
-	}
-#endif   
+  
 	NAND_Print("NB1 : nand phy init ok\n");
 	return(PHY_ChangeMode(1));
 }
@@ -375,8 +382,8 @@ __s32 NAND_HWScanStart(boot_nand_para_t *nand_param)
 	}
 
 	NAND_GetParam(nand_param);
-
-	nand_good_block_ratio_flag = nand_param->good_block_ratio;
+    //nand_param->good_block_ratio = nand_good_blk_ratio;
+	//nand_good_block_ratio_flag = nand_param->good_block_ratio;
 	NAND_Print("NHW : nand hw scan ok\n");
 
 	return(PHY_ChangeMode(1));
@@ -758,7 +765,7 @@ __s32  NAND_EraseChip( const boot_nand_para_t *nand_param)
 	__u32  die_skip_flag = (nand_param->OperationOpt)&(0x1<<11);
 	__u32  block_cnt_of_die = (nand_param->BlkCntPerDie);
 
-
+    bad_block_scan_flag = 0;
 
     page_buf_read = (__u8*)wBoot_malloc(32 * 1024);
     if(!page_buf_read)
@@ -850,7 +857,7 @@ __s32  NAND_EraseChip( const boot_nand_para_t *nand_param)
 				ret = NAND_PhyRead(& para_read );
 
 				//check the current block is a all 0x00 block
-
+				#if 0
 				for(m=0; m<8; m++)   //check user data, 8 byte
 			    {
 			        if(oob_buf_read[m] == ((__u8)0x0) )
@@ -872,7 +879,13 @@ __s32  NAND_EraseChip( const boot_nand_para_t *nand_param)
 					NAND_Print("find a all 0x00 block %u\n", j);
 					break;
 				}
-
+				#endif
+				if(oob_buf_read[0] == 0x0)
+				{
+						bad_block_flag = 1;
+						NAND_Print("find a bad block %u\n", j);
+						break;
+				}
 			}
 
 			if(bad_block_flag)

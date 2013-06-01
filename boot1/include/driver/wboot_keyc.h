@@ -1,25 +1,25 @@
 /*
-**********************************************************************************************************************
-*											        eGon
-*						           the Embedded GO-ON Bootloader System
-*									       eGON mod demo sub-system
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*						  Copyright(C), 2006-2010, SoftWinners Microelectronic Co., Ltd.
-*                                                                            All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File        : drv_keyc.h
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* By         : Victor
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version  : V1.00
-*
-* Date	  :2010-09-21
-*
-* Description:
-*            lradc key的驱动，维护一个按键消息队列，按键按下或释放 时会放到
-*      消息队列去，上层用户获取按键消息时，直接通过ioctl函数获取。
-*
-**********************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
 #ifndef  _WBOOT_KEYC_H_
 #define  _WBOOT_KEYC_H_

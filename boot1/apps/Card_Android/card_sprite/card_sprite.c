@@ -1,35 +1,30 @@
 /*
-************************************************************************************************************************
-*                                                         eGon2
-*                                         the Embedded GO-ON Bootloader System
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*                             Copyright(C), 2006-2008, SoftWinners Microelectronic Co., Ltd.
-*											       All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File Name   : card_sprite.c
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* Author      : Jerry.Wang
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version     : 1.1.0
-*
-* Date        : 2010-3-30 8:59:10
-*
-* Description :
-*
-* Others      : None at present.
-*
-*
-* History     :
-*
-*  <Author>        <time>       <version>      <description>
-*
-* Jerry.Wang      2010-3-30       1.1.0        build the file
-*
-************************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
 #include  "card_sprite_i.h"
 
-#define   TEST_BLK_BYTES      (512 * 1024)
+#define   TEST_BLK_BYTES      (16*1024 * 1024)
+#define   TEST_BLK_SECTORS    (TEST_BLK_BYTES/512)
 
 #define   CARD_SPRITE_START    		0
 #define   CARD_SPRITE_FLASH_INFO    3
@@ -72,16 +67,20 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 {
     HIMAGEITEM  imghd = 0, imgitemhd = 0;
     __u64      item_original_size = 0;
-    __u64       item_rest_size = 0;
+    __u64       item_rest_bytes = 0;
+    __u32       item_origin_sectors;
+    __u32       item_rest_sectors;
     __u64		item_verify_size = 0;
     __u32       part_sector, file_sector, flash_sector;
     int         crc, mbr_count, mbr_buf_size;
     __u32		img_start;
+    __u32       partdata_start, tmp_partdata_start;
     MBR         *tmp_mbr_cfg, *mbr_info;
     download_info  *dl_info  = NULL;
     char        *tmp_mbr_buf = NULL;
     char        *src_buf = NULL, *dest_buf = NULL;
     __u32       actual_buf_addr;
+    __u32       calc_sum, once_sum;
     int         ret = -1;
     int         aver_rage, sprite_ratio, pre_ratio, this_ratio;          //进度标志
     unsigned    i, sprite_type;
@@ -118,15 +117,6 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
     	sprite_wrn("sprite update error: fail to scan flash infomation\n");
 
     	goto _update_error_;
-    }
-    //准备nand数据信息
-	sprite_show(CARD_SPRITE_FLASH_INFO);
-	src_buf = (char *)sprite_malloc(1024 * 1024);
-    if(!src_buf)
-    {
-        sprite_wrn("sprite update error: fail to get memory for tmpdata\n");
-
-        goto _update_error_;
     }
     //准备nand数据信息
 	sprite_show(CARD_SPRITE_FLASH_INFO);
@@ -172,7 +162,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 //*************************************************************************************
 	img_start = mbr_info->array[1 + i].addrlo;
 	__inf("part start = %d\n", img_start);
-    imghd = Img_Open(img_start, TEST_BLK_BYTES);
+    imghd = Img_Open(img_start);
     if(!imghd)       //初始化
     {
         sprite_wrn("sprite update error: fail to open img\n");
@@ -205,6 +195,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	}
 	//MBR长度
 	item_original_size = Img_GetItemSize(imghd, imgitemhd);
+    __inf("mbr item size=%d\n",(u32)item_original_size);
 	//获取空间用于存放MBR
 	if(!item_original_size)
     {
@@ -219,7 +210,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
         goto _update_error_;
     }
-	if(!Img_ReadItemData(imghd, imgitemhd, (void *)tmp_mbr_buf, item_original_size))   //读出MBR数据
+	if(!Img_ReadItem(imghd, imgitemhd, (void *)tmp_mbr_buf, (__u32)item_original_size))   //读出MBR数据
     {
         sprite_wrn("sprite update error: fail to read data for mbr\n");
 
@@ -260,7 +251,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
         sprite_wrn("sprite update error: get download map size fail\n");
         goto _update_error_;
     }
-	if(!Img_ReadItemData(imghd, imgitemhd, (void *)dl_info, item_original_size))   //读出 DOWNLOAD MAP 数据
+	if(!Img_ReadItem(imghd, imgitemhd, (void *)dl_info, (__u32)item_original_size))   //读出 DOWNLOAD MAP 数据
     {
         sprite_wrn("sprite update error: fail to read data for download map\n");
 
@@ -324,6 +315,13 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
 	        goto _update_error_;
 	    }
+	    partdata_start = Img_GetItemStart(imghd, imgitemhd);
+	    if(!partdata_start)
+	    {
+	    	sprite_wrn("sprite update error: get part file %s start sectors failed\n", dl_info->one_part_info[i].dl_filename);
+
+	        goto _update_error_;
+	    }
 	    if(!strcmp((char *)dl_info->one_part_info[i].name, "env"))
 	    {
 	    	private_type = 1;
@@ -341,9 +339,16 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    	}
 	    }
 	    //sprite_wrn("get part file %s size = %d\n", dl_info->one_part_info[i].dl_filename, item_original_size);
-	    item_rest_size = item_original_size;
+	    //item_rest_size = item_original_size;
+	    item_origin_sectors = (__u32)(item_original_size/512);
+	    item_rest_bytes = item_original_size & 0x1ff;
+	    if(item_rest_bytes)
+	    {
+	    	item_origin_sectors ++;
+	    }
+	    item_rest_sectors = item_origin_sectors;
 	    //检查文件大小是否小于等于分区大小
-		file_sector = (__u32)(item_original_size>>9);
+		file_sector = (__u32)(item_original_size / 512);
 		part_sector = dl_info->one_part_info[i].lenlo;
 		if(file_sector > part_sector)
 		{
@@ -352,17 +357,37 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 			goto _update_error_;
 		}
 	    update_flash_open(dl_info->one_part_info[i].addrlo, dl_info->one_part_info[i].addrhi);
+	    __inf("download part start = %x\n", dl_info->one_part_info[i].addrlo);
 	    //初始化解密函数
 	    init_code(dl_info->one_part_info[i].encrypt);
-	    while(item_rest_size >= TEST_BLK_BYTES)      //当超过32k的时候
+	    __inf("download part encrypt = %d\n", dl_info->one_part_info[i].encrypt);
+	    tmp_partdata_start = partdata_start;
+	    __inf("part start = %d\n", partdata_start);
+	//    calc_sum = 0;
+	 //   sprite_read_time  = 0;
+	//    sprite_write_time = 0;
+	//    card_read_time  = 0;
+	//    check_time      = 0;
+	    while(item_rest_sectors > TEST_BLK_SECTORS)      //当超过32k的时候
 	    {
-	    	if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, TEST_BLK_BYTES))   //读出32k数据
-	        {
-	            sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
+//	    	if(!Img_ReadItem(imghd, imgitemhd, (void *)src_buf, TEST_BLK_BYTES))   //读出32k数据
+//	        {
+//	            sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
+//
+//	            goto _update_error_;
+//	        }
+			//__inf("image part start = %x\n", tmp_partdata_start);
+		//	t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+			if(wBoot_block_read(tmp_partdata_start, TEST_BLK_SECTORS, (void *)src_buf))
+			{
+				sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
 
 	            goto _update_error_;
-	        }
-	        item_rest_size -= TEST_BLK_BYTES;
+			}
+	//		t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	//		card_read_time += t2 - t1;
+			tmp_partdata_start += TEST_BLK_SECTORS;
+	        item_rest_sectors -= TEST_BLK_SECTORS;
 	        decode((__u32)src_buf, (__u32)dest_buf, TEST_BLK_BYTES, &actual_buf_addr);
 	        if(update_flash_write((void *)actual_buf_addr, TEST_BLK_BYTES))
 	        {
@@ -370,7 +395,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
 	            goto _update_error_;
 	        }
-	        this_ratio = (int)(((item_original_size>>9) - (item_rest_size>>9))*aver_rage)/((__u32)(item_original_size>>9));
+	       this_ratio = ((item_origin_sectors - item_rest_sectors)*aver_rage)/item_origin_sectors;
 	        if(this_ratio)
 	        {
 	        	if(pre_ratio != this_ratio)
@@ -381,16 +406,50 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    		}
 	    	}
 	    }
-	    if(item_rest_size)
+	    if(item_rest_sectors)
 	    {
-	        if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_rest_size))   //读出32k数据
-	        {
-	            sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
+	    	__u32 last_bytes;
+//	        if(!Img_ReadItem(imghd, imgitemhd, (void *)src_buf, item_rest_size))   //读出32k数据
+//	        {
+//	            sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
+//
+//	            goto _update_error_;
+//	        }
+			//__inf("image part start = %x\n", tmp_partdata_start);
+			//__inf("item rest sectors = %x\n", item_rest_sectors);
+		//	t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        if(wBoot_block_read(tmp_partdata_start, item_rest_sectors, (void *)src_buf))
+			{
+				sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
 
 	            goto _update_error_;
-	        }
-	        decode((__u32)src_buf, (__u32)dest_buf, (__u32)item_rest_size, &actual_buf_addr);
-	        if(update_flash_write((void *)actual_buf_addr, (__u32)item_rest_size))
+			}
+		//	t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+			//__inf("%x %x %x %x\n", *((__u32 *)src_buf + 0), *((__u32 *)src_buf + 1), *((__u32 *)src_buf + 2), *((__u32 *)src_buf + 3));
+	 //       card_read_time += t2 - t1;
+	        if(!item_rest_bytes)
+			{
+				last_bytes = item_rest_sectors<<9;
+			}
+			else
+			{
+				last_bytes = ((item_rest_sectors - 1)<<9) + item_rest_bytes;
+			}
+	        decode((__u32)src_buf, (__u32)dest_buf, last_bytes, &actual_buf_addr);
+			//__inf("item rest item_rest_bytes = %x\n", item_rest_bytes);
+//			if(!item_rest_bytes)
+//			{
+//				once_sum = verify_sum((void *)actual_buf_addr, item_rest_sectors<<9);
+//			}
+//			else
+//			{
+//				once_sum = verify_sum((void *)actual_buf_addr, ((item_rest_sectors - 1)<<9) + item_rest_bytes);
+//			}
+	        //__inf("verify sum = %x\n", once_sum);
+	        //calc_sum += once_sum;
+			//__inf("total sum = %x\n", calc_sum);
+	//		t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+			if(update_flash_write((void *)actual_buf_addr, last_bytes))
 	        {
 	        	sprite_wrn("sprite update error: fail to write last data in %s\n", dl_info->one_part_info[i].dl_filename);
 
@@ -425,7 +484,11 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 				else
 				{
 					init_code(0);
-					if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_verify_size))   //读出数据
+//					if(!Img_ReadItem(imghd, imgitemhd, (void *)src_buf, item_verify_size))   //读出数据
+//			        {
+//			            __inf("sprite update warning: fail to read data from %s\n", dl_info->one_part_info[i].vf_filename);
+//			        }
+					if(!Img_ReadItem(imghd, imgitemhd, (void *)src_buf, 1024))   //读出数据
 			        {
 			            __inf("sprite update warning: fail to read data from %s\n", dl_info->one_part_info[i].vf_filename);
 			        }
@@ -438,36 +501,62 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 						{
 				        	//读出flash上的数据
 				        	__inf("normal type verify\n");
-				        	item_rest_size = item_original_size;
+				        	item_rest_sectors = item_origin_sectors;
 				        	update_flash_open(dl_info->one_part_info[i].addrlo, dl_info->one_part_info[i].addrhi);
-				        	while(item_rest_size >= 512 * 1024)
+				        	//__inf("verify part start = %x\n", dl_info->one_part_info[i].addrlo);
+				        	while(item_rest_sectors > TEST_BLK_SECTORS)
 				        	{
-				        		if(update_flash_read_ext(dest_buf, 512 * 1024))
+	//			        		t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+				        		if(update_flash_read_ext(dest_buf, TEST_BLK_BYTES))
 				        		{
 				        			__inf("sprite update warning: fail to read data in %s\n", dl_info->one_part_info[i].vf_filename);
 
 				        			goto __download_part_data__;
 				        		}
-								sum += verify_sum(dest_buf, 512 * 1024);
-								item_rest_size -= 512 * 1024;
+//				        		t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+//	        					sprite_read_time += t2 - t1;
+//				        		t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+				        		once_sum = verify_sum(dest_buf, TEST_BLK_BYTES);
+//				        		t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+//	        					check_time += t2 - t1;
+				        		//__inf("verify sum = %x\n", once_sum);
+								sum += once_sum;
+								//__inf("sum = %x\n", sum);
+								item_rest_sectors -= TEST_BLK_SECTORS;
 				        	}
-				        	if(item_rest_size)
+				        	if(item_rest_sectors)
 				        	{
-				        		if(update_flash_read_ext(dest_buf, item_rest_size))
+				        		if(update_flash_read_ext(dest_buf, item_rest_sectors<<9))
 				        		{
 				        			__inf("sprite update warning: fail to read data in %s\n", dl_info->one_part_info[i].vf_filename);
 
 				        			goto __download_part_data__;
 				        		}
-				        		sum += verify_sum(dest_buf, (__u32)item_rest_size);
-				        	}
+//				        		t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        				//	sprite_read_time += t2 - t1;
+//								t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+								if(!item_rest_bytes)
+								{
+									once_sum = verify_sum(dest_buf, item_rest_sectors<<9);
+								}
+								else
+								{
+									once_sum = verify_sum(dest_buf, ((item_rest_sectors - 1)<<9) + item_rest_bytes);
+								}
+//								t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        				//	check_time += t2 - t1;
+								//once_sum = verify_sum(dest_buf, item_rest_sectors<<9);
+				        		//__inf("verify sum = %x\n", once_sum);
+								sum += once_sum;
+								//__inf("sum = %x\n", sum);
+							}
 				        }
 				        else
 				        {
 				        	__inf("sparse type verify\n");
 				        	sum = unsparse_checksum();
 				        }
-				        __inf("pc check sum=%x, local check sum=%x\n", check_sum, sum);
+				        __inf("pc sum=%x, check sum=%x\n", check_sum, sum);
 				        if(sum != check_sum)
 			        	{
 			        		sprite_wrn("sprite update error: checksum is error %s\n", dl_info->one_part_info[i].dl_filename);
@@ -578,7 +667,7 @@ __download_part_data__:
         goto _update_error_;
     }
     /*获取boot1的数据(压缩过的)*/
-    if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_original_size))
+    if(!Img_ReadItem(imghd, imgitemhd, (void *)src_buf, (__u32)item_original_size))
     {
         sprite_wrn("update error: fail to read data from for boot1\n");
         goto _update_error_;
@@ -630,7 +719,7 @@ __download_part_data__:
         sprite_wrn("sprite update error: fail to get boot0 size\n");
         goto _update_error_;
     }
-    if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_original_size))
+    if(!Img_ReadItem(imghd, imgitemhd, (void *)src_buf, (__u32)item_original_size))
     {
         sprite_wrn("sprite update error: fail to get boot0 item size\n");
         goto _update_error_;
@@ -663,8 +752,7 @@ __download_part_data__:
     Img_Close(imghd);
 
     ret = 0;
-
-_update_error_:
+    
     if(src_buf)
     {
         sprite_free(src_buf);
@@ -679,22 +767,20 @@ _update_error_:
 //    }
     if(tmp_mbr_buf)
     {
-    	sprite_free(tmp_mbr_buf);
+        sprite_free(tmp_mbr_buf);
     }
     if(sprite_type)
     {
-    	update_flash_exit(1);
+        update_flash_exit(1);
     }
-    if(!ret)
-    {
-    	sprite_show(CARD_SPRITE_FINISH);
-    }
-    else
-    {
-		sprite_wrn("sprite update error: current card sprite failed\n");
-		sprite_wrn("now hold the machine\n");
-    }
-
+    sprite_show(CARD_SPRITE_FINISH);
+    return ret;
+    
+_update_error_:
+    
+    ret =-1;
+	sprite_wrn("sprite update error: current card sprite failed\n");
+	sprite_wrn("now hold the machine\n");
     return ret;
 }
 

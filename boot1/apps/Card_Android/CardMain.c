@@ -1,22 +1,25 @@
 /*
-**********************************************************************************************************************
-*											        eGon
-*						           the Embedded GO-ON Bootloader System
-*									       eGON arm boot sub-system
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*						  Copyright(C), 2006-2010, SoftWinners Microelectronic Co., Ltd.
-*                                           All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File    : BootMain.c
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* By      : Jerry
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version : V2.00
-*
-* Date	  :
-*
-* Descript:
-**********************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
 #include "include.h"
 #include "card_sprite.h"
@@ -32,6 +35,26 @@ int					  cue;
 
 extern  __u32 usb_start(void);
 extern  __u32 usb_run(void);
+
+static void SIMD_HW_enable(void)
+{
+#ifdef __NEON_SIMD__
+__asm__ __volatile__ (
+"push {r0 ,r1}\n\t"
+"MRC p15, #0, r1, c1, c0, #2 \n\t"/* r1 = Access Control Register*/
+"ORR r1, r1, #(0xf << 20)\n\t" /* enable full access for p10,11*/
+"MCR p15, #0, r1, c1, c0, #2\n\t" /*Access Control Register = r1*/
+"MOV r1, #0\n\t"
+"MCR p15, #0, r1, c7, c5, #4\n\t" /*flush prefetch buffer because of FMXR below*/
+"MOV r0,#0x40000000\n\t" /*and CP 10 & 11 were only just enabled,Enable VFP itself*/
+"FMXR FPEXC, r0\n\t" /*FPEXC = r0*/
+"pop {r0 ,r1}\n\t"
+"isb sy\n\t"
+"dsb sy\n\t"
+);
+#endif
+}
+
 /*
 *******************************************************************************
 *                     BootMain
@@ -57,6 +80,7 @@ int BootMain(int argc, char **argv)
 	MBR					  mbr_info;
     boot_global_info_t   *global_info;
 
+    SIMD_HW_enable();
     DMSG_INFO("big firmware! here we go !\n");
 	DMSG_INFO("Sprite start\n");
 	{

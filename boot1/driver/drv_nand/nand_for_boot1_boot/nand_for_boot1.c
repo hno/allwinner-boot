@@ -1,9 +1,33 @@
+/*
+* (C) Copyright 2007-2012
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Neil Peng<penggang@allwinnertech.com>
+*
+* See file CREDITS for list of people who contributed to this
+* project.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
+*/
+
 #include "egon2.h"
 #include "boot0_v2.h"
 #include "bsp_nand.h"
 #include "string.h"
 
-//#define  NAND_FOR_CARD_PHONIX
+
 #define  OOB_BUF_SIZE                   32
 
 static __u32 nand_good_block_ratio_flag = 0;
@@ -148,21 +172,7 @@ __s32 NAND_PhyInit(void)
 		NAND_Print("NB1 : nand scan fail\n");
 		return ret;
 	}
-#ifdef NAND_FOR_CARD_PHONIX
-	if(!nand_good_block_ratio_flag)
-	{
-		NAND_GetParam((void *)&param);
-		nand_good_blk_ratio =  NAND_BadBlockScan((void *)&param);
-		NAND_SetValidBlkRatio(nand_good_blk_ratio);
-	  NAND_Print("get the good blk ratio from bad block scan : %d \n", nand_good_blk_ratio);
-	  nand_good_block_ratio_flag = 1;
-	}
-	else
-	{
-		NAND_Print(" bad blcok has done before,nand good block ratio is : %d \n", nand_good_blk_ratio);
-		NAND_SetValidBlkRatio(nand_good_blk_ratio);	
-	}
-#else
+
 	//modify ValidBlkRatio
 	if(wBoot_get_para( WBOOT_PARA_NANDFLASH_INFO, (void *)&param))
   {
@@ -180,7 +190,7 @@ __s32 NAND_PhyInit(void)
   		NAND_Print("get the good blk ratio from hwscan : %d \n", nand_good_blk_ratio);
 		}
 	}
-#endif   
+  
 	NAND_Print("NB1 : nand phy init ok\n");
 	return(PHY_ChangeMode(1));
 }

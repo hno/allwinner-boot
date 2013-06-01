@@ -1,22 +1,25 @@
 /*
-**********************************************************************************************************************
-*											        eGon
-*						           the Embedded GO-ON Bootloader System
-*									       eGON arm boot sub-system
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*						  Copyright(C), 2006-2010, SoftWinners Microelectronic Co., Ltd.
-*                                           All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File    : usb_storage_init.c
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* By      :
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version : V2.00
-*
-* Date	  :
-*
-* Descript:
-**********************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
 #include "usb_descriptor.h"
 #include "usb_params.h"
@@ -492,6 +495,7 @@ static void timer_test_usbdc(void *p_arg)
 		usb_clock_exit();
 		wBoot_DisableInt(awxx_usb[0].irq_no);
 		power_set_usbdc();
+        
 	}
 	usb_working = 0;
 
@@ -566,8 +570,10 @@ __u32 usb_detect_enter(void)
 		__inf("usb enter detect\n");
 		usb_working = 1;
 		usb_clock_init();
-
+        if(!tmr_hd)
+        {
 		tmr_hd = wBoot_timer_request((void *)timer_test_usbdc, 0);
+        }
 		if(!tmr_hd)
 		{
 			__inf("timer request fail\n");

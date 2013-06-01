@@ -1,31 +1,25 @@
 /*
-************************************************************************************************************************
-*                                                         eGon2
-*                                         the Embedded GO-ON Bootloader System
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*                             Copyright(C), 2006-2008, SoftWinners Microelectronic Co., Ltd.
-*											       All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File Name   : card_sprite.c
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* Author      : Jerry.Wang
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version     : 1.1.0
-*
-* Date        : 2010-3-30 8:59:10
-*
-* Description :
-*
-* Others      : None at present.
-*
-*
-* History     :
-*
-*  <Author>        <time>       <version>      <description>
-*
-* Jerry.Wang      2010-3-30       1.1.0        build the file
-*
-************************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
 #include  "card_sprite_i.h"
 
@@ -517,8 +511,7 @@ __download_part_data__:
     Img_Close(imghd);
 
     ret = 0;
-
-_update_error_:
+    
     if(src_buf)
     {
         wBoot_free(src_buf);
@@ -533,22 +526,21 @@ _update_error_:
 //    }
     if(tmp_mbr_buf)
     {
-    	wBoot_free(tmp_mbr_buf);
+        wBoot_free(tmp_mbr_buf);
     }
     if(sprite_type)
     {
-    	update_flash_exit(1);
+        update_flash_exit(1);
     }
-    if(!ret)
-    {
-    	;
-    }
-    else
-    {
-		__wrn("sprite update error: current card sprite failed\n");
-		__wrn("now hold the machine\n");
-    }
-
+    sprite_show(CARD_SPRITE_FINISH);
     return ret;
+    
+_update_error_:
+    
+    ret =-1;
+    __wrn("sprite update error: current card sprite failed\n");
+    __wrn("now hold the machine\n");
+    return ret;
+
 }
 

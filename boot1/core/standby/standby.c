@@ -1,22 +1,25 @@
 /*
-**********************************************************************************************************************
-*											        eGon
-*						                     the Embedded System
-*									       script parser sub-system
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*						  Copyright(C), 2006-2010, SoftWinners Microelectronic Co., Ltd.
-*                                           All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File    : standby.c
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* By      : Jerry
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version : V2.00
-*
-* Date	  :
-*
-* Descript:
-**********************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
 #include "include.h"
 #include "standby.h"
@@ -30,7 +33,34 @@ static int eGon2_mod_exit_standby(void);
 
 static int standby_flag = 0;
 static int status;
+static boot_dram_para_t standby_dram_para;
 
+void standby_get_dram_para(void)
+{
+  //     __u32 *addr = (__u32 *)&BT1_head.prvt_head.dram_para;
+    memcpy((void *)&standby_dram_para, (void *)&BT1_head.prvt_head.dram_para, sizeof(boot_dram_para_t));
+    #if 0
+    __inf("standby_dram_para.type=%x\n",standby_dram_para.dram_type);
+    __inf("standby_dram_para.dram_clk=%x\n",standby_dram_para.dram_clk);
+    __inf("standby_dram_para.dram_rank_num=%x\n",standby_dram_para.dram_rank_num);
+    __inf("standby_dram_para.dram_chip_density=%x\n",standby_dram_para.dram_chip_density);
+    __inf("standby_dram_para.dram_io_width=%x\n",standby_dram_para.dram_io_width);
+    __inf("standby_dram_para.dram_cas=%x\n",standby_dram_para.dram_cas);
+    __inf("standby_dram_para.dram_zq=%x\n",standby_dram_para.dram_zq);
+    __inf("standby_dram_para.dram_odt_en=%x\n",standby_dram_para.dram_odt_en);
+    __inf("standby_dram_para.dram_size=%x\n",standby_dram_para.dram_size);
+    __inf("standby_dram_para.dram_baseaddr=%x\n",standby_dram_para.dram_baseaddr);
+    __inf("standby_dram_para.dram_tpr0=%x\n",standby_dram_para.dram_tpr0);
+    __inf("standby_dram_para.dram_tpr1=%x\n",standby_dram_para.dram_tpr1);
+    __inf("standby_dram_para.dram_tpr2=%x\n",standby_dram_para.dram_tpr2);
+    __inf("standby_dram_para.dram_tpr3=%x\n",standby_dram_para.dram_tpr3);
+    __inf("standby_dram_para.dram_tpr4=%x\n",standby_dram_para.dram_tpr4);
+    __inf("standby_dram_para.dram_tpr5=%x\n",standby_dram_para.dram_tpr5);
+    __inf("standby_dram_para.dram_emr1=%x\n",standby_dram_para.dram_tpr1);
+    __inf("standby_dram_para.dram_emr2=%x\n",standby_dram_para.dram_tpr2);
+    __inf("standby_dram_para.dram_emr3=%x\n",standby_dram_para.dram_tpr3);
+    #endif
+}
 /*
 ************************************************************************************************************
 *
@@ -150,11 +180,85 @@ int eGon2_standby_mode(void)
 #define   DCDC2_STANDBY_VOL      (1250)
 #define   DCDC3_STANDBY_VOL		 (1250)
 
+//#define STANDBY_CHECK_CRC
+#ifdef STANDBY_CHECK_CRC
+static unsigned int crc_before_standby[8];
+static unsigned int test_rang_begin=0x40000000;
+static unsigned int test_rang_last =0x43000000;
+void standby_before_check_crc(void)
+{
+    int i, j;
+    int *tmp = (int *)test_rang_begin;
+    int crc = 0;
+
+  for(i = 0; i < 8; i++)
+  {
+        crc = 0;
+        for(j = 0; j < 128 * 1024 * 1024; j+=32)
+        {
+            crc += *tmp;
+            tmp += 8;
+        }
+        crc_before_standby[i]=crc;
+   //     if (crc != standby_get_from_rtc(8 + i))
+      //  {
+    //        eGon2_printf("%d M dram crc err!\n", i*128);
+    //    }
+    //    else
+    //    {
+    //        eGon2_printf("%d M dram crc ok!\n", i*128);
+    //    }
+  }
+}
+
+
+void standby_after_check_crc(void)
+{
+    int i, j;
+    int *tmp = (int *)test_rang_begin;
+    int crc = 0;
+    int result =1;
+    //eGon2_printf("check crc!\n");
+   eGon2_printf("test_rang_begin=%x\n",test_rang_begin);
+  for(i = 0; i < 8; i++)
+  {
+        crc = 0;
+        for(j = 0; j < 128 * 1024 * 1024; j+=32)
+        {
+            crc += *tmp;
+            tmp += 8;
+        }
+        if (crc != crc_before_standby[i])
+        {   
+            
+            eGon2_printf("%d M dram crc err!\n", i*128);
+            
+       //    result =0;
+        }
+        else
+        {
+            eGon2_printf("%d M dram crc ok!\n", i*128);
+           // result =1;
+        }
+        
+        
+  }
+//  if(result)
+//  {
+//       test_rang_begin = ((test_rang_begin-0x40000000)>>1);
+//  }else
+//  {
+//       test_rang_begin +=((test_rang_last-test_rang_begin)>>1);
+//  }
+}
+#endif
+
 static int eGon2_enter_standby(void)
 {
 	volatile int i;
 //	__u8  power_int_status[5];
 	//限制standby充电电流
+	standby_get_dram_para();
 	eGon2_config_charge_current(1);
 	//设置VBUS充电不限流
 //	eGon2_power_vbus_cur_limit();
@@ -165,10 +269,12 @@ static int eGon2_enter_standby(void)
 	standby_int_init();
 	//处理clock
 	standby_clock_store();
-
+    #ifdef STANDBY_CHECK_CRC
+    standby_before_check_crc();
+    #endif
     #ifndef CONFIG_AW_FPGA_PLATFORM
 	//处理dram，之后不允许再访问dram
-	dram_power_save_process();
+	dram_power_save_process(&standby_dram_para);
 	//禁止drampll输出使能
 	standby_clock_drampll_ouput(0);
     #endif
@@ -233,8 +339,11 @@ static int eGon2_exit_standby(void)
 	standby_clock_drampll_ouput(1);
 	//激活dram
 	standby_tmr_enable_watchdog();
-	dram_power_up_process();
+	dram_power_up_process(&standby_dram_para);
 	standby_tmr_disable_watchdog();
+    #endif
+    #ifdef STANDBY_CHECK_CRC
+    standby_after_check_crc();
     #endif
 	//还原中断状态
 	standby_int_exit();

@@ -1,23 +1,26 @@
 /*
- *  linux/include/asm/setup.h
- *
- *  Copyright (C) 1997-1999 Russell King
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- *  Structure passed to kernel to tell it about the
- *  hardware it's running on.  See linux/Documentation/arm/Setup
- *  for more info.
- *
- * NOTE:
- *  This file contains two ways to pass information from the boot
- *  loader to the kernel. The old struct param_struct is deprecated,
- *  but it will be kept in the kernel for 5 years from now
- *  (2001). This will allow boot loaders to convert to the new struct
- *  tag way.
- */
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
+*
+* See file CREDITS for list of people who contributed to this
+* project.
+*
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
+*/
 #ifndef __ASMARM_SETUP_H
 #define __ASMARM_SETUP_H
 

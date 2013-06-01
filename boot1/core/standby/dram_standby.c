@@ -1,23 +1,74 @@
 /*
-**********************************************************************************************************************
-*											        eGon
-*						                     the Embedded System
-*									       script parser sub-system
+* (C) Copyright 2007-2013
+* Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+* Martin zheng <zhengjiewen@allwinnertech.com>
 *
-*						  Copyright(C), 2006-2010, SoftWinners Microelectronic Co., Ltd.
-*                                           All Rights Reserved
+* See file CREDITS for list of people who contributed to this
+* project.
 *
-* File    : standby.c
+* This program is free software; you can redistribute it and/or
+* modify it under the terms of the GNU General Public License as
+* published by the Free Software Foundation; either version 2 of
+* the License, or (at your option) any later version.
 *
-* By      : Jerry
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+* GNU General Public License for more details.
 *
-* Version : V2.00
-*
-* Date	  :
-*
-* Descript:
-**********************************************************************************************************************
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+* MA 02111-1307 USA
 */
+
+#if UNMERGED_CODE_CHANGES
+/* This code was in the GPL release patch but do not apply to this file. Wrong version? */
+@@ unknown code
+ #define SAVE_SDR_ZQSR_TO_RTC
+ 
+ 
+ static __s32 backup_dram_cal_val(int standby_mode)
+ {
+ #ifdef SAVE_SDR_ZQSR_TO_RTC
+@@ -474,17 +477,17 @@
+ #else 
+ #error "super standby has not save SDR_ZQSR"
+ #endif
+ __s32 dram_power_save_process(boot_dram_para_t* standby_dram_para)
+ {
+ 	__u32 i;	
+ 	__u32 reg_val;
+ 
+ 	#define MAX_RETRY_TIMES (5)
+ 	
+ 	__s32 retry = MAX_RETRY_TIMES;
+ 	
+-	while((-1 == backup_dram_cal_val(0)) && --retry){
++	while((-1 == backup_dram_cal_val(0)) && --retry){
+ 		;
+ 	}
+ 	if(0 == retry){
+@@ -502,62 +505,62 @@
+ //	//disable and reset all DLL
+ //	mctl_disable_dll();
+ 
+-    reg_val = mctl_read_w(DRAM_CCM_AHB_GATE_REG);
+-    reg_val &= ~(0x3<<14);
+-    mctl_write_w(DRAM_CCM_AHB_GATE_REG, reg_val);
+-
+-	return 0;
+-
+-}
++    reg_val = mctl_read_w(DRAM_CCM_AHB_GATE_REG);
++    reg_val &= ~(0x3<<14);
++    mctl_write_w(DRAM_CCM_AHB_GATE_REG, reg_val);
++
++	return 0;
++
++}
+#endif
+
 #include "include.h"
 #include "standby.h"
 #include "dram_i.h"
@@ -83,18 +134,18 @@ void DRAMC_enter_selfrefresh(void)
 //	{
 //		DRAMC_hostport_on_off(i, 0x0);
 //	}
-	for(i=0; i<8; i++)
-	{
-		mctl_write_w(SDR_HPCR + (i<<2), 0);
-	}
-	
-	for(i=16; i<28; i++)
-	{
-		mctl_write_w(SDR_HPCR + (i<<2), 0);
-	}	
-	
-	mctl_write_w(SDR_HPCR + (29<<2), 0);
-	mctl_write_w(SDR_HPCR + (31<<2), 0);
+//	for(i=0; i<8; i++)
+//	{
+//		mctl_write_w(SDR_HPCR + (i<<2), 0);
+//	}
+//
+//	for(i=16; i<28; i++)
+//	{
+//		mctl_write_w(SDR_HPCR + (i<<2), 0);
+//	}
+//
+//	mctl_write_w(SDR_HPCR + (29<<2), 0);
+//	mctl_write_w(SDR_HPCR + (31<<2), 0);
 /*
 	//disable auto-fresh
 	reg_val = mctl_read_w(SDR_DRR);
@@ -102,7 +153,13 @@ void DRAMC_enter_selfrefresh(void)
 	mctl_write_w(SDR_DRR, reg_val);
 */
 	//issue prechage all command
-	mctl_precharge_all();
+//	mctl_precharge_all();
+
+	//disable auto-fresh			//by cpl 2013-5-6
+	reg_val = mctl_read_w(SDR_DRR);
+	reg_val |= 0x1U<<31;
+	mctl_write_w(SDR_DRR, reg_val);
+
 
 	//enter into self-refresh
 	reg_val = mctl_read_w(SDR_DCR);
@@ -111,9 +168,18 @@ void DRAMC_enter_selfrefresh(void)
 	mctl_write_w(SDR_DCR, reg_val);
 	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
 	standby_delay(0x100);
+	
+	reg_val = mctl_read_w(SDR_CR);
+	reg_val &= ~(0x3<<28);
+	reg_val |= 0x2<<28;
+	mctl_write_w(SDR_CR, reg_val);
 
 	//dram pad odt hold
 	mctl_write_w(SDR_DPCR, 0x16510001);
+	
+	while(!(mctl_read_w(SDR_DPCR) & 0x1));
+	standby_delay(0x100);
+	
 }
 void mctl_mode_exit(void)
 {
@@ -309,12 +375,13 @@ __u32 mctl_ahb_reset(void)
 	return 0;
 }
 
+/*
 __s32 DRAMC_retraining(void)
 {
 	__u32 i;
 	__u32 reg_val;
 	__u32 ret_val;
-	__u32 reg_dcr, reg_drr, reg_tpr0, reg_tpr1, reg_tpr2, reg_tpr3, reg_mr, reg_emr, reg_emr2, reg_emr3;
+	__u32 reg_dcr, reg_drr, reg_tpr0, reg_tpr1, reg_tpr2, reg_mr, reg_emr, reg_emr2, reg_emr3;
 	__u32 reg_zqcr0, reg_iocr, reg_ccr, reg_zqsr;
 
 	//remember register value
@@ -405,6 +472,7 @@ __s32 DRAMC_retraining(void)
 			return 0;
     }
 }
+*/
 
 __s32 dram_power_save_process(void)
 {
@@ -507,63 +575,13 @@ __s32 dram_power_save_process(void)
 #endif
 	return 0;
 }
-__u32 dram_power_up_process(void)
+
+__u32 dram_power_up_process(boot_dram_para_t* standby_dram_para)
 {
 	__u32 i;
 	__u32 reg_val;
 	
-#if 0
-	return DRAMC_retraining();
-#else
-	//turn on dll
-	mctl_enable_dll0();
-	mctl_enable_dllx(0);
-	
-	//turn on sclk
-	reg_val = mctl_read_w(SDR_CR);
-	reg_val |= (0x1<<16);
-	mctl_write_w(SDR_CR, reg_val);
-
-    //itm enable
-	reg_val = mctl_read_w(SDR_CCR);
-	reg_val &= ~(0x1<<28);
-	mctl_write_w(SDR_CCR, reg_val);
-
-	reg_val = mctl_read_w(SDR_CR);
-	reg_val &= ~(0x3<<28);
-	mctl_write_w(SDR_CR, reg_val);
-
-	//dram pad odt hold
-	mctl_write_w(SDR_DPCR, 0x16510000);
-
-	while((mctl_read_w(SDR_DPCR) & 0x1));
-
-
-	//exit from self-refresh
-	reg_val = mctl_read_w(SDR_DCR);
-	reg_val &= ~(0x1fU<<27);
-	reg_val |= 0x17U<<27;
-	mctl_write_w(SDR_DCR, reg_val);
-
-	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
-
-	for(i=0; i<8; i++)
-	{
-		mctl_write_w(SDR_HPCR + (i<<2), hpcr_value[i]);
-	}
-
-	for(i=16; i<28; i++)
-	{
-		mctl_write_w(SDR_HPCR + (i<<2), hpcr_value[i]);
-	}
-
-    mctl_write_w(SDR_HPCR + (29<<2), hpcr_value[29]);
-    mctl_write_w(SDR_HPCR + (31<<2), hpcr_value[31]);
-
-	mctl_write_w(DRAM_CCM_SDRAM_CLK_REG, gating);
-	
-	return 0;
-#endif
+	init_DRAM(standby_dram_para);
 }
 
 
