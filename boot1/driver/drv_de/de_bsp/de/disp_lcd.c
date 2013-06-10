@@ -31,26 +31,26 @@ void Lcd_Panel_Parameter_Check(__u32 sel)
 	
 	info = &(gpanel_info[sel]);
 	
-	if(info->lcd_if==0 && info->lcd_hv_if==1 && info->lcd_hv_smode==0)
+	if((info->lcd_if== LCD_IF_HV||info->lcd_if== LCD_IF_HV2DSI) && info->lcd_hv_if==1 && info->lcd_hv_smode==0)
 		cycle_num = 3;
-	else if(info->lcd_if==0 && info->lcd_hv_if==1 && info->lcd_hv_smode==1)
+	else if((info->lcd_if== LCD_IF_HV||info->lcd_if== LCD_IF_HV2DSI) && info->lcd_hv_if==1 && info->lcd_hv_smode==1)
 		cycle_num = 2;
-	else if(info->lcd_if==1 && info->lcd_cpu_if==1)
+	else if(info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==1)
 		cycle_num = 3;
-	else if(info->lcd_if==1 && info->lcd_cpu_if==2)
+	else if(info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==2)
 		cycle_num = 2;
-	else if(info->lcd_if==1 && info->lcd_cpu_if==3)
+	else if(info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==3)
 		cycle_num = 2;
-	else if(info->lcd_if==1 && info->lcd_cpu_if==5)
+	else if(info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==5)
 		cycle_num = 2;
-	else if(info->lcd_if==1 && info->lcd_cpu_if==6)
+	else if(info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==6)
 		cycle_num = 3;
-	else if(info->lcd_if==1 && info->lcd_cpu_if==7)
+	else if(info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==7)
 		cycle_num = 2;
 	else
 		cycle_num = 1;	
 
-	if(info->lcd_hbp > info->lcd_hv_hspw)
+	if(info->lcd_hbp > info->lcd_hspw)
 	{
 		;
 	}
@@ -59,7 +59,7 @@ void Lcd_Panel_Parameter_Check(__u32 sel)
 		Lcd_Panel_Err_Flag |= BIT0;
 	}
 
-	if(info->lcd_vbp > info->lcd_hv_vspw)
+	if(info->lcd_vbp > info->lcd_vspw)
 	{
 		;
 	}
@@ -104,13 +104,13 @@ void Lcd_Panel_Parameter_Check(__u32 sel)
 	}
 
 
-	if((info->lcd_if==1 && info->lcd_cpu_if==0)	
-	 ||(info->lcd_if==3 && info->lcd_lvds_bitwidth==1))
+	if((info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==0)	
+	 ||(info->lcd_if== LCD_IF_LVDS && info->lcd_lvds_bitwidth==1))
 	{
 		if(info->lcd_frm != 1)
 			Lcd_Panel_Wrn_Flag |= BIT0;		
 	}
-	else if(info->lcd_if==1 && info->lcd_cpu_if==4)
+	else if(info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==4)
 	{
 		if(info->lcd_frm != 2)
 			Lcd_Panel_Wrn_Flag |= BIT1;					
@@ -143,19 +143,19 @@ void Lcd_Panel_Parameter_Check(__u32 sel)
 		
 		OSAL_PRINTF("*** \n");	
 		OSAL_PRINTF("*** Interface:");
-		if(info->lcd_if==0 && info->lcd_hv_if==0)
+		if((info->lcd_if== LCD_IF_HV||info->lcd_if== LCD_IF_HV2DSI) && info->lcd_hv_if==0)
 			{OSAL_PRINTF("*** Parallel HV Panel\n");}
-		else if(info->lcd_if==0 && info->lcd_hv_if==1)
+		else if((info->lcd_if== LCD_IF_HV||info->lcd_if== LCD_IF_HV2DSI) && info->lcd_hv_if==1)
 			{OSAL_PRINTF("*** Serial HV Panel\n");}
-		else if(info->lcd_if==0 && info->lcd_hv_if==2)
+		else if((info->lcd_if== LCD_IF_HV||info->lcd_if== LCD_IF_HV2DSI) && info->lcd_hv_if==2)
 			{OSAL_PRINTF("*** Serial YUV Panel\n");}
-		else if(info->lcd_if==3 && info->lcd_lvds_bitwidth==0)
+		else if(info->lcd_if== LCD_IF_LVDS && info->lcd_lvds_bitwidth==0)
 			{OSAL_PRINTF("*** 24Bit LVDS Panel\n");}
-		else if(info->lcd_if==3 && info->lcd_lvds_bitwidth==1)
+		else if(info->lcd_if== LCD_IF_LVDS && info->lcd_lvds_bitwidth==1)
 			{OSAL_PRINTF("*** 18Bit LVDS Panel\n");}	
-		else if(info->lcd_if==1 && info->lcd_cpu_if==0)
+		else if(info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==0)
 			{OSAL_PRINTF("*** 18Bit CPU Panel\n");}	
-		else if(info->lcd_if==1 && info->lcd_cpu_if==4)
+		else if(info->lcd_if== LCD_IF_CPU && info->lcd_cpu_if==4)
 			{OSAL_PRINTF("*** 16Bit CPU Panel\n");}
 		else
 		{
@@ -180,8 +180,8 @@ void Lcd_Panel_Parameter_Check(__u32 sel)
 		OSAL_PRINTF("*** lcd_hbp:    %d\n",info->lcd_hbp);
 		OSAL_PRINTF("*** lcd_vt:     %d\n",info->lcd_vt);
 		OSAL_PRINTF("*** lcd_vbp:    %d\n",info->lcd_vbp);
-		OSAL_PRINTF("*** lcd_hspw:   %d\n",info->lcd_hv_hspw);			
-		OSAL_PRINTF("*** lcd_vspw:   %d\n",info->lcd_hv_vspw);		
+		OSAL_PRINTF("*** lcd_hspw:   %d\n",info->lcd_hspw);			
+		OSAL_PRINTF("*** lcd_vspw:   %d\n",info->lcd_vspw);		
 		OSAL_PRINTF("*** lcd_frame_frq:  %dHz\n",lcd_fclk_frq);	
 		
 		//´òÓ¡´íÎóÌáÊ¾
@@ -204,27 +204,27 @@ void Lcd_Panel_Parameter_Check(__u32 sel)
 			{OSAL_PRINTF("*** WRN03: Recommend \"lcd_dclk_frq = %d\"\n",((info->lcd_vt/2) * info->lcd_ht)*60/(1000*1000));}
 		OSAL_PRINTF("*** \n");	
 
-    	if(Lcd_Panel_Err_Flag != 0)
-    	{	
-            __u32 image_base_addr;
-            __u32 reg_value = 0;
+    	        if(Lcd_Panel_Err_Flag != 0)
+    	        {	
+                        __u32 image_base_addr;
+                        __u32 reg_value = 0;
 
-            image_base_addr = DE_Get_Reg_Base(sel);
+                        image_base_addr = DE_Get_Reg_Base(sel);
 
-            sys_put_wvalue(image_base_addr+0x804,0xffff00ff);//set background color
+                        sys_put_wvalue(image_base_addr+0x804,0xffff00ff);//set background color
 
-            reg_value = sys_get_wvalue(image_base_addr+0x800);
-            sys_put_wvalue(image_base_addr+0x800,reg_value & 0xfffff0ff);//close all layer
+                        reg_value = sys_get_wvalue(image_base_addr+0x800);
+                        sys_put_wvalue(image_base_addr+0x800,reg_value & 0xfffff0ff);//close all layer
 
 #ifdef __LINUX_OSAL__
-            LCD_delay_ms(2000);
-            sys_put_wvalue(image_base_addr+0x804,0x00000000);//set background color
-            sys_put_wvalue(image_base_addr+0x800,reg_value);//open layer
+                        LCD_delay_ms(2000);
+                        sys_put_wvalue(image_base_addr+0x804,0x00000000);//set background color
+                        sys_put_wvalue(image_base_addr+0x800,reg_value);//open layer
 #endif
-            OSAL_PRINTF("*** Try new parameters,you can make it pass!\n");
-    	}
-        OSAL_PRINTF("*** LCD Panel Parameter Check End\n");
-        OSAL_PRINTF("*****************************************************************\n");
+                        OSAL_PRINTF("*** Try new parameters,you can make it pass!\n");
+    	        }
+                OSAL_PRINTF("*** LCD Panel Parameter Check End\n");
+                OSAL_PRINTF("*****************************************************************\n");
 	}
 }
 
@@ -415,26 +415,26 @@ __s32 LCD_get_panel_para(__u32 sel, __panel_para_t * info)
         DE_INF("lcd_hv_syuv_if = %d\n", value);
     }
     
-    ret = OSAL_Script_FetchParser_Data(primary_key, "lcd_hv_vspw", &value, 1);
+    ret = OSAL_Script_FetchParser_Data(primary_key, "lcd_vspw", &value, 1);
     if(ret < 0)
     {
-        DE_INF("fetch script data %s.lcd_hv_vspw fail\n", primary_key);
+        DE_INF("fetch script data %s.lcd_vspw fail\n", primary_key);
     }
     else
     {
-        info->lcd_hv_vspw = value;
-        DE_INF("lcd_hv_vspw = %d\n", value);
+        info->lcd_vspw = value;
+        DE_INF("lcd_vspw = %d\n", value);
     }
     
-    ret = OSAL_Script_FetchParser_Data(primary_key, "lcd_hv_hspw", &value, 1);
+    ret = OSAL_Script_FetchParser_Data(primary_key, "lcd_hspw", &value, 1);
     if(ret < 0)
     {
-        DE_INF("fetch script data %s.lcd_hv_hspw fail\n", primary_key);
+        DE_INF("fetch script data %s.lcd_hspw fail\n", primary_key);
     }
     else
     {
-        info->lcd_hv_hspw = value;
-        DE_INF("lcd_hv_hspw = %d\n", value);
+        info->lcd_hspw = value;
+        DE_INF("lcd_hspw = %d\n", value);
     }
     
     ret = OSAL_Script_FetchParser_Data(primary_key, "lcd_lvds_ch", &value, 1);
@@ -646,7 +646,7 @@ void LCD_get_sys_config(__u32 sel, __disp_lcd_cfg_t *lcd_cfg)
     }
 
 //lcd_gpio
-    for(i=0; i<4; i++)
+    for(i=0; i<6; i++)
     {
         sprintf(sub_name, "lcd_gpio_%d", i);
         
@@ -979,7 +979,7 @@ __s32 LCD_PWM_EN(__u32 sel, __bool b_en)
 
         memcpy(gpio_info, &(gdisp.screen[sel].lcd_cfg.lcd_pwm), sizeof(user_gpio_set_t));
         
-        if((OSAL_sw_get_ic_ver() != 0xA) && (gpanel_info[sel].lcd_pwm_not_used == 0))
+        if(gpanel_info[sel].lcd_pwm_not_used == 0)
         {
             if(b_en)
             {
@@ -1095,7 +1095,7 @@ __s32 LCD_GPIO_init(__u32 sel)
 {
     __u32 i = 0;
 
-    for(i=0; i<4; i++)
+    for(i=0; i<6; i++)
     {
         gdisp.screen[sel].gpio_hdl[i] = 0;
 
@@ -1115,7 +1115,7 @@ __s32 LCD_GPIO_exit(__u32 sel)
 {
     __u32 i = 0;
 
-    for(i=0; i<4; i++)
+    for(i=0; i<6; i++)
     {
         if(gdisp.screen[sel].gpio_hdl[i])
         {
@@ -1151,7 +1151,7 @@ __s32 Disp_lcdc_pin_cfg(__u32 sel, __disp_output_type_t out_type, __u32 bon)
                 }
                 else
                 {
-                    if((gpanel_info[sel].lcd_if == 3) && (gpio_info->mul_sel==2))
+                    if((gpanel_info[sel].lcd_if == LCD_IF_LVDS) && (gpio_info->mul_sel==2))
                     {
                         gpio_info->mul_sel = 3;
                     }
@@ -1254,7 +1254,7 @@ __s32 Disp_lcdc_init(__u32 sel)
         }
         gpanel_info[sel].tcon_index = 0;
 
-        if((OSAL_sw_get_ic_ver() != 0xA) && (gpanel_info[sel].lcd_pwm_not_used == 0))
+        if(gpanel_info[sel].lcd_pwm_not_used == 0)
         {
             __pwm_info_t pwm_info;
 
@@ -1740,7 +1740,7 @@ __s32 BSP_disp_lcd_set_bright(__u32 sel, __u32  bright)
 {	    
     __u32 duty_ns;
     
-    if((OSAL_sw_get_ic_ver() != 0xA) && (gpanel_info[sel].lcd_pwm_not_used == 0))
+    if(gpanel_info[sel].lcd_pwm_not_used == 0)
     {
         if(bright != 0)
         {
@@ -1943,8 +1943,12 @@ __s32 BSP_disp_close_lcd_backlight(__u32 sel)
             OSAL_GPIO_Release(hdl, 2);
         }
     }
-
     return 0;
+}
+__s32 lcd_get_panel_para(__u32 sel, __panel_para_t * info)
+{    
+        memcpy(info, &gpanel_info[sel], sizeof(__panel_para_t));    
+        return DIS_SUCCESS;
 }
 
 #ifdef __LINUX_OSAL__
@@ -1973,6 +1977,7 @@ EXPORT_SYMBOL(pwm_set_para);
 EXPORT_SYMBOL(pwm_get_para);
 EXPORT_SYMBOL(pwm_set_duty_ns);
 EXPORT_SYMBOL(pwm_enable);
+EXPORT_SYMBOL(lcd_get_panel_para);
 
 #endif
 

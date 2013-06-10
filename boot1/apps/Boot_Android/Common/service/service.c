@@ -23,6 +23,7 @@
 
 int usbpc_cur = 0, usbpc_vol = 4000;
 int usbdc_cur = 0, usbdc_vol = 4000;
+__u32 usb_ac_enable_gpio_hd  = 0;
 /*
 ************************************************************************************************************
 *
@@ -41,6 +42,14 @@ int usbdc_cur = 0, usbdc_vol = 4000;
 */
 int power_set_init(void)
 {
+    script_gpio_set_t  gpio;
+    int ret;
+	__inf("set pc\n");
+    ret = wBoot_script_parser_fetch("usbc0", "usb_ac_enable_gpio", &gpio, 1);    
+	if(ret >= 0)
+	{
+       usb_ac_enable_gpio_hd = wBoot_GPIO_Request(&gpio, 1);
+    }
 	wBoot_script_parser_fetch("pmu_para", "pmu_usbvol", &usbdc_vol, 1);
 	wBoot_script_parser_fetch("pmu_para", "pmu_usbcur", &usbdc_cur, 1);
 	wBoot_script_parser_fetch("pmu_para", "pmu_usbvol_pc", &usbpc_vol, 1);
@@ -68,7 +77,11 @@ int power_set_init(void)
 */
 void power_set_usbpc(void)
 {
-	__inf("set pc\n");
+    __inf("set pc\n");
+    if(usb_ac_enable_gpio_hd)
+    {
+        wBoot_GPIO_Write_One_PIN_Value(usb_ac_enable_gpio_hd, 0, "usb_ac_enable_gpio");
+    }
 	wBoot_power_cur_limit(usbpc_cur);
 	wBoot_power_vol_limit(usbpc_vol);
 }
@@ -90,7 +103,27 @@ void power_set_usbpc(void)
 */
 void power_set_usbdc(void)
 {
-	
+    __inf("set dc\n");
+	if(usb_ac_enable_gpio_hd)
+    {
+        wBoot_GPIO_Write_One_PIN_Value(usb_ac_enable_gpio_hd, 1, "usb_ac_enable_gpio");
+    }
 	wBoot_power_cur_limit(usbdc_cur);
 	wBoot_power_vol_limit(usbdc_vol);
 }
+
+
+void system_reset(void)
+{
+	WATCHDOG_REG_CTRL = 0xA57<<1;
+    WATCHDOG_REG_CTRL &= ~1;
+    WATCHDOG_REG_CTRL = 0;
+    WATCHDOG_REG_MODE = 0x13;
+    WATCHDOG_REG_MODE = 0x0;
+    //¿ªÊ¼ÖØÆô
+	wBoot_block_exit();
+	WATCHDOG_REG_MODE = 0x3;
+	wBoot_timer_delay(50);
+	while(1);
+}
+

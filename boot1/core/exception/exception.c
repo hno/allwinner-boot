@@ -112,7 +112,6 @@ static __s32 check_key_to_fel(void)
         {
             count ++;
         }
-
         eGon2_timer_delay(40);
         ret = eGon2_key_get_value();  		//读取按键信息
         if(ret < 0)             			//没有按键按下
@@ -122,7 +121,6 @@ static __s32 check_key_to_fel(void)
             {
             	if(new_key >= 2)
             	{
-            		eGon2_printf("1\n");
             		eGon2_printf("force to debug mode\n");
 
             		return -2;
@@ -162,13 +160,13 @@ static __s32 check_key_to_fel(void)
 
         if(count == 3)
         {
-        	eGon2_printf("you can unclench the key to update now\n");
+        	eGon2_printf("you can release the key to update now\n");
             return 0;
         }
 
         if((!count) && (time_tick >= KEY_MAX_COUNT_GO_ON))
         {
-            eGon2_printf("timeout, but no power key found\n");
+            eGon2_printf("LRADC key timeout without power key\n");
             return value_old;
         }
     }

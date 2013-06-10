@@ -6,3 +6,4 @@ all:
 	make -C boot1/apps/Boot_Burn -j8
 	make -C boot1/apps/Card_Android -j8
 	make -C boot1/driver/drv_de -j8
+	make -C boot1/driver/drv_de_hdmi -j8

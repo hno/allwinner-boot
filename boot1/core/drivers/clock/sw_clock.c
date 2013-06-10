@@ -26,13 +26,13 @@
 
 static __u32 volt_freq_table[][2] =
 {
-	{1104, 1500},
-	{1008, 1400},
-	{ 960, 1350},
-	{ 912, 1300},
-	{ 864, 1250},
-	{ 624, 1200},
-	{   0, 1200}
+	{960, 1400},
+	{864, 1300},
+	{720, 1200},
+	{528, 1100},
+	{312, 1000},
+	{146,  900},
+    {0,   1000}
 };
 
 struct core_pll_freq_tbl{
@@ -67,24 +67,24 @@ static struct core_pll_freq_tbl    CorePllTbl[] = {
     { 17,    0,    0,    2,    102,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 17 ), index = 17  */
     { 18,    0,    0,    2,    108,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 18 ), index = 18  */
     { 19,    0,    0,    2,    114,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 19 ), index = 19  */
-    { 10,    0,    0,    1,    120,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 20 ), index = 20  */
+    {  5,    0,    0,    0,    120,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 20 ), index = 20  */
     { 21,    0,    0,    2,    126,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 21 ), index = 21  */
     { 11,    0,    0,    1,    132,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 22 ), index = 22  */
     { 23,    0,    0,    2,    138,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 23 ), index = 23  */
-    { 12,    0,    0,    1,    144,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 24 ), index = 24  */
+    {  6,    0,    0,    0,    144,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 24 ), index = 24  */
     { 25,    0,    0,    2,    150,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 25 ), index = 25  */
     { 13,    0,    0,    1,    156,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 26 ), index = 26  */
     { 27,    0,    0,    2,    162,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 27 ), index = 27  */
-    { 14,    0,    0,    1,    168,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 28 ), index = 28  */
+    {  7,    0,    0,    0,    168,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 28 ), index = 28  */
     { 29,    0,    0,    2,    174,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 29 ), index = 29  */
     { 15,    0,    0,    1,    180,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 30 ), index = 30  */
     { 31,    0,    0,    2,    186,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 31 ), index = 31  */
-    { 16,    0,    0,    1,    192,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 32 ), index = 32  */
-    { 16,    0,    0,    1,    192,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 32 ), index = 33  */
+    {  8,    0,    0,    0,    192,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 32 ), index = 32  */
+    {  8,    0,    0,    0,    192,  CLK_DIV(1, 1, 1, 2) },   /* freq = (6M * 32 ), index = 33  */
     { 17,    0,    0,    1,    204,  CLK_DIV(1, 1, 2, 2) },   /* freq = (6M * 34 ), index = 34  */
     { 17,    0,    0,    1,    204,  CLK_DIV(1, 1, 2, 2) },   /* freq = (6M * 34 ), index = 35  */
-    { 18,    0,    0,    1,    216,  CLK_DIV(1, 1, 2, 2) },   /* freq = (6M * 36 ), index = 36  */
-    { 18,    0,    0,    1,    216,  CLK_DIV(1, 1, 2, 2) },   /* freq = (6M * 36 ), index = 37  */
+    {  9,    0,    0,    0,    216,  CLK_DIV(1, 1, 2, 2) },   /* freq = (6M * 36 ), index = 36  */
+    {  9,    0,    0,    0,    216,  CLK_DIV(1, 1, 2, 2) },   /* freq = (6M * 36 ), index = 37  */
     { 19,    0,    0,    1,    228,  CLK_DIV(1, 1, 2, 2) },   /* freq = (6M * 38 ), index = 38  */
     { 19,    0,    0,    1,    228,  CLK_DIV(1, 1, 2, 2) },   /* freq = (6M * 38 ), index = 39  */
     { 10,    0,    0,    0,    240,  CLK_DIV(1, 1, 2, 2) },   /* freq = (6M * 40 ), index = 40  */
@@ -159,18 +159,18 @@ static struct core_pll_freq_tbl    CorePllTbl[] = {
     { 27,    0,    0,    0,    648,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 108), index = 109 */
     { 27,    0,    0,    0,    648,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 108), index = 110 */
     { 27,    0,    0,    0,    648,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 108), index = 111 */
-    { 28,    0,    0,    0,    672,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 112), index = 112 */
-    { 28,    0,    0,    0,    672,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 112), index = 113 */
-    { 28,    0,    0,    0,    672,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 112), index = 114 */
-    { 28,    0,    0,    0,    672,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 112), index = 115 */
+    { 14,    1,    0,    0,    672,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 112), index = 112 */
+    { 14,    1,    0,    0,    672,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 112), index = 113 */
+    { 14,    1,    0,    0,    672,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 112), index = 114 */
+    { 14,    1,    0,    0,    672,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 112), index = 115 */
     { 29,    0,    0,    0,    696,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 116), index = 116 */
     { 29,    0,    0,    0,    696,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 116), index = 117 */
     { 29,    0,    0,    0,    696,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 116), index = 118 */
     { 29,    0,    0,    0,    696,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 116), index = 119 */
-    { 30,    0,    0,    0,    720,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 120), index = 120 */
-    { 30,    0,    0,    0,    720,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 120), index = 121 */
-    { 30,    0,    0,    0,    720,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 120), index = 122 */
-    { 30,    0,    0,    0,    720,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 120), index = 123 */
+    { 15,    1,    0,    0,    720,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 120), index = 120 */
+    { 15,    1,    0,    0,    720,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 120), index = 121 */
+    { 15,    1,    0,    0,    720,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 120), index = 122 */
+    { 15,    1,    0,    0,    720,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 120), index = 123 */
     { 31,    0,    0,    0,    744,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 124), index = 124 */
     { 31,    0,    0,    0,    744,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 124), index = 125 */
     { 31,    0,    0,    0,    744,  CLK_DIV(1, 2, 2, 2) },   /* freq = (6M * 124), index = 126 */
@@ -203,10 +203,10 @@ static struct core_pll_freq_tbl    CorePllTbl[] = {
     { 19,    1,    0,    0,    912,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 153 */
     { 19,    1,    0,    0,    912,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 154 */
     { 19,    1,    0,    0,    912,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 155 */
-    { 19,    1,    0,    0,    912,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 156 */
-    { 19,    1,    0,    0,    912,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 157 */
-    { 19,    1,    0,    0,    912,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 158 */
-    { 19,    1,    0,    0,    912,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 159 */
+    { 13,    2,    0,    0,    936,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 156 */
+    { 13,    2,    0,    0,    936,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 157 */
+    { 13,    2,    0,    0,    936,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 158 */
+    { 13,    2,    0,    0,    936,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 152), index = 159 */
     { 20,    1,    0,    0,    960,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 160), index = 160 */
     { 20,    1,    0,    0,    960,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 160), index = 161 */
     { 20,    1,    0,    0,    960,  CLK_DIV(1, 3, 2, 2) },   /* freq = (6M * 160), index = 162 */
@@ -717,10 +717,12 @@ __u32 eGon2_clock_set_ext(__u32 clock_frequency, __u32 core_vol)
 			}
 		}
     }
-    //切换到24M
+    
     reg_val = CCMU_REG_AHB_APB;
+    //切换到24M
     reg_val &= ~(0x03 << 16);
     reg_val |=  (0x01 << 16);
+
     CCMU_REG_AHB_APB = reg_val;
     //延时，等待时钟稳定
     for(i=0; i<0x4000; i++);
@@ -734,6 +736,9 @@ __u32 eGon2_clock_set_ext(__u32 clock_frequency, __u32 core_vol)
     reg_val = CCMU_REG_AHB_APB;
     reg_val &= ~(0x3ff << 0);
     reg_val |=  (pll_factor.clk_div << 0);
+    //修改ATB
+    reg_val &= ~(0x03<<2);
+    reg_val |=  (0x02<<2);
     CCMU_REG_AHB_APB = reg_val;
     //延时，等待时钟稳定
     for(i=0; i<0x4000; i++);
@@ -742,8 +747,9 @@ __u32 eGon2_clock_set_ext(__u32 clock_frequency, __u32 core_vol)
     reg_val &= ~(0x03 << 16);
     reg_val |=  (0x02 << 16);
     CCMU_REG_AHB_APB = reg_val;
+    //打印分频比
     tmp = (reg_val>>8)&0x03;
-    eGon2_printf("axi:ahb:apb=%d:%d:%d\n", ((reg_val>>0)&0x03) + 1, 1<<((reg_val>>4)&0x03), (tmp<=1) ? 2:(1<<tmp));
+    eGon2_printf("axi:ahb:apb=%d:%d:%d\n", 1<<(reg_val&0x03), 1<<((reg_val>>4)&0x03), (tmp==0) ? 2:(1<<tmp));
 
     return  _get_corepll();
 }

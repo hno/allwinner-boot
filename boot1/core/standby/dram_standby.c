@@ -34,7 +34,8 @@
 *	  2011-08-05		  Berg        1.2     add retraining method in power up process when failed
 *********************************************************************************************************
 */
-
+static __u32 hpcr_value[32];
+static 	__u32 gating = 0;
 
 void standby_delay(int ms)
 {
@@ -59,6 +60,7 @@ void standby_delay(int ms)
 */
 void mctl_precharge_all(void)
 {
+	__u32 i;
 	__u32 reg_val;
 
 	reg_val = mctl_read_w(SDR_DCR);
@@ -76,17 +78,29 @@ void DRAMC_enter_selfrefresh(void)
 	__u32 i;
 	__u32 reg_val;
 
-	//disable all port
-	for(i=0; i<31; i++)
+//	//disable all port
+//	for(i=0; i<31; i++)
+//	{
+//		DRAMC_hostport_on_off(i, 0x0);
+//	}
+	for(i=0; i<8; i++)
 	{
-		DRAMC_hostport_on_off(i, 0x0);
+		mctl_write_w(SDR_HPCR + (i<<2), 0);
 	}
-
+	
+	for(i=16; i<28; i++)
+	{
+		mctl_write_w(SDR_HPCR + (i<<2), 0);
+	}	
+	
+	mctl_write_w(SDR_HPCR + (29<<2), 0);
+	mctl_write_w(SDR_HPCR + (31<<2), 0);
+/*
 	//disable auto-fresh
 	reg_val = mctl_read_w(SDR_DRR);
 	reg_val |= 0x1U<<31;
 	mctl_write_w(SDR_DRR, reg_val);
-
+*/
 	//issue prechage all command
 	mctl_precharge_all();
 
@@ -97,9 +111,13 @@ void DRAMC_enter_selfrefresh(void)
 	mctl_write_w(SDR_DCR, reg_val);
 	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
 	standby_delay(0x100);
+
+	//dram pad odt hold
+	mctl_write_w(SDR_DPCR, 0x16510001);
 }
 void mctl_mode_exit(void)
 {
+	__u32 i;
 	__u32 reg_val;
 
 	reg_val = mctl_read_w(SDR_DCR);
@@ -155,6 +173,7 @@ void DRAMC_exit_selfrefresh(void)
 */
 void DRAMC_enter_power_down(void)
 {
+
 	__u32 reg_val;
 
 	reg_val = mctl_read_w(SDR_DCR);
@@ -265,10 +284,6 @@ void DRAMC_hostport_setup(__u32 port_idx, __u32 port_pri_level, __u32 port_wait_
 *                 DRAM power save process
 *
 * Description: We can save power by disable DRAM PLL.
-*			   DRAMC_power_save_process() is called to disable DRAMC ITM and DLL, then disable PLL to save power;
-*			   Before exit SDRAM self-refresh state, we should enable DRAM PLL and make sure that it is stable clock.
-*			   Then call function DRAMC_exit_selfrefresh() to exit self-refresh state. Before access external SDRAM,
-*              the function DRAMC_power_up_process() should be called to enable DLL and re-training DRAM controller.
 *
 * Arguments  : none
 *
@@ -279,15 +294,16 @@ void DRAMC_hostport_setup(__u32 port_idx, __u32 port_pri_level, __u32 port_wait_
 */
 __u32 mctl_ahb_reset(void)
 {
+
 	__u32 reg_val;
 
 	reg_val = mctl_read_w(DRAM_CCM_AHB_GATE_REG);
-	reg_val &=~(0x1<<14);
+	reg_val &=~(0x3<<14);
 	mctl_write_w(DRAM_CCM_AHB_GATE_REG,reg_val);
     standby_delay(0x10);
 
 	reg_val = mctl_read_w(DRAM_CCM_AHB_GATE_REG);
-	reg_val |=(0x1<<14);
+	reg_val |=(0x3<<14);
 	mctl_write_w(DRAM_CCM_AHB_GATE_REG,reg_val);
 
 	return 0;
@@ -295,10 +311,11 @@ __u32 mctl_ahb_reset(void)
 
 __s32 DRAMC_retraining(void)
 {
+	__u32 i;
 	__u32 reg_val;
 	__u32 ret_val;
-	__u32 reg_dcr, reg_drr, reg_tpr0, reg_tpr1, reg_tpr2, reg_mr, reg_emr, reg_emr2, reg_emr3;
-	__u32 reg_zqcr0, reg_iocr;
+	__u32 reg_dcr, reg_drr, reg_tpr0, reg_tpr1, reg_tpr2, reg_tpr3, reg_mr, reg_emr, reg_emr2, reg_emr3;
+	__u32 reg_zqcr0, reg_iocr, reg_ccr, reg_zqsr;
 
 	//remember register value
 	reg_dcr = mctl_read_w(SDR_DCR);
@@ -312,35 +329,43 @@ __s32 DRAMC_retraining(void)
 	reg_emr3 = mctl_read_w(SDR_EMR3);
 	reg_zqcr0 = mctl_read_w(SDR_ZQCR0);
 	reg_iocr = mctl_read_w(SDR_IOCR);
-	while(1)
-	{
+	reg_tpr3 = (mctl_read_w(SDR_DLLCR1)>>14) & 0xf;
+	reg_tpr3 |= ((mctl_read_w(SDR_DLLCR2)>>14) & 0xf)<<4;
+	reg_tpr3 |= ((mctl_read_w(SDR_DLLCR3)>>14) & 0xf)<<8;
+	reg_tpr3 |= ((mctl_read_w(SDR_DLLCR4)>>14) & 0xf)<<12;
+	reg_ccr = mctl_read_w(SDR_CCR);
+    reg_zqsr = mctl_read_w(SDR_ZQSR);
+	while(1){
 		mctl_ahb_reset();
-
-		//reset external DRAM
 		mctl_ddr3_reset();
 		mctl_set_drive();
 
-		//dram clock off
-		DRAMC_clock_output_en(0);
-
-		//select dram controller 1
-		mctl_write_w(SDR_SCSR, 0x16237495);
-
 		mctl_itm_disable();
+
 		mctl_enable_dll0();
+
+		//set CCR value
+		mctl_write_w(SDR_CCR, reg_ccr);
 
 		//configure external DRAM
 		mctl_write_w(SDR_DCR, reg_dcr);
 
+		//set ZQ value
+		reg_val = reg_zqsr&0xfffff;
+		reg_val |= 0x1<<30;
+		reg_val |= 0x1<<28;
+		reg_val |= reg_zqcr0&(0xff<<20);
+		reg_val |= reg_zqcr0&(0x1<<29);
+		mctl_write_w(SDR_ZQCR0, reg_val);
+
 		//dram clock on
 		DRAMC_clock_output_en(1);
-        standby_delay(0x10);
+		
+		
+		standby_delay(0x10);
 		while(mctl_read_w(SDR_CCR) & (0x1U<<31)) {};
 
-		mctl_enable_dllx();
-
-		//set odt impendance divide ratio
-		mctl_write_w(SDR_ZQCR0, reg_zqcr0);
+		mctl_enable_dllx(reg_tpr3);
 
 		//set I/O configure register
 		mctl_write_w(SDR_IOCR, reg_iocr);
@@ -359,17 +384,15 @@ __s32 DRAMC_retraining(void)
 		mctl_write_w(SDR_EMR2, reg_emr2);
 		mctl_write_w(SDR_EMR3, reg_emr3);
 
-		//set DQS window mode
-		reg_val = mctl_read_w(SDR_CCR);
-		reg_val |= 0x1U<<14;
-		mctl_write_w(SDR_CCR, reg_val);
-
 		//initial external DRAM
 		reg_val = mctl_read_w(SDR_CCR);
 		reg_val |= 0x1U<<31;
 		mctl_write_w(SDR_CCR, reg_val);
-
 		while(mctl_read_w(SDR_CCR) & (0x1U<<31)) {};
+
+		//dram pad hold release
+		mctl_write_w(SDR_DPCR, 0x16510000);
+		standby_delay(0x10000);
 
 		//scan read pipe value
 		mctl_itm_enable();
@@ -383,48 +406,164 @@ __s32 DRAMC_retraining(void)
     }
 }
 
-void dram_power_save_process(void)
+__s32 dram_power_save_process(void)
 {
+	__u32 i;	
+	__u32 reg_val;
+
+	
+#if 0
 	//put external SDRAM into self-fresh state
 	DRAMC_enter_selfrefresh();
 
 	//disable ITM
 	mctl_itm_disable();
 
-	//dramc clock off
-	DRAMC_clock_output_en(0);
-
 	//disable and reset all DLL
 	mctl_disable_dll();
+#else
+	for(i=0; i<8; i++)
+	{
+		hpcr_value[i] = mctl_read_w(SDR_HPCR + (i<<2));
+	}
+
+	for(i=16; i<28; i++)
+	{
+		hpcr_value[i] = mctl_read_w(SDR_HPCR + (i<<2));
+	}
+
+	hpcr_value[29] = mctl_read_w(SDR_HPCR + (29<<2));
+	hpcr_value[31] = mctl_read_w(SDR_HPCR + (31<<2));
+
+	for(i=0; i<8; i++)
+	{
+		mctl_write_w(SDR_HPCR + (i<<2), 0);
+	}
+
+	for(i=16; i<28; i++)
+	{
+		mctl_write_w(SDR_HPCR + (i<<2), 0);
+	}
+
+	mctl_write_w(SDR_HPCR + (29<<2), 0);
+	mctl_write_w(SDR_HPCR + (31<<2), 0);
+
+	gating = mctl_read_w(DRAM_CCM_SDRAM_CLK_REG);
+
+	//enter into self-refresh
+	reg_val = mctl_read_w(SDR_DCR);
+	reg_val &= ~(0x1fU<<27);
+	reg_val |= 0x12U<<27;
+	mctl_write_w(SDR_DCR, reg_val);
+
+	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
+
+	reg_val = mctl_read_w(SDR_CR);
+	reg_val &= ~(0x3<<28);
+	reg_val |= 0x2<<28;
+	mctl_write_w(SDR_CR, reg_val);
+
+	//dram pad odt hold
+	mctl_write_w(SDR_DPCR, 0x16510001);
+
+	while(!(mctl_read_w(SDR_DPCR) & 0x1));
+
+	//itm disable
+	reg_val = mctl_read_w(SDR_CCR);
+	reg_val |= 0x1<<28;
+	reg_val &= ~(0x1U<<31);          //danielwang, 2012-05-18
+	mctl_write_w(SDR_CCR, reg_val);
+
+	//turn off sclk
+	reg_val = mctl_read_w(SDR_CR);
+	reg_val &= ~(0x1<<16);
+	mctl_write_w(SDR_CR, reg_val);
+
+	//disable dll
+	reg_val = mctl_read_w(SDR_DLLCR0);
+	reg_val &= ~(0x1<<30);
+	reg_val |= 0x1U<<31;
+	mctl_write_w(SDR_DLLCR0, reg_val);
+
+	reg_val = mctl_read_w(SDR_DLLCR1);
+	reg_val &= ~(0x1<<30);
+	reg_val |= 0x1U<<31;
+	mctl_write_w(SDR_DLLCR1, reg_val);
+
+	reg_val = mctl_read_w(SDR_DLLCR2);
+	reg_val &= ~(0x1<<30);
+	reg_val |= 0x1U<<31;
+	mctl_write_w(SDR_DLLCR2, reg_val);
+
+	reg_val = mctl_read_w(SDR_DLLCR3);
+	reg_val &= ~(0x1<<30);
+	reg_val |= 0x1U<<31;
+	mctl_write_w(SDR_DLLCR3, reg_val);
+
+	reg_val = mctl_read_w(SDR_DLLCR4);
+	reg_val &= ~(0x1<<30);
+	reg_val |= 0x1U<<31;
+	mctl_write_w(SDR_DLLCR4, reg_val);
+#endif
+	return 0;
 }
 __u32 dram_power_up_process(void)
 {
-	__s32 ret_val;
-
-	mctl_itm_disable();
-
+	__u32 i;
+	__u32 reg_val;
+	
+#if 0
+	return DRAMC_retraining();
+#else
+	//turn on dll
 	mctl_enable_dll0();
+	mctl_enable_dllx(0);
+	
+	//turn on sclk
+	reg_val = mctl_read_w(SDR_CR);
+	reg_val |= (0x1<<16);
+	mctl_write_w(SDR_CR, reg_val);
 
-	//dram clock on
-	DRAMC_clock_output_en(1);
-    standby_delay(0x10);
+    //itm enable
+	reg_val = mctl_read_w(SDR_CCR);
+	reg_val &= ~(0x1<<28);
+	mctl_write_w(SDR_CCR, reg_val);
 
-	mctl_enable_dllx();
+	reg_val = mctl_read_w(SDR_CR);
+	reg_val &= ~(0x3<<28);
+	mctl_write_w(SDR_CR, reg_val);
 
-	//enable ITM
-	mctl_itm_enable();
+	//dram pad odt hold
+	mctl_write_w(SDR_DPCR, 0x16510000);
 
-	//exit from self-refresh state
-	DRAMC_exit_selfrefresh();
+	while((mctl_read_w(SDR_DPCR) & 0x1));
 
-	//scan read pipe value
-	ret_val = DRAMC_scan_readpipe();
-	if(ret_val != 0)
+
+	//exit from self-refresh
+	reg_val = mctl_read_w(SDR_DCR);
+	reg_val &= ~(0x1fU<<27);
+	reg_val |= 0x17U<<27;
+	mctl_write_w(SDR_DCR, reg_val);
+
+	while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
+
+	for(i=0; i<8; i++)
 	{
-		DRAMC_retraining();
+		mctl_write_w(SDR_HPCR + (i<<2), hpcr_value[i]);
 	}
 
-	return (ret_val);
+	for(i=16; i<28; i++)
+	{
+		mctl_write_w(SDR_HPCR + (i<<2), hpcr_value[i]);
+	}
+
+    mctl_write_w(SDR_HPCR + (29<<2), hpcr_value[29]);
+    mctl_write_w(SDR_HPCR + (31<<2), hpcr_value[31]);
+
+	mctl_write_w(DRAM_CCM_SDRAM_CLK_REG, gating);
+	
+	return 0;
+#endif
 }
 
 
@@ -468,6 +607,4 @@ void dram_hostport_setup(__u32 port, __u32 prio, __u32 wait_cycle, __u32 cmd_num
 {
     DRAMC_hostport_setup(port, prio, wait_cycle, cmd_num);
 }
-
-
 

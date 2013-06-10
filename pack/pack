@@ -30,7 +30,7 @@ function pack_info()
     echo -e "\033[47;30mINFO: $*\033[0m"
 }
 
-. ../../buildroot/scripts/shflags/shflags
+. pctools/linux/shflags/shflags
 
 # define option, format:
 #   'long option' 'default value' 'help message' 'short option'
@@ -46,7 +46,7 @@ eval set -- "${FLAGS_ARGV}"
 
 PACK_CHIP="sun7i"
 PACK_PLATFORM="linux"
-PACK_BOARD="sun7i"
+PACK_BOARD="qc"
 PACK_DEBUG=${FLAGS_debug_mode}
 
 ROOT_DIR=`pwd`

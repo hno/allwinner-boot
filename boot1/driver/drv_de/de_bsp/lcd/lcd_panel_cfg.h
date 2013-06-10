@@ -36,7 +36,7 @@ extern __s32 LCD_GPIO_write(__u32 sel,__u32 io_index, __u32 data);
 
 extern __s32 pwm_set_para(__u32 channel, __pwm_info_t * pwm_info);
 extern __s32 pwm_get_para(__u32 channel, __pwm_info_t * pwm_info);
-
+extern __s32 lcd_get_panel_para(__u32 sel,__panel_para_t * info);
 #define mdelay LCD_delay_ms
 #define udelay LCD_delay_us
 #define printk __inf

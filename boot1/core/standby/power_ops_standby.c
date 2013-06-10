@@ -145,7 +145,7 @@ __s32 eGon2_power_set_dcdc2(int set_vol)
             vol     = tmp * 25 + 700;
         }
     }
-    __debug("after set dcdc2,the value =%dmv\n",vol);
+  //  __debug("after set dcdc2,the value =%dmv\n",vol);
     return 0;
 }
 /*
@@ -290,7 +290,7 @@ __s32 eGon2_power_set_ldo2(int set_vol)
 			if((vol_value >= 1800) && (vol_value <= 3300))
 			{
 				reg_value &= 0x0f;
-				reg_value = (((vol_value - 1800)/100) << 4);
+				reg_value |= (((vol_value - 1800)/100) << 4);
 				if(BOOT_TWI_Write(AXP20_ADDR, &reg_addr, &reg_value))
 				{
 					eGon2_printf("boot power:unable to set ldo2\n");
@@ -367,7 +367,7 @@ __s32 eGon2_power_set_ldo3(int set_vol)
 			if((vol_value >= 700) && (vol_value <= 3500))
 			{
 				reg_value &= 0x80;
-				reg_value = ((vol_value - 700)/25);
+				reg_value |= ((vol_value - 700)/25);
 				if(BOOT_TWI_Write(AXP20_ADDR, &reg_addr, &reg_value))
 				{
 					eGon2_printf("boot power:unable to set ldo3\n");
@@ -967,7 +967,7 @@ __s32 eGon2_power_int_enable(void)
     	}
     }
 
-    writel(0x1,NMI_CTL_REG);
+    writel(0x0,NMI_CTL_REG);
     writel(0x1,NMI_IRG_PENDING_REG);
     writel(0x1,NMI_INT_ENABLE_REG);
     
@@ -1002,7 +1002,7 @@ __s32 eGon2_power_int_disable(void)
         	return -1;
     	}
     }
-    writel(0x1,NMI_CTL_REG);
+    writel(0x0,NMI_CTL_REG);
     writel(0x1,NMI_IRG_PENDING_REG);
     writel(0x0,NMI_INT_ENABLE_REG);
     

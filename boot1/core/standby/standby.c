@@ -51,7 +51,6 @@ int eGon2_standby_mode(void)
 {
 	__u32 dcin_exist, battery_exist;
 	__s32 key_status;
-
 	status = -1;
 	//检查是否有按键按下
 	__debug("at the start of %s\n",__FUNCTION__);
@@ -126,7 +125,8 @@ int eGon2_standby_mode(void)
 	else
 	{
 		standby_flag = 1;
-	}
+	}    
+  
 	eGon2_restore_sp();
 
 	return status;
@@ -152,7 +152,7 @@ int eGon2_standby_mode(void)
 
 static int eGon2_enter_standby(void)
 {
-	int i;
+	volatile int i;
 //	__u8  power_int_status[5];
 	//限制standby充电电流
 	eGon2_config_charge_current(1);
@@ -161,11 +161,11 @@ static int eGon2_enter_standby(void)
 //	//清除power的中断pending
 //	eGon2_power_int_query(power_int_status);
 	//处理中断
-	__debug("standby int init\n");
+	//__debug("standby int init\n");
 	standby_int_init();
 	//处理clock
 	standby_clock_store();
-    __debug("after standby_clock_store\n");
+
     #ifndef CONFIG_AW_FPGA_PLATFORM
 	//处理dram，之后不允许再访问dram
 	dram_power_save_process();
@@ -174,16 +174,20 @@ static int eGon2_enter_standby(void)
     #endif
 	//切换到24M
 	standby_clock_to_source(24000000);
+    //__debug("after standby_clock_to_source\n");
 	//关闭所有pll输出
 	standby_clock_plldisable();
+   // __debug("after standby_clock_plldisable\n");
     
 	//降低电源电压输出
 	eGon2_power_set_dcdc2(DCDC2_STANDBY_VOL);
+    //__debug("after standby_clock_plldisable\n");
 	//eGon2_power_set_dcdc3(DCDC3_STANDBY_VOL);
 	//使能电源中断，等待唤醒
 	eGon2_power_int_enable();
 	//切换分频比全为0
 	standby_clock_divsetto0();
+    //__debug("after standby_clock_divsetto0 fail\n");
 	//切换apb1到32k
 	standby_clock_apb1_to_source(32000);
 	//切换时钟，关闭时钟

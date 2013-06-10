@@ -48,26 +48,32 @@ __u32  WORD_SIZE;
 */
 __s32 WaitForDeInitFinish(void)
 {
-	__u32 time = 0;
+	__s32 ret;
+	__s32 timedly = 2000;
+	__s32 check_time = timedly/50;
 
-	if(De_IsLCDOpen() < 0){
-		DMSG_PANIC("ERR: Not need to wait LCD open\n");
-		return -1;
-	}
-
-    /* 最大超时时间为 5s */
-	time = 500;
-	while(!De_IsLCDOpen() && time--)
+	do
 	{
-//		DMSG_INFO("[MSG]: Wait for lcd open finish\n");
-		wBoot_timer_delay(10);
+		ret = De_IsLCDOpen();
+		if(ret == 1)
+		{
+			break;
+		}
+		else if(ret == -1)
+		{
+			return -1;
+		}
+		wBoot_timer_delay(50);
+		check_time --;
+		if(check_time <= 0)
+		{
+			return -1;
+		}
 	}
-
-//	if(!time){
-//		DMSG_PANIC("ERR: Wait for lcd open finish timeout\n");
-//	}
+	while(1);
 
 	return 0;
+
 }
 /*
 *******************************************************************************

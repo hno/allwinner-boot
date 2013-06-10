@@ -34,7 +34,7 @@ all:$(LOCALTARGET)
 	$(LOAD) $(LDFLAGS) $(LOCALTARGET) $(LTARGET)
 	-cp $(LTARGET) $(TARGET0)
 	cp  $(LTARGET) $(TARGET1)
-	-rm $(OBJS) $(LOCALTARGET) $(LTARGET)
+	-rm $(OBJS) $(LTARGET)
 	@echo ----------------------------
 	@echo target make finish
 	@echo ----------------------------

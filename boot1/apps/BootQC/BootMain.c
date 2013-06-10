@@ -21,6 +21,7 @@
 #include "include.h"
 #include "board.h"
 #include "common_res.h"
+#include <math.h>
 
 boot_hardware_res     board_res;
 /*
@@ -41,6 +42,21 @@ boot_hardware_res     board_res;
 *
 *******************************************************************************
 */
+
+void mathlib_test(void)
+{
+    double x,y;
+    __inf("begain mathlib_test!\n");
+    __s32 print_x,print_y;
+    for(x=0;x<6.28;x+=0.1)
+    {
+        y=sin(x);
+        print_x=x*1000;
+        print_y=y*1000;
+        __inf("sin(%d)=%d\n",print_x,print_y);
+    }
+    __inf("mathlib test done!\n");
+}
 
 int BootMain(int argc, char **argv)
 {
@@ -71,8 +87,8 @@ int BootMain(int argc, char **argv)
 	    }
 	    else if(ch == '1')
 	    {
-//	    	usb_start();
-//    		usb_run();
+	    	usb_start(0);
+    		usb_run();
     		break;
 	    }
 	    else
@@ -83,7 +99,7 @@ int BootMain(int argc, char **argv)
 	//关闭DCACHE
     wlibc_DCacheDisable();
 	BoardInit_Display(0, 0);           //初始化显示
-
+		mathlib_test();
 //    if(Amain() == 1)
 //    	__dinf("test ok\n");
 //    else

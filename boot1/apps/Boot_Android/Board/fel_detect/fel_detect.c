@@ -125,6 +125,10 @@ __s32 check_power_status(void)
 {
 	__s32 status;
 	__s32 power_start;
+    
+#ifdef CONFIG_AW_HOMELET_PRODUCT
+    return 0;
+#endif
 
 	status = wBoot_power_get_level();
 	if(status == BATTERY_RATIO_TOO_LOW_WITHOUT_DCIN)						//低电状态下，无外部电源，直接关机
@@ -203,7 +207,7 @@ __s32 check_power_status(void)
 		usb_detect_enter();
 		bat_show_hd = ShowBatteryCharge_init(0);
 
-		wBoot_timer_delay(1500);
+		//wBoot_timer_delay(1500);
 		dcin = 0;
 		bat_exist = 0;
 		wBoot_power_get_dcin_battery_exist(&dcin, &bat_exist);

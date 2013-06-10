@@ -251,6 +251,7 @@ void TCON0_cfg(__u32 sel, __panel_para_t * info)
 	switch(info->lcd_if)
 	{
 		case LCDC_LCDIF_HV:
+                case LCDC_LCDIF_HV2DSI:
 			lcd_if_reg = 0;
 			break;
 		case LCDC_LCDIF_CPU:
@@ -290,14 +291,14 @@ void TCON0_cfg(__u32 sel, __panel_para_t * info)
 
 	LCDC_WUINT32(sel, LCDC_BASIC2_OFF,(info->lcd_vt <<16) | (info->lcd_vbp-1));
 
-	if(info->lcd_if == LCDC_LCDIF_HV)
+	if(info->lcd_if == LCDC_LCDIF_HV || info->lcd_if == LCDC_LCDIF_HV2DSI)
 	{
-	    __u32 hspw_tmp = info->lcd_hv_hspw;
-		__u32 vspw_tmp = info->lcd_hv_vspw;
+	    __u32 hspw_tmp = info->lcd_hspw;
+		__u32 vspw_tmp = info->lcd_vspw;
 		
-		if(info->lcd_hv_hspw != 0)
+		if(info->lcd_hspw != 0)
 			hspw_tmp --;
-		if(info->lcd_hv_vspw != 0)
+		if(info->lcd_vspw != 0)
 			vspw_tmp --;
 		LCDC_WUINT32(sel, LCDC_BASIC3_OFF,(hspw_tmp <<16) | vspw_tmp);
 
@@ -352,13 +353,13 @@ void TCON0_cfg(__u32 sel, __panel_para_t * info)
 
 	if(info->lcd_frm == LCDC_FRM_RGB666 || info->lcd_frm == LCDC_FRM_RGB656)
 	{
-    	LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x00,0x11111111);	
-    	LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x04,0x11111111);	
-       	LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x08,0x11111111);	
-    	LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x0c,0x11111111);	
-       	LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x10,0x11111111);	
-    	LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x14,0x11111111);		    
-	    LCDC_WUINT32(sel, LCDC_FRM2_OFF+0x00,0x01010000);	
+    	        LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x00,0x11111111);	
+    	        LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x04,0x11111111);	
+       	        LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x08,0x11111111);	
+    	        LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x0c,0x11111111);	
+       	        LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x10,0x11111111);	
+    	        LCDC_WUINT32(sel, LCDC_FRM1_OFF+0x14,0x11111111);		    
+	        LCDC_WUINT32(sel, LCDC_FRM2_OFF+0x00,0x01010000);	
 	 	LCDC_WUINT32(sel, LCDC_FRM2_OFF+0x04,0x15151111);	
 	 	LCDC_WUINT32(sel, LCDC_FRM2_OFF+0x08,0x57575555);	
 		LCDC_WUINT32(sel, LCDC_FRM2_OFF+0x0c,0x7f7f7777);
@@ -534,8 +535,8 @@ __u32 TCON1_cfg_ex(__u32 sel, __panel_para_t * info)
     tcon1_cfg.hbp = info->lcd_hbp;
     tcon1_cfg.vt = info->lcd_vt;
     tcon1_cfg.vbp = info->lcd_vbp;
-    tcon1_cfg.vspw = info->lcd_hv_vspw;
-    tcon1_cfg.hspw = info->lcd_hv_hspw;
+    tcon1_cfg.vspw = info->lcd_vspw;
+    tcon1_cfg.hspw = info->lcd_hspw;
     tcon1_cfg.io_pol = info->lcd_io_cfg0;
     tcon1_cfg.io_out = info->lcd_io_cfg1;
 

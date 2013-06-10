@@ -51,6 +51,7 @@
 #define CCMU_REG_o_PLL7_TUNING          0x34
 #define CCMU_REG_o_PLL1_TUNING2         0x38
 #define CCMU_REG_o_PLL5_TUNING2         0x3C
+#define CCMU_REG_o_PLL8_CTRL            0x40
 
 #define CCMU_REG_o_PLTD                 0x4C
 #define CCMU_REG_o_OSC24M				0x50
@@ -84,6 +85,8 @@
 #define CCMU_REG_PLL6_TUNING            __REG( CCMU_REGS_BASE + CCMU_REG_o_PLL6_TUNING )
 #define CCMU_REG_PLL7_CTRL              __REG( CCMU_REGS_BASE + CCMU_REG_o_PLL7_CTRL   )
 #define CCMU_REG_PLL7_TUNING            __REG( CCMU_REGS_BASE + CCMU_REG_o_PLL7_TUNING )
+#define CCMU_REG_PLL8_CTRL              __REG( CCMU_REGS_BASE + CCMU_REG_o_PLL8_CTRL   )
+
 #define CCMU_REG_PLL1_TUNING2           __REG( CCMU_REGS_BASE + CCMU_REG_o_PLL1_TUNING2)
 #define CCMU_REG_PLL5_TUNING2           __REG( CCMU_REGS_BASE + CCMU_REG_o_PLL5_TUNING2)
 

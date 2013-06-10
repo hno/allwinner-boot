@@ -36,6 +36,7 @@ sdmmc:$(LOCALTARGET)
 	-$(WORKTOOLS)/gen_check_code $(TMPTARGET)
 	-cp $(TMPTARGET)  $(TARGET0)
 	cp  $(TMPTARGET)  $(TARGET1)
+	cp  $(TMPTARGET)  $(TARGET2)
 	-rm $(OBJS) $(TMPTARGET)
 	@echo ----------------------------
 	@echo target make finish

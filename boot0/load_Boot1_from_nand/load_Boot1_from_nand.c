@@ -84,8 +84,8 @@ __s32 load_Boot1_from_nand( void )
 
 		bfh = (boot_file_head_t *) BOOT1_BASE;
         length =  bfh->length;
-        msg("The size of Boot1 is %x.\n", length );
-        msg("The align size of Boot1 is %x.\n", bfh->align_size);
+      //  msg("The size of Boot1 is %x.\n", length );
+      //  msg("The align size of Boot1 is %x.\n", bfh->align_size);
         if( ( length & ( NF_SECTOR_SIZE - 1 ) ) != 0 )     // length必须是NF_SECTOR_SIZE对齐的
         {
             msg("the boot1 is not aligned by %x\n", NF_SECTOR_SIZE);

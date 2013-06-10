@@ -132,11 +132,12 @@ __s32 ui_FreeLayerPara(display_layer_info_t *layer_para)
 __s32 ShowLayer(__hdle layer_hdl, display_layer_info_t *layer_para, __s32 layer_source)
 {
 	__s32 ret = 0;
-
+#ifndef SPEED_UP_BOOT
     if(!layer_source)
     {
 	    WaitForDeInitFinish();
     }
+#endif
 	ret = De_SetLayerPara(layer_hdl, layer_para);
 	if(ret != 0){
 		DMSG_PANIC("ERR: De_SetLayerPara failed\n");
@@ -241,8 +242,9 @@ __u32 ShowPictureEx(char *Path, __u32 address)
 	/* œ‘ æÕº∆¨ */
 	layer_para = ui_AllocLayerPara(&PictureInfo);
 	ShowLayer(board_res.layer_hd, layer_para, board_res.display_source);
+    #ifndef SPEED_UP_BOOT
 	wBoot_timer_delay(50);
-
+    #endif
     return (__u32)layer_para;
 
 error:

@@ -135,7 +135,7 @@ void eGon2_block_ratio(void)
 	good_block_ratio = nand_info->good_block_ratio;
 	if(!eGon2_script_parser_patch("nand_para", "good_block_ratio", good_block_ratio))
 	{
-		eGon2_printf("nand ratio=%d\n", good_block_ratio);
+		eGon2_printf("nand good_block_ratio=%d\n", good_block_ratio);
 	}
 }
 

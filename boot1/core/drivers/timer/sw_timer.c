@@ -421,10 +421,10 @@ void eGon2_timer_init(void)
 */
 void eGon2_timer_exit(void)
 {
-	*(volatile unsigned int *)(0x01c20C00 + 0x84 )  = 0;
-	*(volatile unsigned int *)(0x01c20C00 + 0x8C )  = 0x05DB05DB;
-	*(volatile unsigned int *)(0x01c20C00 + 0x80 )  = 0;
-	*(volatile unsigned int *)(0x01c20000 + 0x144) &= ~(1U << 31);
+//	*(volatile unsigned int *)(0x01c20C00 + 0x84 )  = 0;
+//	*(volatile unsigned int *)(0x01c20C00 + 0x8C )  = 0x05DB05DB;
+//	*(volatile unsigned int *)(0x01c20C00 + 0x80 )  = 0;
+//	*(volatile unsigned int *)(0x01c20000 + 0x144) &= ~(1U << 31);
 
 }
 /*

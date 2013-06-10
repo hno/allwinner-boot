@@ -81,7 +81,7 @@ __s32  BOOT_TWI_Write(__u32 arg1, __u8 *arg2, __u8 *arg3)
 void boot_power_nmi_enable(void)
 {
 
-    writel(0x01,NMI_CTL_REG); //nagative edge trigger
+    writel(0x00,NMI_CTL_REG); //nagative edge trigger
     writel(0x01,NMI_IRG_PENDING_REG); //clean the NMI pendding
     writel(0x01,NMI_INT_ENABLE_REG); //enable the NMI irq
     
@@ -106,7 +106,7 @@ void boot_power_nmi_enable(void)
 void boot_power_nmi_disable(void)
 {
 
-    writel(0x01,NMI_CTL_REG);
+    writel(0x00,NMI_CTL_REG); 
     writel(0x01,NMI_IRG_PENDING_REG);
     writel(0x00,NMI_INT_ENABLE_REG);
 
@@ -229,6 +229,7 @@ __s32 eGon2_power_int_query(__u8 *int_status)
     		__inf("twi read err\n");
         	return -1;
     	}
+        __debug("int_status[%d]=%x\n",i,(int)int_status[i]);
     	if(BOOT_TWI_Write(AXP20_ADDR, &reg_addr, int_status + i))
     	{
     		__inf("twi write err\n");
@@ -305,6 +306,7 @@ void power_int_handler(void *p_arg)
 */
 void power_int_reg(void)
 {
+    __u8 status[5];
 	__inf("power start detect\n");
 	if(!power_int_working)
 	{
@@ -313,7 +315,8 @@ void power_int_reg(void)
 		power_int_working = 1;
 		boot_power_int_enable();
 		wBoot_InsINT_Func(GIC_SRC_NMI, (int *)power_int_handler, 0);
-		
+        wBoot_EnableInt(GIC_SRC_NMI);
+        
 	}
 }
 /*

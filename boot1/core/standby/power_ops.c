@@ -234,15 +234,15 @@ __s32 eGon2_power_init(void *power_para)
     {
     	reg_addr1 = BOOT_POWER20_COULOMB_CAL;
     	BOOT_TWI_Read(AXP20_ADDR, &reg_addr1, &value1);
-    	value1 |= 0x80;//open lock,pouse ocv.
+    	value1 |= 0x80;//pouse ocv.
     	BOOT_TWI_Write(AXP20_ADDR, &reg_addr1, &value1);
-    	value1 = 0xBA;
+    	reg_addr1 = BOOT_POWER20_RDC1;
     	BOOT_TWI_Read(AXP20_ADDR, &reg_addr1, &value1);
-    	value1 &= 0x7F;//start ocv
+    	value1 &= 0x7F;//disable rdc calculation
     	BOOT_TWI_Write(AXP20_ADDR, &reg_addr1, &value1);
 		reg_addr1 = BOOT_POWER20_COULOMB_CAL;
     	BOOT_TWI_Read(AXP20_ADDR, &reg_addr1, &value1);
-    	value1 &= 0x7F;//lock  start ocv
+    	value1 &= 0x7F;//start ocv
     	BOOT_TWI_Write(AXP20_ADDR, &reg_addr1, &value1);
     }
 
@@ -272,7 +272,11 @@ __s32 eGon2_power_init(void *power_para)
     __debug("core_para->user_set_clock =%d\n",core_para->user_set_clock);
     reg_addr1 = BOOT_POWER20_DATA_BUFFER1;										//读之前的比分比记录
     BOOT_TWI_Read(AXP20_ADDR, &reg_addr1, &value1);
-	if(value1 & 0x80)				            //检测标志位，1有效
+    if(!core_para->vol_threshold)
+	{
+		core_para->vol_threshold = 3600;
+	}
+    if(value1 & 0x80)				            //检测标志位，1有效
 	{
 		int bat_cou;
 		int bat_value;
@@ -284,7 +288,7 @@ __s32 eGon2_power_init(void *power_para)
 			eGon2_printf("bat_cou=%x\n", bat_cou);
 			if(dcin_exist)
 			{
-				if(bat_vol > 3900)
+				if(bat_vol > (core_para->vol_threshold+100))
 				{
 					_axp_clr_status();
 					power_step_level = BATTERY_RATIO_ENOUGH;
@@ -297,11 +301,11 @@ __s32 eGon2_power_init(void *power_para)
 			}
 			else
 			{
-				if(bat_vol > 3800)
+				if(bat_vol > core_para->vol_threshold)
 				{
 					power_step_level = BATTERY_RATIO_ENOUGH;
 					_axp_clr_status();
-					eGon2_printf("bat_vol > 3800\n");
+					eGon2_printf("bat_vol > %d\n",core_para->vol_threshold);
 				}
 				else
 				{
@@ -332,10 +336,6 @@ __s32 eGon2_power_init(void *power_para)
 		}
     	else
     	{
-    		if(!core_para->vol_threshold)
-    		{
-    			core_para->vol_threshold = 3600;
-    		}
     		if(bat_vol >= core_para->vol_threshold)
     		{
     			power_step_level = BATTERY_RATIO_ENOUGH;

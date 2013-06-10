@@ -36,6 +36,7 @@ nand:$(LOCALTARGET)
 	-$(WORKTOOLS)/gen_check_code.exe $(TMPTARGET) boot0.bin
 	cp boot0.bin $(TARGET)
 	cp boot0.bin $(TARGET1)
+	cp boot0.bin $(TARGET2)
 	-rm $(OBJS) $(TMPTARGET) boot0.bin
 	@echo ----------------------------
 	@echo target make finish

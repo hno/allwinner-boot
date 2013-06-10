@@ -52,7 +52,11 @@ __s32 BoardInit_Display(__s32 source, __s32 mode)
         board_res.display_source = -1;
         return 0;
     }
+    #ifndef CONFIG_AW_HOMELET_PRODUCT
     ret = wBoot_driver_install("c:\\drv_de.drv");
+    #else
+    ret = wBoot_driver_install("c:\\drv_hdmi.drv");
+    #endif
     if(ret != 0)
     {
         DMSG_PANIC("ERR: wBoot_driver_install display driver failed\n");

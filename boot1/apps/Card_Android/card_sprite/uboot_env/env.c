@@ -27,7 +27,7 @@
 #include  "string.h"
 
 #define  ENV_DATA_DRAM_ADDRESS         0x58000000
-#define  ENV_FLASH_DRAM_ADDRESS		   0x48000000
+#define  ENV_FLASH_DRAM_ADDRESS		   0x49000000
 #define  ENV_SIZE                      (128 * 1024)
 #define  PRIVATE_FLASH_DRAM_ADDRESS	   0x5E000000
 
@@ -194,7 +194,7 @@ int private_fetch_from_flash(void)
         __inf("update flash env err: malloc mbr buffer failed!\n");
         goto update_flash_env_err;
     }
-	if(sprite_flash_read(0, MBR_SIZE/512, mbr_buf))
+	if(sprite_flash_read(0, MBR_SIZE*MBR_COPY_NUM/512, mbr_buf))
 	{
 		__inf("update flash env err: read flash error\n");
 

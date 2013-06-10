@@ -30,6 +30,7 @@
 ************************************************************************************************************************
 */
 #include "boot0_i.h"
+#include "arm_a8.h"
 
 #include <string.h>
 
@@ -43,6 +44,9 @@ static int  check_bootid(void);
 static void timer_init(void);
 static void print_version(void);
 static __u32 check_odt(int ms);
+static void open_cpuX(__u32 cpu);
+static void close_cpuX(__u32 cpu);
+
 
 static __u32 cpu_freq = 0;
 static __u32 overhead = 0;
@@ -69,6 +73,8 @@ void Boot0_C_part( void )
     {
     	jump_to( FEL_BASE );
     }
+    
+
     timer_init();
     UART_open( BT0_head.prvt_head.uart_port, (void *)BT0_head.prvt_head.uart_ctrl, 24*1000*1000 );
 	odt_status = check_odt(5);
@@ -78,17 +84,16 @@ void Boot0_C_part( void )
     }
 	msg("HELLO! BOOT0 is starting!\n");
 	print_version();
-
-	mmu_system_init(EGON2_DRAM_BASE, 4 * 1024, EGON2_MMU_BASE);
-	mmu_enable();
     
-	init_perfcounters(1, 0);
+    init_perfcounters(1, 0);
 	change_runtime_env(0);
 
-    #ifdef CONFIG_HOLD_SUPERSTANDBY_DATA_BY_PMU
-	//for A20 super standby
-	boot0_twi_init();
-    #endif
+    open_cpuX(1);
+    close_cpuX(1);
+    
+	mmu_system_init(EGON2_DRAM_BASE, 1 * 1024, EGON2_MMU_BASE);
+	mmu_enable();
+    
     if(BT0_head.boot_head.platform[7])
     {
         msg("read dram para.\n");
@@ -98,12 +103,10 @@ void Boot0_C_part( void )
     }
 	dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // ≥ı ºªØDRAM
 
-    #ifdef CONFIG_HOLD_SUPERSTANDBY_DATA_BY_PMU
-    boot0_twi_exit();
-    #endif
+
     if(dram_size)
 	{
-		msg("dram size =%d\n", dram_size);
+		msg("dram size =%dMB\n", dram_size);
 	}
 	else
 	{
@@ -111,17 +114,6 @@ void Boot0_C_part( void )
 		mmu_disable( );
 		jump_to( FEL_BASE );
 	}
-
-#ifdef CONFIG_AW_FPGA_PLATFORM
-	dram_size=*((volatile unsigned int*)(0x7000-0x4));
-	msg("sram data=%x\n",dram_size);
-	if(dram_size==0x12345678)
-	{
-			msg("force jump to superstandby!\n");
-			jump_to( 0x52000000 );
-	}
-#endif
-
 	msg("%x\n", *(volatile int *)0x52000000);
 	msg("super_standby_flag = %d\n", super_standby_flag);
 	if(1 == super_standby_flag)
@@ -457,4 +449,123 @@ void delay_us(__u32 us)
 
 	return;
 }
+
+
+__asm void cpuX_startup_to_wfi(void)
+{
+
+    mrs r0, cpsr
+    bic r0, r0, #ARMV7_MODE_MASK
+    orr r0, r0, #ARMV7_SVC_MODE
+    orr r0, r0, #( ARMV7_IRQ_MASK | ARMV7_FIQ_MASK )   // After reset, ARM automaticly disables IRQ and FIQ, and runs in SVC mode.
+    bic r0, r0, #ARMV7_CC_E_BIT                         // set little-endian
+    msr cpsr_c, r0
+
+    // configure memory system : disable MMU,cache and write buffer; set little_endian;
+    mrc p15, 0, r0, c1, c0
+    bic r0, r0, #( ARMV7_C1_M_BIT | ARMV7_C1_C_BIT )// disable MMU, data cache
+    bic r0, r0, #( ARMV7_C1_I_BIT | ARMV7_C1_Z_BIT )// disable instruction cache, disable flow prediction
+    bic r0, r0, #( ARMV7_C1_A_BIT)                  // disable align
+    mcr p15, 0, r0, c1, c0                          
+    // set SP for SVC mode
+    mrs r0, cpsr
+    bic r0, r0, #ARMV7_MODE_MASK
+    orr r0, r0, #ARMV7_SVC_MODE
+    msr cpsr_c, r0
+    ldr sp, =0xb400
+
+    //let the cpu1+ enter wfi state;
+    /* step3: execute a CLREX instruction */
+    clrex
+    /* step5: execute an ISB instruction */
+    isb sy
+    /* step6: execute a DSB instruction  */
+    dsb sy
+    /* step7: execute a WFI instruction */
+    wfi
+    /* step8:wait here */
+    b .
+}
+
+#define SW_PA_CPUCFG_IO_BASE              0x01c25c00
+/*
+ * CPUCFG
+ */
+#define AW_CPUCFG_P_REG0            0x01a4
+#define CPUX_RESET_CTL(x) (0x40 + (x)*0x40)
+#define CPUX_CONTROL(x)   (0x44 + (x)*0x40)
+#define CPUX_STATUS(x)    (0x48 + (x)*0x40)
+#define AW_CPUCFG_GENCTL            0x0184
+#define AW_CPUCFG_DBGCTL0           0x01e0
+#define AW_CPUCFG_DBGCTL1           0x01e4
+
+#define AW_CPU1_PWR_CLAMP         0x01b0
+#define AW_CPU1_PWROFF_REG        0x01b4
+#define readl(addr)		(*((volatile unsigned long  *)(addr)))
+#define writel(v, addr)	(*((volatile unsigned long  *)(addr)) = (unsigned long)(v))
+
+#define IO_ADDRESS(IO_ADDR) (IO_ADDR)
+#define IS_WFI_MODE(cpu)    (readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + CPUX_STATUS(cpu)) & (1<<2))
+
+void open_cpuX(__u32 cpu)
+{
+    long paddr;
+    __u32 pwr_reg;
+
+    paddr = (__u32)cpuX_startup_to_wfi;
+    writel(paddr, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_P_REG0);
+
+    /* step1: Assert nCOREPORESET LOW and hold L1RSTDISABLE LOW.
+              Ensure DBGPWRDUP is held LOW to prevent any external
+              debug access to the processor.
+    */
+    /* assert cpu core reset */
+    writel(0, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + CPUX_RESET_CTL(cpu));
+    /* L1RSTDISABLE hold low */
+    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_GENCTL);
+    pwr_reg &= ~(1<<cpu);
+    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_GENCTL);
+    /* DBGPWRDUP hold low */
+    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
+    pwr_reg &= ~(1<<cpu);
+    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
+
+
+    /* step3: clear power-off gating */
+    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPU1_PWROFF_REG);
+    pwr_reg &= ~(1);
+    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPU1_PWROFF_REG);
+    delay_us(1000);
+
+    /* step4: de-assert core reset */
+    writel(3, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + CPUX_RESET_CTL(cpu));
+
+    /* step5: assert DBGPWRDUP signal */
+    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
+    pwr_reg |= (1<<cpu);
+    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
+
+}
+
+void close_cpuX(__u32 cpu)
+{
+    __u32 pwr_reg;
+
+    while(!IS_WFI_MODE(cpu));
+    /* step1: deassert cpu core reset */
+    writel(0, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + CPUX_RESET_CTL(cpu));
+
+    /* step2: deassert DBGPWRDUP signal */
+    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
+    pwr_reg &= ~(1<<cpu);
+    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
+
+    /* step3: set up power-off signal */
+    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPU1_PWROFF_REG);
+    pwr_reg |= 1;
+    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPU1_PWROFF_REG);
+   
+}
+
+
 

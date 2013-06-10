@@ -55,6 +55,7 @@
 #define SDR_DQSTR1			(DRAMC_IO_BASE + 0x22c)
 #define SDR_CR				(DRAMC_IO_BASE + 0x230)
 #define SDR_CFSR			(DRAMC_IO_BASE + 0x234)
+#define SDR_DPCR			(DRAMC_IO_BASE + 0x23c)
 #define SDR_APR  			(DRAMC_IO_BASE + 0x240)
 #define SDR_LTR	  			(DRAMC_IO_BASE + 0x244)
 #define SDR_HPCR			(DRAMC_IO_BASE + 0x250)
@@ -74,7 +75,7 @@
 #define DRAM_CCM_AHB_GATE_REG     (DRAM_CCM_BASE + 0x60)
 #define DRAM_CCM_GPS_CLK_REG      (DRAM_CCM_BASE + 0xd0)
 #define DRAM_CCM_SDRAM_CLK_REG    (DRAM_CCM_BASE + 0x100)
-
+#define DRAM_CCM_MUS_CLK_REG      (DRAM_CCM_BASE + 0x15c)
 
 //TIMER register for system
 #define DRAM_TIMER_BASE     0x01c20c00
@@ -89,7 +90,7 @@ extern unsigned DRAMC_get_dram_size(void);
 extern void mctl_itm_disable(void);
 extern void mctl_itm_enable(void);
 extern void mctl_enable_dll0(void);
-extern void mctl_enable_dllx(void);
+extern void mctl_enable_dllx(__u32 phase);
 extern void mctl_disable_dll(void);
 extern void DRAMC_hostport_on_off(__u32 port_idx, __u32 on);
 

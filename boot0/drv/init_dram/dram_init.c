@@ -14,6 +14,10 @@
 *     2012-06-28      Daniel      1.6     Add Three Times DRAM Initial for CARD Boot (DRAMC_init_EX)
 *     2012-06-28      Daniel      1.7     Add DLL Parameter Scan Function      
 *     2012-09-07      Daniel      1.8     Add more delay to all delay_us
+*	  2013-03-04	  CPL		  1.9	  modify for A20
+*	  2013-03-06	  CPL		  1.10	  use dram_tpr4 bit1 as DQ & CA mode setup
+*	  2013-03-08	  CPL		  1.11	  fix the problem [EFR DRAM can't not exit from super selfrefresh]
+*     2013-03-15      CPL         1.12    modify mbus source to PLL6*2 /4 = 300MHz
 *********************************************************************************************************
 */
 #include "boot0_i.h"
@@ -65,6 +69,8 @@ void mctl_set_drive(void)
 	reg_val |= (0x6<<12);
 	reg_val |= 0xFFC;
 	reg_val &= ~0x3;
+	reg_val &= ~(0x3<<28);
+//	reg_val |= 0x7<<20;
 	mctl_write_w(SDR_CR, reg_val);
 }
 
@@ -178,10 +184,10 @@ void mctl_disable_dll(void)
 
 void mctl_configure_hostport(void)
 {
-__u32 i;
+	__u32 i;
 	__u32 hpcr_value[32] = {
 		0x00000301,0x00000301,0x00000301,0x00000301,
-		0x00000301,0x00000301,0x0,       0x0,
+		0x00000301,0x00000301,0x00000301,0x00000301,
 		0x0,       0x0,       0x0,       0x0,
 		0x0,       0x0,       0x0,       0x0,
 		0x00001031,0x00001031,0x00000735,0x00001035,
@@ -190,10 +196,18 @@ __u32 i;
 		0x00001031,0x00000301,0x00000301,0x00000731,
 	};
 
-	for(i=0; i<32; i++)
+	for(i=0; i<8; i++)
 	{
 		mctl_write_w(SDR_HPCR + (i<<2), hpcr_value[i]);
 	}
+	
+	for(i=16; i<28; i++)
+	{
+		mctl_write_w(SDR_HPCR + (i<<2), hpcr_value[i]);
+	}	
+	
+	mctl_write_w(SDR_HPCR + (29<<2), hpcr_value[i]);
+	mctl_write_w(SDR_HPCR + (31<<2), hpcr_value[i]);
 }
 
 void mctl_setup_dram_clock(__u32 clk)
@@ -220,7 +234,7 @@ void mctl_setup_dram_clock(__u32 clk)
     mctl_write_w(DRAM_CCM_SDRAM_PLL_REG, reg_val);
 
 	//setup MBUS clock
-    reg_val = (0x1U<<31)|(0x2<<24)|(0x1);
+    reg_val = (0x1U<<31) | (0x1<<24) | (0x1<<0) | (0x1<<16);
     mctl_write_w(DRAM_CCM_MUS_CLK_REG, reg_val);
 
     //open DRAMC AHB & DLL register clock
@@ -242,12 +256,9 @@ void mctl_setup_dram_clock(__u32 clk)
 __s32 DRAMC_init(__dram_para_t *para)
 {
 	__u32 reg_val;
-	__u8 reg_addr_1st = 0x0a;
-	__u8 reg_addr_2nd = 0x0b;
-	__u8 reg_addr_3rd = 0x0c;
 
 	__u8  reg_value;
-	__s32 ret_val;
+	__s32 ret_val;	
 
 	//check input dram parameter structure
     if(!para)
@@ -297,23 +308,33 @@ __s32 DRAMC_init(__dram_para_t *para)
 
     //SDR_ZQCR1 set bit24 to 1
     reg_val  = mctl_read_w(SDR_ZQCR1);
-    reg_val |= 0x1<<24;
+    reg_val |= (0x1<<24) | (0x1<<1);
+    if(para->dram_tpr4 & 0x2)
+    {
+    	reg_val &= ~((0x1<<24) | (0x1<<1));
+    }    
     mctl_write_w(SDR_ZQCR1, reg_val);
 
+  	//dram clock on
+  	DRAMC_clock_output_en(1);
+  	
 	//set odt impendance divide ratio
 	reg_val=((para->dram_zq)>>8)&0xfffff;
 	reg_val |= ((para->dram_zq)&0xff)<<20;
 	reg_val |= (para->dram_zq)&0xf0000000;
+	reg_val |= (0x1u<<31);
 	mctl_write_w(SDR_ZQCR0, reg_val);
+	
+	while( !((mctl_read_w(SDR_ZQSR)&(0x1<<31))) );
 	
 	//Set CKE Delay to about 1ms
 	reg_val = mctl_read_w(SDR_IDCR);
 	reg_val |= 0x1ffff;
 	mctl_write_w(SDR_IDCR, reg_val);
 
-  //dram clock on
-  DRAMC_clock_output_en(1);
-  //reset external DRAM when CKE is Low
+//  	//dram clock on
+//  	DRAMC_clock_output_en(1);
+  	//reset external DRAM when CKE is Low
 	reg_val = mctl_read_w(SDR_DPCR);
 	if((reg_val & 0x1) != 1)
 	{
@@ -327,8 +348,7 @@ __s32 DRAMC_init(__dram_para_t *para)
 		reg_val |= (0x1<<12);
 		mctl_write_w(SDR_CR, reg_val);
 	}
-
-
+	
 	mctl_delay(0x10);
     while(mctl_read_w(SDR_CCR) & (0x1U<<31)) {};
 
@@ -370,6 +390,11 @@ __s32 DRAMC_init(__dram_para_t *para)
 	reg_val = mctl_read_w(SDR_CCR);
 	reg_val |= 0x1U<<14;
 	reg_val &= ~(0x1U<<17);
+		//2T & 1T mode 
+	if(para->dram_tpr4 & 0x1)
+	{
+		reg_val |= 0x1<<5;
+	}
 	mctl_write_w(SDR_CCR, reg_val);
 
 	//initial external DRAM
@@ -378,6 +403,8 @@ __s32 DRAMC_init(__dram_para_t *para)
 	mctl_write_w(SDR_CCR, reg_val);
 
 	while(mctl_read_w(SDR_CCR) & (0x1U<<31)) {};
+	
+//	while(1);
 
 	//setup zq calibration manual
 	reg_val = mctl_read_w(SDR_DPCR);
@@ -386,32 +413,44 @@ __s32 DRAMC_init(__dram_para_t *para)
 
 		super_standby_flag = 1;
 
-        #ifdef CONFIG_HOLD_SUPERSTANDBY_DATA_BY_PMU
-		//restore calibration value
-		reg_val = 0;
-		if(!BOOT_TWI_Read(AXP20_ADDR, &reg_addr_3rd, &reg_value)){
-			reg_val |= (reg_value&0x0f);
-		}
-		if(!BOOT_TWI_Read(AXP20_ADDR, &reg_addr_2nd, &reg_value)){
-			reg_val <<= 8;
-			reg_val |= reg_value;
-		}
-		if(!BOOT_TWI_Read(AXP20_ADDR, &reg_addr_1st, &reg_value)){
-			reg_val <<= 8;
-			reg_val |= reg_value;
-			reg_val |= 0x17b00000;
-		}
-        
-        #else
-           reg_val = mctl_read_w(SDR_GP_REG0);
-           reg_val &= 0x000fffff;
-           reg_val |= 0x17b00000;
-        #endif
-        
+        reg_val = mctl_read_w(SDR_GP_REG0);
+        reg_val &= 0x000fffff;
+        reg_val |= 0x17b00000;
 		mctl_write_w(SDR_ZQCR0, reg_val);
+		
+		//03-08
+		reg_val = mctl_read_w(SDR_DCR);
+		reg_val &= ~(0x1fU<<27);
+		reg_val |= 0x12U<<27;
+		mctl_write_w(SDR_DCR, reg_val);
+		while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
+		
+		mctl_delay(0x100);
 
 		//dram pad hold off
 		mctl_write_w(SDR_DPCR, 0x16510000);
+		
+		while(mctl_read_w(SDR_DPCR) & 0x1){}		
+				
+		//exit self-refresh state
+		reg_val = mctl_read_w(SDR_DCR);
+		reg_val &= ~(0x1fU<<27);
+		reg_val |= 0x17U<<27;
+		mctl_write_w(SDR_DCR, reg_val);
+	
+		//check whether command has been executed
+		while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
+		mctl_delay(0x100);;
+	
+		//issue a refresh command
+		reg_val = mctl_read_w(SDR_DCR);
+		reg_val &= ~(0x1fU<<27);
+		reg_val |= 0x13U<<27;
+		mctl_write_w(SDR_DCR, reg_val);
+		
+		while( mctl_read_w(SDR_DCR)& (0x1U<<31) );
+
+	    mctl_delay(0x100);
 	}
 
 	//scan read pipe value
@@ -801,7 +840,7 @@ __s32 DRAMC_to_card_init(__dram_para_t *para)
 {
 	__u32 i, m;
 	__u32 dram_den;
-	__u32 err_flag;
+	__u32 err_flag = 0;
 	__u32 start_adr, end_adr;
 	__u32 bonding_id;
 	__u32 reg_val;
@@ -843,16 +882,18 @@ __s32 DRAMC_to_card_init(__dram_para_t *para)
 		}
 	}
 	//try 2048/4096 chip density
-	para->dram_chip_density = 4096;
-	dram_den = para->dram_chip_density<<17;
-	if(para->dram_rank_num == 2)
-		dram_den<<=1;
-	if(para->dram_bus_width == 32)
-		dram_den<<=1;
+	para->dram_chip_density = 8192;
+//	dram_den = para->dram_chip_density<<17;
+//	if(para->dram_rank_num == 2)
+//		dram_den<<=1;
+//	if(para->dram_bus_width == 32)
+//		dram_den<<=1;
 	if(!DRAMC_init_EX(para))
 	{
 		return 0;
 	}
+	
+#if 0
 	//write preset value at special address
 	start_adr = 0x40000000;
 	end_adr = 0x40000000 + dram_den;
@@ -890,6 +931,53 @@ __s32 DRAMC_to_card_init(__dram_para_t *para)
 	}
 
 	para->dram_size = dram_den>>21;
+#else
+	for(m =0x50000000; m<0xC0000000; m+=0x10000000)
+	{
+		for(i=0; i<32; i++)
+		{
+			if(mctl_read_w(m + i*4) != mctl_read_w(0x40000000 + i*4))
+				break;
+		}
+		if(i == 32)
+		{
+			err_flag = 1;			
+			para->dram_size = (m - 0x40000000)>>20;		
+			para->dram_chip_density = (m - 0x40000000)>>17;	
+			if(para->dram_bus_width == 32)
+				para->dram_chip_density>>=1;
+			break;
+			
+		}
+	}
+	
+	if(m == 0xC0000000)
+	{
+		para->dram_size = 2048;
+		para->dram_chip_density = 8192;
+		
+	}	
+	
+	reg_val = mctl_read_w(SDR_DCR);
+	reg_val &= ~(0x7<<3);
+	if(para->dram_chip_density == 256)
+		reg_val |= 0x0<<3;
+	else if(para->dram_chip_density == 512)
+		reg_val |= 0x1<<3;
+	else if(para->dram_chip_density == 1024)
+		reg_val |= 0x2<<3;
+	else if(para->dram_chip_density == 2048)
+		reg_val |= 0x3<<3;
+	else if(para->dram_chip_density == 4096)
+		reg_val |= 0x4<<3;
+	else if(para->dram_chip_density == 8192)
+		reg_val |= 0x5<<3;
+	else
+		reg_val |= 0x0<<3;
+	mctl_write_w(SDR_DCR, reg_val);
+	
+	mctl_configure_hostport();
+#endif
 	return para->dram_size;
 }
 #endif
@@ -901,7 +989,7 @@ __s32 init_DRAM(int type)
 	boot_dram_para_t  boot0_para;
 
 	get_boot0_dram_para( &boot0_para );
-    print_boot0_dram_para(&boot0_para);
+ //   print_boot0_dram_para(&boot0_para);
 	if(boot0_para.dram_clk > 2000)
 	{
 		boot0_para.dram_clk /= 1000000;
@@ -930,7 +1018,7 @@ __s32 init_DRAM(int type)
 
 		i++;
 	}
-
+//    print_boot0_dram_para(&boot0_para);
 	return ret_val;
 }
 

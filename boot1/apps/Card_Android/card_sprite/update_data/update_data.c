@@ -347,7 +347,8 @@ __s32 update_flash_write(void *pbuf, __u32 len)
 	}
 	else
 	{
-		unsparse_dram_write(pbuf, len);
+		//unsparse_dram_write(pbuf, len);
+		unsparse_direct_write(pbuf, len);
 	}
 
     return 0;

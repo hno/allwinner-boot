@@ -46,7 +46,7 @@ extern  void  eGon2_set_sp(void);
 extern  void  eGon2_halt(void);
 
 
-extern  void  dram_power_save_process(void);
+extern  __s32  dram_power_save_process(void);
 extern  __u32 dram_power_up_process(void);
 
 extern  void standby_tmr_enable_watchdog(void);

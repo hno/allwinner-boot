@@ -28,6 +28,7 @@ typedef enum
     LCDC_LCDIF_CPU 			= 1,
     LCDC_LCDIF_TTL 			= 2,
     LCDC_LCDIF_LVDS			= 3,
+    LCDC_LCDIF_HV2DSI       		= 4,
 }__lcdc_lcdif_t; 
   
 

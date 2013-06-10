@@ -72,7 +72,7 @@
 #define BOOT0_BASE                      ( EGON2_SRAM_BASE                       )
 #define BOOT1_BASE                      ( EGON2_DRAM_BASE  + EGON2_BOOT1_OFFSET )
 #define FEL_BASE                        ( EGON2_RESET_BASE + 0x20               )
-#define SCRIPT_BASE						( BOOT1_BASE       + 0x00B00000			)
+#define SCRIPT_BASE						( BOOT1_BASE       + 0x00C00000			)
 
 
 //通用的，和GPIO相关的数据结构

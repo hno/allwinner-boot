@@ -26,7 +26,6 @@ void DRV_lcd_open_callback(void *parg)
     __s32 i = lcd_flow_cnt[sel]++;
 
     flow = BSP_disp_lcd_get_open_flow(sel);
-
 	if(i < flow->func_num)
     {
     	flow->func[i].func(sel);

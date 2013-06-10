@@ -47,10 +47,10 @@ static void LCD_cfg_panel_info(__panel_para_t * info)
 
     info->lcd_hbp           = 215;      //hsync back porch
     info->lcd_ht            = 1055;     //hsync total cycle
-    info->lcd_hv_hspw       = 0;        //hsync plus width
+    info->lcd_hspw       = 0;        //hsync plus width
     info->lcd_vbp           = 34;       //vsync back porch
     info->lcd_vt            = 2 * 525;  //vysnc total cycle *2
-    info->lcd_hv_vspw       = 0;        //vysnc plus width
+    info->lcd_vspw       = 0;        //vysnc plus width
 
     info->lcd_hv_if         = 0;        //0:hv parallel 1:hv serial 
     info->lcd_hv_smode      = 0;        //0:RGB888 1:CCIR656

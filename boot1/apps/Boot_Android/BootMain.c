@@ -57,8 +57,9 @@ int BootMain(int argc, char **argv)
     __s32                 logo_status = 0;
     boot_global_info_t   *global_info;
 //    char				  product[64];
-
+#ifndef SPEED_UP_BOOT
 	DMSG_INFO("BootMain start\n");
+#endif
 	while( 1 )
 	{
 		char ch;
@@ -149,7 +150,7 @@ int BootMain(int argc, char **argv)
 //	    	__inf("gpio finish\n");
 //	    }
 //	}
-#if 0
+#ifdef CONFIG_AW_HOMELET_PRODUCT
 	{
 		user_gpio_set_t     gpio_recovery;
 	    __u32			    gpio_hd = NULL;
@@ -180,9 +181,14 @@ int BootMain(int argc, char **argv)
 #endif
 //	check_private_part(boot1_priv_para.uart_port);
 //	check_private_part(11);
+#ifndef CONFIG_AW_HOMELET_PRODUCT
     power_set_init();
 	__inf("init to usb pc\n");
 	power_set_usbpc();
+#endif
+
+#ifndef SPEED_UP_BOOT
+
     //申请内存，填充第一个启动脚本
     global_info = (boot_global_info_t *)wBoot_malloc(sizeof(boot_global_info_t));
     if(!global_info)
@@ -200,8 +206,15 @@ int BootMain(int argc, char **argv)
 
         goto jump_to_fel;
     }
+
     //初始化显示设备
     BoardInit_Display(global_info->display_device, global_info->display_mode);
+#else
+
+    //初始化显示设备
+    BoardInit_Display(0,0);
+#endif
+
     //开始准备系统数据
     //检测电压状态
     if(check_power_status())
@@ -215,11 +228,17 @@ int BootMain(int argc, char **argv)
     	{
     		ret = -2;
     	}
+    	else
+    	{
+    		ret = 0;
+    	}
     }
     BoardExit(logo_status, ret);
-
+    
+#ifndef CONFIG_AW_HOMELET_PRODUCT
 	power_int_rel();
 	usb_detect_exit();
+#endif
     if(!ret)
     {
         BootOS(para_addr, kernal_addr);
@@ -270,7 +289,6 @@ static  __s32 key_value_test(void)
 
 	__inf("welcome to key value test\n");
 	__inf("press any key, and the value would be printed\n");
-	__inf("press power key to exit\n\n");
 	while(1)
 	{
 		key_value = wBoot_key_get_value();

@@ -63,7 +63,7 @@ void eGon2_start( void )
 	eGon2_create_heap( boot_heap_base, SZ_16M );
 
 	/* use mmu */
-	mmu_system_init(EGON2_DRAM_BASE, 4 * 1024, EGON2_MMU_BASE);                 // init mmu
+	mmu_system_init(EGON2_DRAM_BASE, 1 * 1024, EGON2_MMU_BASE);                 // init mmu
 	mmu_enable( );                      // enable mmu
 
 	eGon2_timer_init( );				// timer 初始化
@@ -115,6 +115,19 @@ void eGon2_start( void )
     eGon2_printf("set dcdc2=%d, clock=%d successed\n", BT1_head.prvt_head.core_para.user_set_core_vol, default_clock);
 #endif
 
+#ifdef CONFIG_AW_HOMELET_PRODUCT
+    {
+        user_gpio_set_t     gpio_pull[4];
+        int ret;
+
+        ret = eGon2_script_parser_mainkey_get_gpio_cfg("gpio_init", (void *)gpio_pull, 4);
+        if(!ret)
+        {
+            eGon2_GPIO_Request(gpio_pull, 4);
+        }
+    }
+#endif
+
     eGon2_key_init();
     //检查是否需要直接进入fel，通常用于异常出现的情况
     exception = eGon2_boot_detect();
@@ -138,11 +151,6 @@ void eGon2_start( void )
     	force_to_card0 = 1;
     }
     
-	//设置电压
-	eGon2_set_power_on_vol();
-	eGon2_power_set_vol();
-	eGon2_config_charge_current(0);//开机状态下充电电流，300MA
-
 	eGon2_printf("flash init start\n");
     if(!eGon2_block_device_init())
     {
@@ -192,6 +200,12 @@ void eGon2_start( void )
 	}
 	eGon2_printf("script finish\n");
 #endif
+
+	//设置电压
+	eGon2_set_power_on_vol();
+	eGon2_power_set_vol();
+	eGon2_config_charge_current(0);//开机状态下充电电流，300MA
+
     dram_para_set();
 
 #if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
@@ -330,15 +344,14 @@ static int script_relocation(void)
 
 	start = (char *)BOOT1_BASE + BT1_head.boot_head.boot1_length;
     size  = BT1_head.boot_head.length - BT1_head.boot_head.boot1_length;
-#ifdef BOOT1_DEBUG
-    eGon2_printf("total boot1 file length = %d\n", BT1_head.boot_head.length);
-	eGon2_printf("boot1 length = %d\n", BT1_head.boot_head.boot1_length);
-	eGon2_printf("script start addr = %x, size = %d\n", (__u32)start, size);
+    __debug("total boot1 file length = %d\n", BT1_head.boot_head.length);
+	__debug("boot1 length = %d\n", BT1_head.boot_head.boot1_length);
+	__debug("script start addr = %x, size = %d\n", (__u32)start, size);
 
-	eGon2_printf("script dest buffer = %x\n", SCRIPT_BASE);
+	__debug("script dest buffer = %x\n", SCRIPT_BASE);
 
-	eGon2_printf("size=%d\n", size);
-#endif
+	__debug("size=%d\n", size);
+
 	if(size)
 	{
 		memcpy((void *)SCRIPT_BASE, start, size);
@@ -357,7 +370,7 @@ static void dram_para_set(void)
 {
     __u32 *addr = (__u32 *)&BT1_head.prvt_head.dram_para;
 
-    __inf("dram_para_set start\n");
+    __debug("dram_para_set start\n");
     eGon2_script_parser_patch("dram_para", "dram_baseaddr", addr[0]);
     eGon2_script_parser_patch("dram_para", "dram_clk", addr[1]);
     eGon2_script_parser_patch("dram_para", "dram_type", addr[2]);
@@ -378,6 +391,6 @@ static void dram_para_set(void)
     eGon2_script_parser_patch("dram_para", "dram_emr1", addr[17]);
     eGon2_script_parser_patch("dram_para", "dram_emr2", addr[18]);
     eGon2_script_parser_patch("dram_para", "dram_emr3", addr[19]);
-    __inf("dram_para_set end\n");
+    __debug("dram_para_set end\n");
 }
 

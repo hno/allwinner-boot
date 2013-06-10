@@ -62,8 +62,8 @@ __s32 load_boot1_from_sdmmc( char *buf)
 
 //			continue;
 //		}
-		msg("sdcard %d line count =%d\n", card_no, sdcard_info->line_count[index] );
-		msg("sdcard %d line sel =%d\n", card_no, sdcard_info->line_sel[index] );
+	//	msg("sdcard %d line count =%d\n", card_no, sdcard_info->line_count[index] );
+		//msg("sdcard %d line sel =%d\n", card_no, sdcard_info->line_sel[index] );
 		if(!sdcard_info->line_sel[index])
 		{
 			sdcard_info->line_sel[index] = 4;

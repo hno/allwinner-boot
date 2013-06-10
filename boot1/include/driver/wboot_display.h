@@ -280,6 +280,118 @@ typedef enum//only for debug!!!
 }__disp_reg_index_t;
 
 
+
+typedef enum
+{
+	LCD_IF_HV	= 0,
+	LCD_IF_CPU	= 1,
+	LCD_IF_LVDS	= 3,
+	LCD_IF_HV2DSI	= 4,
+	LCD_IF_EDP  	= 5,
+}__lcd_if_t;
+
+typedef enum
+{
+	LCD_HV_IF_PRGB_1CYC	= 0,  //parallel hv
+	LCD_HV_IF_SRGB_3CYC	= 8,  //serial hv
+	LCD_HV_IF_DRGB_4CYC	= 10, //Dummy RGB
+	LCD_HV_IF_RGBD_4CYC	= 11, //RGB Dummy
+	LCD_HV_IF_CCIR656_2CYC	= 12, 
+}__lcd_hv_if_t;
+
+typedef enum
+{
+	LCD_HV_SRGB_SEQ_RGB_RGB	= 0,
+	LCD_HV_SRGB_SEQ_RGB_BRG	= 1,
+	LCD_HV_SRGB_SEQ_RGB_GBR	= 2,
+	LCD_HV_SRGB_SEQ_BRG_RGB	= 4,
+	LCD_HV_SRGB_SEQ_BRG_BRG	= 5,
+	LCD_HV_SRGB_SEQ_BRG_GBR	= 6,
+	LCD_HV_SRGB_SEQ_GRB_RGB	= 8,
+	LCD_HV_SRGB_SEQ_GRB_BRG	= 9,
+	LCD_HV_SRGB_SEQ_GRB_GBR	= 10,
+}__lcd_hv_srgb_seq_t;
+
+typedef enum
+{
+	LCD_HV_SYUV_SEQ_YUYV	= 0,
+	LCD_HV_SYUV_SEQ_YVYU	= 1,
+	LCD_HV_SYUV_SEQ_UYUV	= 2,
+	LCD_HV_SYUV_SEQ_VYUY	= 3,
+}__lcd_hv_syuv_seq_t;
+
+typedef enum
+{
+	LCD_HV_SYUV_FDLY_0LINE	= 0,
+	LCD_HV_SRGB_FDLY_2LINE	= 1, //ccir ntsc
+	LCD_HV_SRGB_FDLY_3LINE	= 2, //ccir pal
+}__lcd_hv_syuv_fdly_t;
+
+typedef enum
+{
+	LCD_CPU_IF_RGB666_18PIN	= 0,
+	LCD_CPU_IF_RGB666_9PIN 	= 10,
+	LCD_CPU_IF_RGB666_6PIN 	= 12,
+	LCD_CPU_IF_RGB565_16PIN	= 8,
+	LCD_CPU_IF_RGB565_8PIN 	= 14,
+}__lcd_cpu_if_t;
+
+typedef enum
+{
+	LCD_TE_DISABLE	        = 0,
+	LCD_TE_RISING	        = 1,
+	LCD_TE_FALLING        	= 2,
+}__lcd_te_t;
+
+typedef enum
+{
+	LCD_LVDS_IF_SINGLE_LINK	= 0,
+	LCD_LVDS_IF_DUAL_LINK	= 1,
+}__lcd_lvds_if_t;
+
+typedef enum
+{
+	LCD_LVDS_8bit		= 0,
+	LCD_LVDS_6bit		= 1,
+}__lcd_lvds_colordepth_t;
+
+typedef enum
+{
+	LCD_LVDS_MODE_NS	= 0,
+	LCD_LVDS_MODE_JEIDA	= 1,
+}__lcd_lvds_mode_t;
+
+typedef enum
+{
+	LCD_DSI_IF_VIDEO_MODE	= 0,
+	LCD_DSI_IF_COMMAND_MODE	= 1,
+}__lcd_dsi_if_t;
+
+typedef enum
+{
+	LCD_DSI_1LANE		= 1,
+	LCD_DSI_2LANE		= 2,
+	LCD_DSI_3LANE		= 3,
+	LCD_DSI_4LANE		= 4,
+}__lcd_dsi_lane_t;
+
+typedef enum
+{
+	LCD_DSI_FORMAT_RGB888	= 0,  
+	LCD_DSI_FORMAT_RGB666	= 1,  
+	LCD_DSI_FORMAT_RGB666P	= 2,  
+	LCD_DSI_FORMAT_RGB565	= 3,  
+}__lcd_dsi_format_t;
+
+
+typedef enum
+{
+	LCD_FRM_BYPASS		= 0,
+	LCD_FRM_RGB666		= 1,
+	LCD_FRM_RGB565		= 2,
+}__lcd_frm_t;
+
+
 typedef struct
 {
     __u32                   addr[3];    // frame buffer的内容地址，对于rgb类型，只有addr[0]有效
@@ -400,8 +512,8 @@ typedef struct
 	__u32   lcd_hv_smode;
 	__u32   lcd_hv_s888_if;
 	__u32   lcd_hv_syuv_if;
-	__u32   lcd_hv_vspw;
-	__u32   lcd_hv_hspw;
+	__u32   lcd_vspw;
+	__u32   lcd_hspw;
 	__u32   lcd_hv_lde_used;
 	__u32   lcd_hv_lde_iovalue;
 

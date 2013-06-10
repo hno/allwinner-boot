@@ -226,6 +226,12 @@
 #define   BOOT_POWER20_INTSTS5             			(0x4c)
 #define   BOOT_POWER20_COULOMB_CTL         			(0xB8)
 #define   BOOT_POWER20_COULOMB_CAL					(0xB9)
+#define   BOOT_POWER20_RDC1                         (0xBA)
+#define   BOOT_POWER20_RDC0                         (0xBB)
+#define   BOOT_POWER20_OCV1                         (0xBC)
+#define   BOOT_POWER20_OCV0                         (0xBD)
+
+
 
 //adc data register
 #define   BOOT_POWER20_BAT_AVERVOL_H8          		(0x78)

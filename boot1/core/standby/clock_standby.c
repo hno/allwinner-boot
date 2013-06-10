@@ -28,6 +28,7 @@ static  __u32  pll4_value = 0;
 static  __u32  pll5_value = 0;
 static  __u32  pll6_value = 0;
 static  __u32  pll7_value = 0;
+static  __u32  pll8_value = 0;
 static  __u32  clock_div  = 0;
 
 __s32 standby_clock_store(void)
@@ -39,6 +40,7 @@ __s32 standby_clock_store(void)
 	pll5_value = CCMU_REG_PLL5_CTRL;
 	pll6_value = CCMU_REG_PLL6_CTRL;
 	pll7_value = CCMU_REG_PLL7_CTRL;
+    pll8_value = CCMU_REG_PLL8_CTRL;
 	clock_div  = CCMU_REG_AHB_APB & 0x3ff;
 
 	return 0;
@@ -54,6 +56,7 @@ __s32 standby_clock_restore(void)
 	CCMU_REG_PLL5_CTRL = pll5_value;
 	CCMU_REG_PLL6_CTRL = pll6_value;
 	CCMU_REG_PLL7_CTRL = pll7_value;
+    CCMU_REG_PLL8_CTRL = pll8_value;
 
 	return 0;
 }
@@ -90,6 +93,7 @@ void standby_clock_plldisable(void)
 	CCMU_REG_PLL5_CTRL &= ~(1U << 31);
 	CCMU_REG_PLL6_CTRL &= ~(1U << 31);
 	CCMU_REG_PLL7_CTRL &= ~(1U << 31);
+    CCMU_REG_PLL8_CTRL &= ~(1U << 31);
 }
 
 void standby_clock_divsetto0(void)

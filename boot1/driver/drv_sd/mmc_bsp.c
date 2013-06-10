@@ -174,10 +174,10 @@ s32 smc_set_card_clk(u32 smc_no, u32 cclk,u32 bus_width)
 	
 	
 	if (cclk > 400000) {
-//		src = 2;//change to you select source
-//		sclk = ccm_get_pll5_dev_clk();	//change to you select source clock
-		src = 0;//change to you select source
-		sclk = 24000000;	//change to you select source clock
+		src = 1;//change to you select source
+		sclk = ccm_get_pll6_dev_clk();	//change to you select source clock
+//		src = 0;//change to you select source
+//		sclk = 24000000;	//change to you select source clock
 		outclk_pha = 0;
 		samclk_pha = 0;			
 	}else{
@@ -285,7 +285,7 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
             if (onoff) {
 	            writel(0x222222, gpiof_base + 0x0);
 	            writel(0x555, gpiof_base + 0x1c);
-	            writel(0xaaa, gpiof_base + 0x14);
+	            writel(0xfff, gpiof_base + 0x14);
 	        } else {
 	            writel(0x404044, gpiof_base + 0x0);
 	            writel(0, gpiof_base + 0x1c);
@@ -299,7 +299,7 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
 	            writel(0x33000000, gpioc_base + 0x0);
 	            writel(0x3333, gpioc_base + 0x4);
 	            writel(0x555 << 12, gpioc_base + 0x1c);
-	            writel(0xaaa << 12, gpioc_base + 0x14);
+	            writel(0xfff << 12, gpioc_base + 0x14);
             } else {
 	            writel(0, gpioc_base + 0x0);
 	            writel(0, gpioc_base + 0x4);
@@ -330,7 +330,6 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
     */
 	/* config mod clock */
 	if (onoff) {
-        //fix me: now use 24M OSC, switch to pll6 in the future
 		smc_set_card_clk(sdc_no,400000,1);
 		mmcdbg("init mmc mclk %d\n", mmchost->mclk);
 	} else {

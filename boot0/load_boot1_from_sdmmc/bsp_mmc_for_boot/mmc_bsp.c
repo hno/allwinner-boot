@@ -170,7 +170,7 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
             if (onoff) {
 	            writel(0x222222, gpiof_base + 0x0);
 	            writel(0x555, gpiof_base + 0x1c);
-	            writel(0xaaa, gpiof_base + 0x14);
+	            writel(0xfff, gpiof_base + 0x14);
 	        } else {
 	            writel(0x404044, gpiof_base + 0x0);
 	            writel(0, gpiof_base + 0x1c);
@@ -184,7 +184,7 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
 	            writel(0x33000000, gpioc_base + 0x0);
 	            writel(0x3333, gpioc_base + 0x4);
 	            writel(0x555 << 12, gpioc_base + 0x1c);
-	            writel(0xaaa << 12, gpioc_base + 0x14);
+	            writel(0xfff << 12, gpioc_base + 0x14);
             } else {
 	            writel(0, gpioc_base + 0x0);
 	            writel(0, gpioc_base + 0x4);

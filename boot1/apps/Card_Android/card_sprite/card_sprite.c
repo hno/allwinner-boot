@@ -128,8 +128,19 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
         goto _update_error_;
     }
-    dest_buf = src_buf + 512 * 1024;
+    //准备nand数据信息
+	sprite_show(CARD_SPRITE_FLASH_INFO);
+	//src_buf = (char *)sprite_malloc(1024 * 1024);
+    //if(!src_buf)
+    //{
+    //   sprite_wrn("sprite update error: fail to get memory for tmpdata\n");
+    //
+    //   goto _update_error_;
+    //}
+    //dest_buf = src_buf + 512 * 1024;
 	/* dl info 获取内存空间 */
+    src_buf =  (char *)(0x48000000);
+    dest_buf = (char *)(0x4C000000);
     dl_info = (download_info *)sprite_malloc(sizeof(download_info));
     if(!dl_info)
     {
@@ -160,6 +171,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 //*************************************************************************************
 //*************************************************************************************
 	img_start = mbr_info->array[1 + i].addrlo;
+	__inf("part start = %d\n", img_start);
     imghd = Img_Open(img_start, TEST_BLK_BYTES);
     if(!imghd)       //初始化
     {

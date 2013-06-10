@@ -64,6 +64,78 @@ __s32 De_SetBlkColor(__disp_color_t *Color)
 
     return ret;
 }
+
+
+/*
+*******************************************************************************
+*                     De_GetProperHDMIMode
+*
+* Description:
+*    获取hdmi所支持的最高分辨率模式
+*
+* Parameters:
+*    void
+*
+* Return value:
+*    mode  :  最高分辨率模式
+*   -1 :  失败
+*
+* note:
+*    void
+*
+*******************************************************************************
+*/
+__s32 De_GetProperHDMIMode(void)
+{
+    __u32 arg[3];
+    __u32 i;
+    __s32 ret;
+    __u32 tv_mode[13]={
+    DISP_TV_MOD_1080P_60HZ,      
+    DISP_TV_MOD_1080P_50HZ,    
+    DISP_TV_MOD_1080P_24HZ,
+    DISP_TV_MOD_1080I_60HZ,           
+    DISP_TV_MOD_1080I_60HZ,        
+    DISP_TV_MOD_1080I_50HZ,        
+    DISP_TV_MOD_720P_60HZ ,        
+    DISP_TV_MOD_720P_50HZ ,        
+    DISP_TV_MOD_576P      ,        
+    DISP_TV_MOD_480P      ,        
+    DISP_TV_MOD_576I      ,        
+    DISP_TV_MOD_480I      ,
+    };
+
+    if(board_res.disp_hd == NULL)
+    {
+        DMSG_PANIC("ERR: display driver not open yet\n");
+
+        return -1;
+    }
+    
+    for(i=0; i<13; i++)
+    {
+        arg[0] = tv_mode[i];
+        arg[1] = 0;
+        arg[2] = 0;
+        ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_HDMI_SUPPORT_MODE, 0, arg);
+
+        if(ret == 1)
+        {
+            break;
+        }
+    }
+
+    if(i == 13)
+    {
+        ret = -1;
+    }else
+    {
+        ret = tv_mode[i];
+    }
+
+    return ret;
+}
+
 /*
 *******************************************************************************
 *                     De_OpenDevice
@@ -99,6 +171,8 @@ __s32 De_OpenDevice(__s32 display_source)
     arg[0] = 0;
     arg[1] = 0;
     arg[2] = 0;
+
+    #ifndef CONFIG_AW_HOMELET_PRODUCT
     high_flag = (display_source >> 16) & 0xffff;
     low_flag  = (display_source >>  0) & 0xffff;
 
@@ -139,6 +213,228 @@ __s32 De_OpenDevice(__s32 display_source)
     {
         DMSG_PANIC("ERR: wBoot_driver_ioctl DISP_CMD_HDMI_ON failed\n");
     }
+#else
+    {
+        int  value = 1;
+        int  ret;
+        __u32 output_type = 0;
+        __u32 output_mode = 0;
+        __u32 auto_hpd = 0;
+        __u32 err_count = 0;
+        __u32 arg[4];
+        int i;
+
+
+
+    //screen0_output_type
+        if(wBoot_script_parser_fetch("boot_disp", "output_type", &value, 1) < 0)
+        {
+            __wrn("fetch script data boot_disp.output_type fail\n");
+            err_count ++;
+            value = 0;
+        }else
+        {
+            __inf("boot_disp.output_type=%d\n", value);
+        }
+
+        if(value == 0)
+        {
+            output_type = DISP_OUTPUT_TYPE_NONE;
+        }
+        else if(value == 1)
+        {
+            output_type = DISP_OUTPUT_TYPE_LCD;
+        }
+        else if(value == 2)
+        {
+            output_type = DISP_OUTPUT_TYPE_TV;
+        }
+        else if(value == 3)
+        {
+            output_type = DISP_OUTPUT_TYPE_HDMI;
+        }
+        else if(value == 4)
+        {
+            output_type = DISP_OUTPUT_TYPE_VGA;
+        }
+        else
+        {
+            __wrn("invalid screen0_output_type %d\n", value);
+            return -1;
+        }
+    //screen0_output_mode    
+        if(wBoot_script_parser_fetch("boot_disp", "output_mode", &value, 1) < 0)
+        {
+            __wrn("fetch script data boot_disp.output_mode fail\n");
+            err_count ++;
+            value = 0;
+        }else
+        {
+            __inf("boot_disp.output_mode=%d\n", value);
+        }
+        
+        if(output_type == DISP_OUTPUT_TYPE_TV || output_type == DISP_OUTPUT_TYPE_HDMI)
+        {
+            output_mode = (__disp_tv_mode_t)value;
+        }
+        else if(output_type == DISP_OUTPUT_TYPE_VGA)
+        {
+            output_mode = (__disp_vga_mode_t)value;
+        }
+
+    //auto hot plug detect    
+        if(wBoot_script_parser_fetch("boot_disp", "auto_hpd", &value, 1) < 0)
+        {
+            __wrn("fetch script data boot_disp.auto_hpd fail\n");
+            err_count ++;
+            value = 0;
+        }else
+        {    
+            __inf("boot_disp.auto_hpd=%d\n", value);
+        }
+
+
+        if(err_count == 3)//no boot_disp config
+        {
+            if(wBoot_script_parser_fetch("lcd0_para", "lcd_used", &value, 1) < 0)
+            {
+                __wrn("fetch script data lcd0_para.lcd_used fail\n");
+                value = 0;
+            }else
+            {    
+                __inf("lcd0_para.lcd_used=%d\n", value);
+            }
+
+            value = 0;
+            if(value == 1) //lcd available
+            {
+                output_type = DISP_OUTPUT_TYPE_LCD;
+            }else
+            {
+                arg[0] = 0;
+                arg[1] = 0;
+                arg[2] = 0;
+                ret = 0;
+                for(i=0; (i<3)&&(ret==0); i++)
+                {
+                    ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_HDMI_GET_HPD_STATUS, 0, (void*)arg);
+                }
+                if(ret == 1)
+                {
+                    output_type = DISP_OUTPUT_TYPE_HDMI;
+                  //  output_mode = De_GetProperHDMIMode();
+                  //  output_mode = (output_mode == -1)? DISP_TV_MOD_720P_50HZ:output_mode;
+                    output_mode = DISP_TV_MOD_720P_60HZ;
+                }else
+                {
+      
+                    ret = 0;
+                    arg[0] = 0;
+                    arg[1] = 0;
+                    arg[2] = 0;
+                    for(i=0; (i<6)&&(ret==0); i++)
+                    {
+                        __inf("%d\n",i);
+                        ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_TV_GET_INTERFACE, 0, (void*)arg);
+                        wBoot_timer_delay(200);
+                    }
+                    __inf("tv detect, ret = %d\n", ret);
+                    if((ret & DISP_TV_CVBS) == DISP_TV_CVBS)
+                    {
+                        output_type = DISP_OUTPUT_TYPE_TV;
+                        output_mode = DISP_TV_MOD_PAL;
+                        __inf("cvbs plug\n");
+                    }else if((ret & DISP_TV_YPBPR) == DISP_TV_YPBPR)
+                    {
+                        output_type = DISP_OUTPUT_TYPE_TV;
+                        output_mode = DISP_TV_MOD_720P_50HZ;
+                        __inf("ypbpr plug\n");
+                    }else
+                    {
+                        __inf("no device plug\n");
+                        output_type = DISP_OUTPUT_TYPE_NONE;
+
+                    }
+                }
+            }
+            
+        }else//has boot_disp config
+        {
+            if(output_type == DISP_OUTPUT_TYPE_LCD)
+            {
+
+            }else if(auto_hpd == 1)
+            {
+                if(wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_HDMI_GET_HPD_STATUS, 0, (void*)arg) == 1)
+                {
+                    output_type = DISP_OUTPUT_TYPE_HDMI;
+                  //  output_mode = De_GetProperHDMIMode();
+                  //  output_mode = (output_mode == -1)? DISP_TV_MOD_720P_50HZ:output_mode;
+                  output_mode = DISP_TV_MOD_720P_60HZ;
+                }else
+                {
+                    ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_TV_GET_INTERFACE, 0, (void*)arg);
+                    if((ret & DISP_TV_CVBS) == DISP_TV_CVBS)
+                    {
+                        output_type = DISP_OUTPUT_TYPE_TV;
+                        output_mode = DISP_TV_MOD_PAL;
+                    }else if((ret & DISP_TV_YPBPR) == DISP_TV_YPBPR)
+                    {
+                        if((output_type == DISP_OUTPUT_TYPE_VGA) && (output_type != DISP_OUTPUT_TYPE_TV))
+                        {
+                            output_type = DISP_OUTPUT_TYPE_VGA;
+                            output_mode = DISP_VGA_H1024_V768;
+                        }else
+                        {
+                            output_type = DISP_OUTPUT_TYPE_TV;
+                            output_mode = DISP_TV_MOD_720P_50HZ;
+                        }
+                    }else
+                    {
+                        output_type = DISP_OUTPUT_TYPE_NONE;
+                    }
+                }
+            }
+        }
+        
+        if(output_type == DISP_OUTPUT_TYPE_LCD)
+        {
+            __inf("lcd open\n");
+            arg[0] = 0;
+            arg[1] = 0;
+            arg[2] = 0;
+            ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_LCD_ON, 0, (void*)arg);
+            __inf("lcd open,ret=%d\n",ret);
+        }
+        else if(output_type == DISP_OUTPUT_TYPE_TV)
+        {
+            __inf("tv open\n");
+            arg[0] = output_mode;
+            arg[1] = 0;
+            arg[2] = 0;
+            wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_TV_SET_MODE, 0, arg);
+            ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_TV_ON, 0, NULL);
+        }
+        else if(output_type == DISP_OUTPUT_TYPE_HDMI)
+        {
+            __inf("hdmi open\n");
+            arg[0] = output_mode;
+            arg[1] = 0;
+            arg[2] = 0;
+            wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_HDMI_SET_MODE, 0, arg);
+            ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_HDMI_ON, 0, NULL);
+        }
+        else if(output_type == DISP_OUTPUT_TYPE_VGA)
+        {
+            __inf("vga open\n");
+            arg[0] = output_mode;
+            arg[1] = 0;
+            arg[2] = 0;
+            wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_VGA_SET_MODE, 0, arg);
+            ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_VGA_ON, 0, NULL);
+        }
+    }
+#endif
 
     return ret;
 }
