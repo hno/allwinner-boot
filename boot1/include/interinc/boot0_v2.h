@@ -59,7 +59,6 @@
 //以下是提供给SDMMC卡使用，固定不可改变
 #define BOOT0_SDMMC_START_ADDR          16
 
-
 typedef struct standard_Boot_file_head
 {
 	__u32  jump_instruction;   // one intruction jumping to real code
@@ -73,8 +72,6 @@ typedef struct standard_Boot_file_head
 	__u8   eGON_vsn[4];        // eGON version
 	__u8   platform[8];        // platform information
 }standard_boot_file_head_t;
-
-
 /******************************************************************************/
 /*                              file head of Boot0                            */
 /******************************************************************************/
@@ -82,7 +79,7 @@ typedef struct _boot0_private_head_t
 {
 	__u32                       prvt_head_size;
 	char                        prvt_head_vsn[4];       // the version of boot0_private_head_t
-	boot_dram_para_t            dram_para;              // DRAM patameters for initialising dram. Original values is arbitrary,
+	unsigned int                dram_para[32];          // DRAM patameters for initialising dram. Original values is arbitrary,
 	__s32						uart_port;              // UART控制器编号
 	normal_gpio_cfg             uart_ctrl[2];           // UART控制器(调试打印口)数据信息
 	__s32                       enable_jtag;            // 1 : enable,  0 : disable
@@ -95,8 +92,8 @@ typedef struct _boot0_private_head_t
 
 typedef struct _boot0_file_head_t
 {
-	standard_boot_file_head_t  boot_head;
-	boot0_private_head_t  prvt_head;
+	standard_boot_file_head_t   boot_head;
+	boot0_private_head_t  		prvt_head;
 }boot0_file_head_t;
 
 

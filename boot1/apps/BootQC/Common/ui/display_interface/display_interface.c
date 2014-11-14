@@ -239,6 +239,10 @@ __s32 De_IsLCDOpen(void)
     arg[1] = 0;
     arg[2] = 0;
     ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_LCD_CHECK_OPEN_FINISH, 0, (void*)arg);
+    if(ret)
+    {
+        DMSG_PANIC("ERR: LCD not open\n");
+    }
 
     return ret;
 }
@@ -278,6 +282,10 @@ __s32 De_IsLCDClose(void)
     arg[1] = 0;
     arg[2] = 0;
     ret = wBoot_driver_ioctl(board_res.disp_hd, DISP_CMD_LCD_CHECK_CLOSE_FINISH, 0, (void*)arg);
+    if(ret)
+    {
+        DMSG_PANIC("ERR: LCD not close\n");
+    }
 
     return ret;
 }

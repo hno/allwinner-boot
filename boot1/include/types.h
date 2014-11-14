@@ -30,6 +30,9 @@
 #define BOOT_STORAGE_CODE2    (0x7FFFFF01)
 #define BOOT_STORAGE_CODE3    (0x7FFFFF02)
 #define BOOT_STORAGE_CODE4    (0x7FFFFF03)
+
+#define  egon2_readl(addr)           (*(volatile unsigned int *)(addr))
+#define  egon2_writel(x, addr)      ((*(volatile unsigned int *)(addr)) = (x))
 /*
 **********************************************************************************************************************
 *                                              DATA TYPES
@@ -37,11 +40,8 @@
 */
 //**************************************************
 //normal typedef
-
-typedef unsigned long long	__u64;
 typedef unsigned long long	  u64;
-
-//typedef long long			__int64;
+typedef unsigned long long	__u64;
 typedef long long			__s64;
 
 typedef unsigned int        __u32;

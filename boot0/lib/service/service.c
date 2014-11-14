@@ -47,57 +47,28 @@ __u8  *get_page_buf( void )
 }
 
 
-void   get_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p )
-{
- 
-	memcpy( boot0_dram_para_p, &(BT0_head.prvt_head.dram_para), sizeof(boot_dram_para_t) );
-}
-void   print_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p )
-{   
-    msg("boot0_para->dram_clk			= %d\n",boot0_dram_para_p->dram_clk);
-    msg("boot0_para->dram_type			= %d\n",boot0_dram_para_p->dram_type);
-    msg("boot0_para->dram_rank_num		= %d\n",boot0_dram_para_p->dram_rank_num);
-    msg("boot0_para->dram_chip_density	= %d\n",boot0_dram_para_p->dram_chip_density);
-    msg("boot0_para->dram_io_width		= %d\n",boot0_dram_para_p->dram_io_width);
-    msg("boot0_para->dram_bus_width		= %d\n",boot0_dram_para_p->dram_bus_width);
-    
-	msg("boot0_para->dram_cas		    = %d\n",boot0_dram_para_p->dram_cas);
-    msg("boot0_para->dram_zq           = %x\n",boot0_dram_para_p->dram_zq);
-    msg("boot0_para->dram_odt_en       = %d\n",boot0_dram_para_p->dram_odt_en);
-    msg("boot0_para->dram_size         = %d\n",boot0_dram_para_p->dram_size);
-    
-	
-	msg("boot0_para->dram_tpr0			= %x\n",boot0_dram_para_p->dram_tpr0);
-	msg("boot0_para.dram_tpr1			= %x\n",boot0_dram_para_p->dram_tpr1);
-	msg("boot0_para->dram_tpr2			= %x\n",boot0_dram_para_p->dram_tpr2);
-	msg("boot0_para->dram_emr1			= %x\n",boot0_dram_para_p->dram_emr1);
-	msg("boot0_para->dram_emr2			= %x\n",boot0_dram_para_p->dram_emr2);
-	msg("boot0_para->dram_emr2			= %x\n",boot0_dram_para_p->dram_emr2);
-	
-}
+//void   get_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p )
+//{
+//	memcpy( boot0_dram_para_p, &(BT0_head.prvt_head.dram_para), sizeof(boot_dram_para_t) );
+//}
+//
+//void   set_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p )
+//{
+//	boot0_file_head_t  *boot0_buf = (boot0_file_head_t *)BOOT0_BASE;
+//
+//	memcpy( &(boot0_buf->prvt_head.dram_para), boot0_dram_para_p, sizeof(boot_dram_para_t) );
+//}
 
-void   set_boot0_dram_para( boot_dram_para_t *boot0_dram_para_p )
+void set_dram_para(void *dram_addr , __u32 dram_size)
 {
-	boot0_file_head_t  *boot0_buf = (boot0_file_head_t *)BOOT0_BASE;
-
-	memcpy( &(boot0_buf->prvt_head.dram_para), boot0_dram_para_p, sizeof(boot_dram_para_t) );
-}
-
-void set_dram_para(void *dram_addr, __u32 dram_size)
-{
-    boot_dram_para_t  *dram_para = (boot_dram_para_t *)dram_addr;
+	__dram_para_t  *dram_para = (__dram_para_t *)dram_addr;
 	boot1_file_head_t  *boot1_buf = (boot1_file_head_t *)BOOT1_BASE;
-    dram_para->dram_size = dram_size;
-	memcpy((void *)&boot1_buf->prvt_head.dram_para, dram_addr, sizeof(boot_dram_para_t));
+
+	dram_para->dram_para1 &= 0xffff0000;
+	dram_para->dram_para1 |= (dram_size & 0xffff);
+	memcpy((void *)boot1_buf->prvt_head.script_buf, dram_addr, 32 * sizeof(int));
 
 	return;
-}
-
-void set_nand_good_block_ratio_para(void *nand_info_boot0)
-{
-    boot1_file_head_t  *boot1_buf = (boot1_file_head_t *)BOOT1_BASE;
-    boot_nand_para_t *nand_info_boot1 = (boot_nand_para_t *)(boot1_buf->prvt_head.storage_data);
-	nand_info_boot1->good_block_ratio = ((boot_nand_para_t *)(nand_info_boot0))->good_block_ratio;
 }
 
 //void  delay( __u32 ms )       // CPU frequence is 120Mhz
@@ -112,6 +83,28 @@ void set_nand_good_block_ratio_para(void *nand_info_boot0)
 __s32 BOOT_NandGetPara(boot_nand_para_t *param)
 {
 #if 1
+#ifdef NAND_DEBUG
+	msg("ChannelCnt = %x\n", param->ChannelCnt);
+	msg("ChipCnt = %x\n", param->ChipCnt);
+    msg("ChipConnectInfo = %x\n", param->ChipConnectInfo);
+	msg("RbCnt = %x\n", param->RbCnt);
+	msg("RbConnectInfo= %x\n", param->RbConnectInfo);
+    msg("RbConnectMode = %x\n", param->RbConnectMode);
+	msg("BankCntPerChip = %x\n", param->BankCntPerChip);
+    msg("DieCntPerChip = %x\n", param->DieCntPerChip);
+    msg("PlaneCntPerDie = %x\n", param->PlaneCntPerDie);
+    msg("SectorCntPerPage = %x\n", param->SectorCntPerPage);
+    msg("PageCntPerPhyBlk = %x\n", param->PageCntPerPhyBlk);
+    msg("BlkCntPerDie = %x\n", param->BlkCntPerDie);
+    msg("OperationOpt = %x\n", param->OperationOpt);
+    msg("FrequencePar = %x\n", param->FrequencePar);
+    msg("EccMode = %x\n", param->EccMode);
+    msg("NandChipId = %x, %x\n", param->NandChipId[0], param->NandChipId[4]);
+    msg("ValidBlkRatio = %x\n", param->ValidBlkRatio);
+	msg("good_block_ratio = %x\n", param->good_block_ratio);
+	msg("ReadRetryType = %x\n", param->ReadRetryType);
+	msg("DDRType = %x\n", param->DDRType);
+#endif
 	memcpy( (void *)param, BT0_head.prvt_head.storage_data, sizeof(boot_nand_para_t));
 #else
 	param->ChipCnt = 2;
@@ -125,19 +118,17 @@ __s32 BOOT_NandGetPara(boot_nand_para_t *param)
 	param->SectorCntPerPage = 0x10;
 	param->PageCntPerPhyBlk = 0x100;
 	param->BlkCntPerDie = 0x800;
-	param->OperationOpt = 0x1c8;
+	param->OperationOpt = 0x48;
 	param->FrequencePar = 0x1f;
-	param->EccMode = 3;
+	param->EccMode = 2;
 	memset(param->NandChipId, 0xff, 8);
 	param->NandChipId[0] = 0xad;
 	param->NandChipId[1] = 0xd7;
 	param->NandChipId[2] = 0x94;
-	param->NandChipId[3] = 0xda;
-	param->NandChipId[4] = 0x74;
-	param->NandChipId[5] = 0xc3;
+	param->NandChipId[3] = 0x9a;
 	param->ValidBlkRatio = 900;
 	param->good_block_ratio = 960;
-	param->ReadRetryType = 0x00010604;
+	param->ReadRetryType = 0;
 	param->DDRType = 0;
 #endif
 	return 0;

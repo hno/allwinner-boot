@@ -67,12 +67,13 @@ extern int _standby_start_lma;
 
 void clear_ZI( void )
 {
-	int *dst;
+	//int *dst, *end;
 
-	for (dst = &_bss_start; dst< &_bss_end; dst++)
-	{
-		*dst = 0;
-	}
+	memset((void *)&_bss_start, 0, (&_bss_end - &_bss_start) * 4);
+	//for (dst = &_bss_start; dst< &_bss_end; dst++)
+	//{
+	//	*dst = 0;
+	//}
 }
 /*
 **********************************************************************************************************************
@@ -90,13 +91,14 @@ void clear_ZI( void )
 */
 void  reposition_arm_start( void )
 {
-	int *dst = 0;
-	int *src = &_arm_start;
-
-	while (src < &_arm_end)
-	{
-		*dst++ = *src++;
-	}
+//	int *dst = 0;
+//	int *src = &_arm_start;
+//
+//	while (src < &_arm_end)
+//	{
+//		*dst++ = *src++;
+//	}
+	memcpy((void *)0, (void *)&_arm_start, (&_arm_end - &_arm_start) * 4);
 }
 /*
 **********************************************************************************************************************
@@ -114,6 +116,9 @@ void  reposition_arm_start( void )
 */
 void  reposition_boot_standby( void )
 {
+#if 1
+	memcpy((void *)&_standby_start, (void *)&_standby_start_lma, ((__u32)&_standby_end - (__u32)&_standby_start));
+#else
 	int *dst = &_standby_start;
 	int *src = &_standby_start_lma;
 
@@ -121,6 +126,7 @@ void  reposition_boot_standby( void )
 	{
 		*dst++ = *src++;
 	}
+#endif
 }
 
 

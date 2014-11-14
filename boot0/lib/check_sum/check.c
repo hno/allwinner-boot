@@ -44,22 +44,24 @@
 ********************************************************************************/
 __s32 check_magic( __u32 *mem_base, const char *magic )
 {
-	__u32 i;
+//	__u32 i;
 	boot_file_head_t *bfh;
-	__u32 sz;
-	unsigned char *p;
-
+//	__u32 sz;
+//	unsigned char *p;
 
 	bfh = (boot_file_head_t *)mem_base;
-	p = bfh->magic;
-	for( i = 0, sz = sizeof( bfh->magic );  i < sz;  i++ )
+//	p = bfh->magic;
+//	for( i = 0, sz = sizeof( bfh->magic );  i < sz;  i++ )
+//	{
+//		if( *p++ != *magic++ )
+//			return CHECK_IS_WRONG;
+//	}
+	if(!(strncmp(bfh->magic, magic, 8)))
 	{
-		if( *p++ != *magic++ )
-			return CHECK_IS_WRONG;
+		return CHECK_IS_CORRECT;
 	}
 
-
-	return CHECK_IS_CORRECT;
+	return CHECK_IS_WRONG;
 }
 
 //#pragma arm section

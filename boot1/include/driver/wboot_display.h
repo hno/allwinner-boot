@@ -7,6 +7,23 @@ typedef struct {__s32 x; __s32 y; __u32 width; __u32 height;}__disp_rect_t;
 typedef struct {__u32 width;__u32 height;                   }__disp_rectsz_t;
 typedef struct {__s32 x; __s32 y;                           }__disp_pos_t;
 
+typedef enum
+{
+	LCD_CMAP_B0	= 0x0,
+	LCD_CMAP_G0	= 0x1,
+	LCD_CMAP_R0	= 0x2,
+	LCD_CMAP_B1	= 0x4,
+	LCD_CMAP_G1	= 0x5,
+	LCD_CMAP_R1	= 0x6,
+	LCD_CMAP_B2	= 0x8,
+	LCD_CMAP_G2	= 0x9,
+	LCD_CMAP_R2	= 0xa,
+	LCD_CMAP_B3	= 0xc,
+	LCD_CMAP_G3	= 0xd,
+	LCD_CMAP_R3	= 0xe,
+}__lcd_cmap_color;
+
+
 
 typedef enum
 {
@@ -161,6 +178,8 @@ typedef enum
     DISP_TV_MOD_1080P_24HZ_3D_FP    = 0x17,
     DISP_TV_MOD_720P_50HZ_3D_FP     = 0x18,
     DISP_TV_MOD_720P_60HZ_3D_FP     = 0x19,
+    DISP_TV_MOD_1080P_25HZ          = 0x1a,
+    DISP_TV_MOD_1080P_30HZ          = 0x1b,
     DISP_TV_MOD_PAL                 = 0xb,
     DISP_TV_MOD_PAL_SVIDEO          = 0xc,
     DISP_TV_MOD_NTSC                = 0xe,
@@ -169,7 +188,7 @@ typedef enum
     DISP_TV_MOD_PAL_M_SVIDEO        = 0x12,
     DISP_TV_MOD_PAL_NC              = 0x14,
     DISP_TV_MOD_PAL_NC_SVIDEO       = 0x15,
-    DISP_TV_MODE_NUM               = 0x1a,
+    DISP_TV_MODE_NUM               = 0x1c,
 }__disp_tv_mode_t;
 
 typedef enum
@@ -205,10 +224,11 @@ typedef enum
 {
     DISP_LCDC_SRC_DE_CH1    = 0,
     DISP_LCDC_SRC_DE_CH2    = 1,
-    DISP_LCDC_SRC_DMA       = 2,
-    DISP_LCDC_SRC_WHITE     = 3,
-    DISP_LCDC_SRC_BLACK     = 4,
-    DISP_LCDC_SRC_BLUT      = 5,
+    DISP_LCDC_SRC_DMA888    = 2,
+    DISP_LCDC_SRC_DMA565    = 3,    
+    DISP_LCDC_SRC_WHITE     = 4,
+    DISP_LCDC_SRC_BLACK     = 5,
+    DISP_LCDC_SRC_BLUE      = 6,
 }__disp_lcdc_src_t;
 
 typedef enum
@@ -263,6 +283,20 @@ typedef enum
     DISP_EXIT_MODE_CLEAN_PARTLY = 1,//only clean interrupt temply
 }__disp_exit_mode_t;
 
+typedef enum
+{
+    DISP_ENHANCE_MODE_RED       = 0x0,
+    DISP_ENHANCE_MODE_GREEN     = 0x1,
+    DISP_ENHANCE_MODE_BLUE      = 0x2,
+    DISP_ENHANCE_MODE_CYAN      = 0x3,
+    DISP_ENHANCE_MODE_MAGENTA   = 0x4,
+    DISP_ENHANCE_MODE_YELLOW    = 0x5,
+    DISP_ENHANCE_MODE_FLESH     = 0x6,
+    DISP_ENHANCE_MODE_STANDARD  = 0x7,
+    DISP_ENHANCE_MODE_VIVID     = 0x8,
+    DISP_ENHANCE_MODE_SCENERY   = 0xa,
+}__disp_enhance_mode_t;
+
 
 typedef enum//only for debug!!!
 {
@@ -277,118 +311,128 @@ typedef enum//only for debug!!!
     DISP_REG_CCMU = 8,
     DISP_REG_PIOC = 9,
     DISP_REG_PWM = 10,
+    DISP_REG_DEU0 = 11,
+    DISP_REG_DEU1 = 12,
+    DISP_REG_CMU0 = 13,
+    DISP_REG_CMU1 = 14,
+    DISP_REG_DRC0 = 15,
+    DISP_REG_DRC1 = 16,
+    DISP_REG_DSI = 17,
+    DISP_REG_DSI_DPHY = 18,
+    DISP_REG_HDMI = 19,
 }__disp_reg_index_t;
 
 
 
 typedef enum
 {
-	LCD_IF_HV	= 0,
-	LCD_IF_CPU	= 1,
-	LCD_IF_LVDS	= 3,
-	LCD_IF_HV2DSI	= 4,
-	LCD_IF_EDP  	= 5,
+    LCD_IF_HV			= 0,
+    LCD_IF_CPU			= 1,
+    LCD_IF_LVDS			= 3,
+    LCD_IF_DSI			= 4,
+    LCD_IF_EDP      = 5,
+    LCD_IF_EXT_DSI  = 6,
 }__lcd_if_t;
 
 typedef enum
 {
-	LCD_HV_IF_PRGB_1CYC	= 0,  //parallel hv
-	LCD_HV_IF_SRGB_3CYC	= 8,  //serial hv
-	LCD_HV_IF_DRGB_4CYC	= 10, //Dummy RGB
-	LCD_HV_IF_RGBD_4CYC	= 11, //RGB Dummy
-	LCD_HV_IF_CCIR656_2CYC	= 12, 
+    LCD_HV_IF_PRGB_1CYC		= 0,  //parallel hv
+    LCD_HV_IF_SRGB_3CYC		= 8,  //serial hv
+    LCD_HV_IF_DRGB_4CYC		= 10, //Dummy RGB
+    LCD_HV_IF_RGBD_4CYC		= 11, //RGB Dummy
+    LCD_HV_IF_CCIR656_2CYC	= 12, 
 }__lcd_hv_if_t;
 
 typedef enum
 {
-	LCD_HV_SRGB_SEQ_RGB_RGB	= 0,
-	LCD_HV_SRGB_SEQ_RGB_BRG	= 1,
-	LCD_HV_SRGB_SEQ_RGB_GBR	= 2,
-	LCD_HV_SRGB_SEQ_BRG_RGB	= 4,
-	LCD_HV_SRGB_SEQ_BRG_BRG	= 5,
-	LCD_HV_SRGB_SEQ_BRG_GBR	= 6,
-	LCD_HV_SRGB_SEQ_GRB_RGB	= 8,
-	LCD_HV_SRGB_SEQ_GRB_BRG	= 9,
-	LCD_HV_SRGB_SEQ_GRB_GBR	= 10,
+    LCD_HV_SRGB_SEQ_RGB_RGB	= 0,
+    LCD_HV_SRGB_SEQ_RGB_BRG	= 1,
+    LCD_HV_SRGB_SEQ_RGB_GBR	= 2,
+    LCD_HV_SRGB_SEQ_BRG_RGB	= 4,
+    LCD_HV_SRGB_SEQ_BRG_BRG	= 5,
+    LCD_HV_SRGB_SEQ_BRG_GBR	= 6,
+    LCD_HV_SRGB_SEQ_GRB_RGB	= 8,
+    LCD_HV_SRGB_SEQ_GRB_BRG	= 9,
+    LCD_HV_SRGB_SEQ_GRB_GBR	= 10,
 }__lcd_hv_srgb_seq_t;
 
 typedef enum
 {
-	LCD_HV_SYUV_SEQ_YUYV	= 0,
-	LCD_HV_SYUV_SEQ_YVYU	= 1,
-	LCD_HV_SYUV_SEQ_UYUV	= 2,
-	LCD_HV_SYUV_SEQ_VYUY	= 3,
+    LCD_HV_SYUV_SEQ_YUYV	= 0,
+    LCD_HV_SYUV_SEQ_YVYU	= 1,
+    LCD_HV_SYUV_SEQ_UYUV	= 2,
+    LCD_HV_SYUV_SEQ_VYUY	= 3,
 }__lcd_hv_syuv_seq_t;
 
 typedef enum
 {
-	LCD_HV_SYUV_FDLY_0LINE	= 0,
-	LCD_HV_SRGB_FDLY_2LINE	= 1, //ccir ntsc
-	LCD_HV_SRGB_FDLY_3LINE	= 2, //ccir pal
+    LCD_HV_SYUV_FDLY_0LINE	= 0,
+    LCD_HV_SRGB_FDLY_2LINE	= 1, //ccir ntsc
+    LCD_HV_SRGB_FDLY_3LINE	= 2, //ccir pal
 }__lcd_hv_syuv_fdly_t;
 
 typedef enum
 {
-	LCD_CPU_IF_RGB666_18PIN	= 0,
-	LCD_CPU_IF_RGB666_9PIN 	= 10,
-	LCD_CPU_IF_RGB666_6PIN 	= 12,
-	LCD_CPU_IF_RGB565_16PIN	= 8,
-	LCD_CPU_IF_RGB565_8PIN 	= 14,
+    LCD_CPU_IF_RGB666_18PIN	= 0,
+    LCD_CPU_IF_RGB666_9PIN	= 10,
+    LCD_CPU_IF_RGB666_6PIN	= 12,
+    LCD_CPU_IF_RGB565_16PIN	= 8,
+    LCD_CPU_IF_RGB565_8PIN	= 14,
 }__lcd_cpu_if_t;
 
 typedef enum
 {
-	LCD_TE_DISABLE	        = 0,
-	LCD_TE_RISING	        = 1,
-	LCD_TE_FALLING        	= 2,
+    LCD_TE_DISABLE		= 0,
+    LCD_TE_RISING		= 1,
+    LCD_TE_FALLING      = 2,
 }__lcd_te_t;
 
 typedef enum
 {
-	LCD_LVDS_IF_SINGLE_LINK	= 0,
-	LCD_LVDS_IF_DUAL_LINK	= 1,
+    LCD_LVDS_IF_SINGLE_LINK		= 0,
+    LCD_LVDS_IF_DUAL_LINK		= 1,
 }__lcd_lvds_if_t;
 
 typedef enum
 {
-	LCD_LVDS_8bit		= 0,
-	LCD_LVDS_6bit		= 1,
+    LCD_LVDS_8bit		= 0,
+    LCD_LVDS_6bit		= 1,
 }__lcd_lvds_colordepth_t;
 
 typedef enum
 {
-	LCD_LVDS_MODE_NS	= 0,
-	LCD_LVDS_MODE_JEIDA	= 1,
+    LCD_LVDS_MODE_NS		= 0,
+    LCD_LVDS_MODE_JEIDA		= 1,
 }__lcd_lvds_mode_t;
 
 typedef enum
 {
-	LCD_DSI_IF_VIDEO_MODE	= 0,
-	LCD_DSI_IF_COMMAND_MODE	= 1,
+    LCD_DSI_IF_VIDEO_MODE	= 0,
+    LCD_DSI_IF_COMMAND_MODE	= 1,
 }__lcd_dsi_if_t;
 
 typedef enum
 {
-	LCD_DSI_1LANE		= 1,
-	LCD_DSI_2LANE		= 2,
-	LCD_DSI_3LANE		= 3,
-	LCD_DSI_4LANE		= 4,
+    LCD_DSI_1LANE			= 1,
+    LCD_DSI_2LANE			= 2,
+    LCD_DSI_3LANE			= 3,
+    LCD_DSI_4LANE			= 4,
 }__lcd_dsi_lane_t;
 
 typedef enum
 {
-	LCD_DSI_FORMAT_RGB888	= 0,  
-	LCD_DSI_FORMAT_RGB666	= 1,  
-	LCD_DSI_FORMAT_RGB666P	= 2,  
-	LCD_DSI_FORMAT_RGB565	= 3,  
+    LCD_DSI_FORMAT_RGB888	= 0,  //24bit
+    LCD_DSI_FORMAT_RGB666	= 1,  //24bit
+    LCD_DSI_FORMAT_RGB666P	= 2,  //18bit
+    LCD_DSI_FORMAT_RGB565	= 3,  //16bit
 }__lcd_dsi_format_t;
 
 
 typedef enum
 {
-	LCD_FRM_BYPASS		= 0,
-	LCD_FRM_RGB666		= 1,
-	LCD_FRM_RGB565		= 2,
+    LCD_FRM_BYPASS			= 0,
+    LCD_FRM_RGB666			= 1,
+    LCD_FRM_RGB565			= 2,
 }__lcd_frm_t;
 
 
@@ -404,6 +448,7 @@ typedef struct
     __bool                  b_trd_src; //if 3d source, used for scaler mode layer
     __disp_3d_src_mode_t    trd_mode; //source 3d mode, used for scaler mode layer
     __u32                   trd_right_addr[3];//used when in frame packing 3d mode
+    __bool                  pre_multiply; //TRUE: pre-multiply fb
 }__disp_fb_t;
 
 typedef struct
@@ -462,7 +507,7 @@ typedef struct
     __disp_fb_t     input_fb;
     __disp_rect_t   source_regn;
     __disp_fb_t     output_fb;
-    //__disp_rect_t   out_regn;
+    __disp_rect_t   out_regn;
 }__disp_scaler_para_t;
 
 typedef struct
@@ -480,86 +525,110 @@ typedef struct
 
 typedef struct
 {
-    __s32 (*Hdmi_open)(void);
-    __s32 (*Hdmi_close)(void);
+    __s32 (*hdmi_open)(void);
+    __s32 (*hdmi_close)(void);
     __s32 (*hdmi_set_mode)(__disp_tv_mode_t mode);
     __s32 (*hdmi_mode_support)(__disp_tv_mode_t mode);
     __s32 (*hdmi_get_HPD_status)(void);
     __s32 (*hdmi_set_pll)(__u32 pll, __u32 clk);
+    __s32 (*hdmi_suspend)(void);
+    __s32 (*hdmi_resume)(void);
 }__disp_hdmi_func;
 
 typedef struct
 {
-	__u32   lcd_x;
-	__u32   lcd_y;
+	__u32 lp_clk_div;
+	__u32 hs_prepare;
+	__u32 hs_trail;
+	__u32 clk_prepare;
+	__u32 clk_zero;
+	__u32 clk_pre;
+	__u32 clk_post;
+	__u32 clk_trail;
+	__u32 hs_dly_mode;
+	__u32 hs_dly;
+	__u32 lptx_ulps_exit;
+	__u32 hstx_ana0;
+	__u32 hstx_ana1;
+}__disp_dsi_dphy_timing_t;
+
+
+typedef struct
+{
+	__u32   lcd_gamma_tbl[256];
+	__u32	lcd_cmap_tbl[2][3][4];
+    __u32   lcd_bright_curve_tbl[256];
+}__panel_extend_para_t;
+
+
+
+typedef struct
+{
+	__lcd_if_t   			lcd_if;
+
+	__lcd_hv_if_t		 	lcd_hv_if;
+	__lcd_hv_srgb_seq_t  	lcd_hv_srgb_seq;
+	__lcd_hv_syuv_seq_t  	lcd_hv_syuv_seq;
+	__lcd_hv_syuv_fdly_t	lcd_hv_syuv_fdly;
+
+	__lcd_lvds_if_t   		lcd_lvds_if;
+	__lcd_lvds_colordepth_t	lcd_lvds_colordepth; //color depth, 0:8bit; 1:6bit
+	__lcd_lvds_mode_t   	lcd_lvds_mode;
+	__u32   				lcd_lvds_io_polarity;
+
+	__lcd_cpu_if_t			lcd_cpu_if;
+	__lcd_te_t			    lcd_cpu_te;
+
+	__lcd_dsi_if_t			lcd_dsi_if;
+	__lcd_dsi_lane_t		lcd_dsi_lane;
+	__lcd_dsi_format_t		lcd_dsi_format;
+	__u32					lcd_dsi_eotp;
+    __u32					lcd_dsi_vc;
+    __lcd_te_t              lcd_dsi_te;
+    __u32                   lcd_ext_dsi_colordepth;
+    
+	__u32						lcd_dsi_dphy_timing_en; //todo? maybe not used
+	__disp_dsi_dphy_timing_t*	lcd_dsi_dphy_timing_p;
+
+    __u32                  lcd_edp_tx_ic;   //0:anx9804;  1:anx6345
+    __u32                  lcd_edp_tx_rate; //1(1.62G); 2(2.7G); 3(5.4G)
+    __u32                  lcd_edp_tx_lane; //  1/2/4lane
+    __u32                  lcd_edp_colordepth; //color depth, 0:8bit; 1:6bit
+    
+    __u32                  lcd_ext_dsi_if;
+
 	__u32   lcd_dclk_freq;
-	__u32   lcd_pwm_not_used;
-	__u32   lcd_pwm_ch;
-	__u32   lcd_pwm_freq;
-	__u32   lcd_pwm_pol;
-	__u32   lcd_srgb;
-	__u32   lcd_swap;
+	__u32   lcd_x; //horizontal resolution
+	__u32   lcd_y; //vertical resolution
+    __u32   lcd_width; //width of lcd in mm
+    __u32   lcd_height;//height of lcd in mm
+    __u32   lcd_xtal_freq;//unit: Mhz
 
-	__u32   lcd_if; //0:hv(sync+de); 1:8080; 2:ttl; 3:lvds
+	__u32  	lcd_pwm_freq;
+	__u32  	lcd_pwm_pol;
 
-	__u32   lcd_uf;
+	__u32  	lcd_rb_swap;
+	__u32  	lcd_rgb_endian;
+
 	__u32   lcd_vt;
 	__u32   lcd_ht;
 	__u32   lcd_vbp;
 	__u32   lcd_hbp;
-
-	__u32   lcd_hv_if;
-	__u32   lcd_hv_smode;
-	__u32   lcd_hv_s888_if;
-	__u32   lcd_hv_syuv_if;
 	__u32   lcd_vspw;
 	__u32   lcd_hspw;
-	__u32   lcd_hv_lde_used;
-	__u32   lcd_hv_lde_iovalue;
 
-	__u32   lcd_ttl_stvh;
-	__u32   lcd_ttl_stvdl;
-	__u32   lcd_ttl_stvdp;
-	__u32   lcd_ttl_ckvt;
-	__u32   lcd_ttl_ckvh;
-	__u32   lcd_ttl_ckvd;
-	__u32   lcd_ttl_oevt;
-	__u32   lcd_ttl_oevh;
-	__u32   lcd_ttl_oevd;
-	__u32   lcd_ttl_sthh;
-	__u32   lcd_ttl_sthd;
-	__u32   lcd_ttl_oehh;
-	__u32   lcd_ttl_oehd;
-	__u32   lcd_ttl_revd;
-	__u32   lcd_ttl_datarate;
-	__u32   lcd_ttl_revsel;
-	__u32   lcd_ttl_datainv_en;
-	__u32   lcd_ttl_datainv_sel;
+	__u32   lcd_hv_clk_phase;
+    __u32   lcd_hv_sync_polarity;
 
-	__u32   lcd_lvds_ch;        // 0: single channel; 1:dual channel
-	__u32   lcd_lvds_mode;      // 0:NS mode; 1:JEIDA mode
-	__u32	lcd_lvds_bitwidth;  // 0:24bit; 1:18bit
-	__u32   lcd_lvds_io_cross;	// 0:normal; 1:pn cross
-	
-	__u32   lcd_cpu_if;//0:18bit; 1:16bit mode0; 2:16bit mode1; 3:16bit mode2; 4:16bit mode3; 5:9bit; 6:8bit 256K; 7:8bit 65K
-	__u32   lcd_cpu_da;
 	__u32   lcd_frm;
+	__u32   lcd_gamma_en;
+	__u32 	lcd_cmap_en;
+    __u32   lcd_bright_curve_en;
+    __panel_extend_para_t lcd_extend_para;
 
-	__u32   lcd_io_cfg0;
-	__u32   lcd_io_cfg1;
-	__u32   lcd_io_strength;
-
-	__u32   lcd_gamma_correction_en;
-	__u32   lcd_gamma_tbl[256];
-
-	__u32   lcd_hv_srgb_seq0;
-	__u32   lcd_hv_srgb_seq1;
-	__u32   lcd_hv_syuv_seq;
-	__u32   lcd_hv_syuv_fdly;
-
-	__u32   port_index;
-	__u32   start_delay;//not need to config for user
 	__u32   tcon_index; //not need to config for user
+	__u32	lcd_fresh_mode;//not need to config for user
+
 }__panel_para_t;
 
 typedef struct
@@ -597,11 +666,12 @@ typedef struct lcd_flow
 {
     __lcd_function_t func[5];
     __u32 func_num;
+    __u32 cur_step;
 }__lcd_flow_t;
 
 typedef struct
 {
-    void (*cfg_panel_info)(__panel_para_t * info);
+    void (*cfg_panel_info)(__panel_extend_para_t * info);
     __s32 (*cfg_open_flow)(__u32 sel);
     __s32 (*cfg_close_flow)(__u32 sel);
     __s32 (*lcd_user_defined_func)(__u32 sel, __u32 para1, __u32 para2, __u32 para3);
@@ -672,6 +742,8 @@ typedef struct
     __disp_pixel_fmt_t      format[2];
     __disp_pixel_seq_t      seq[2];
     __bool                  br_swap[2];
+    __u32                   fb_width[2];
+    __u32                   fb_height[2];
 }__disp_init_t;
 
 
@@ -698,11 +770,9 @@ typedef enum tag_DISP_CMD
     DISP_CMD_SET_BRIGHT = 0x12,
     DISP_CMD_SET_CONTRAST = 0x13,
     DISP_CMD_SET_SATURATION = 0x14,
-    DISP_CMD_SET_HUE=0x23,
     DISP_CMD_GET_BRIGHT = 0x16,
     DISP_CMD_GET_CONTRAST = 0x17,
     DISP_CMD_GET_SATURATION = 0x18,
-    DISP_CMD_GET_HUE=0x24,
     DISP_CMD_ENHANCE_ON = 0x1a,
     DISP_CMD_ENHANCE_OFF = 0x1b,
     DISP_CMD_GET_ENHANCE_EN = 0x1c,
@@ -712,6 +782,20 @@ typedef enum tag_DISP_CMD
     DISP_CMD_CAPTURE_SCREEN = 0x20,//caputre screen and scaler to dram
     DISP_CMD_DE_FLICKER_ON = 0x21,
     DISP_CMD_DE_FLICKER_OFF = 0x22,
+    DISP_CMD_GET_DE_FLICKER_EN = 0x23,
+    DISP_CMD_DRC_ON = 0x24,
+    DISP_CMD_DRC_OFF = 0x25,
+    DISP_CMD_GET_DRC_EN = 0x26,
+    DISP_CMD_DE_FLICKER_SET_WINDOW = 0x27,
+    DISP_CMD_DRC_SET_WINDOW = 0x28,
+    DISP_CMD_SET_HUE = 0x29,
+    DISP_CMD_GET_HUE = 0x2a,
+    DISP_CMD_VSYNC_EVENT_EN = 0x2b,
+    DISP_CMD_DRC_GET_WINDOW = 0x2c,//NEW 
+    DISP_CMD_SET_ENHANCE_MODE = 0x2d,      
+    DISP_CMD_GET_ENHANCE_MODE = 0x2e,
+    DISP_CMD_SET_ENHANCE_WINDOW = 0X2f,
+    DISP_CMD_GET_ENHANCE_WINDOW = 0X30,
 
 //----layer----
     DISP_CMD_LAYER_REQUEST = 0x40,
@@ -763,11 +847,18 @@ typedef enum tag_DISP_CMD
     DISP_CMD_LAYER_GET_WHITE_EXTEN_LEVEL = 0x6f,
     DISP_CMD_LAYER_SET_BLACK_EXTEN_LEVEL = 0x70,
     DISP_CMD_LAYER_GET_BLACK_EXTEN_LEVEL = 0x71,
+    DISP_CMD_LAYER_VPP_SET_WINDOW = 0X72,
+    DISP_CMD_LAYER_VPP_GET_WINDOW = 0X73,
+    DISP_CMD_LAYER_SET_ENHANCE_MODE = 0x74,      //NEW 
+    DISP_CMD_LAYER_GET_ENHANCE_MODE = 0x75,      //NEW 
+    DISP_CMD_LAYER_SET_ENHANCE_WINDOW = 0X76,
+    DISP_CMD_LAYER_GET_ENHANCE_WINDOW = 0X77,
 
 //----scaler----
     DISP_CMD_SCALER_REQUEST = 0x80,
     DISP_CMD_SCALER_RELEASE = 0x81,
     DISP_CMD_SCALER_EXECUTE = 0x82,
+    DISP_CMD_SCALER_EXECUTE_EX = 0x83,
 
 //----hwc----
     DISP_CMD_HWC_OPEN = 0xc0,
@@ -864,7 +955,7 @@ typedef enum tag_DISP_CMD
 	
 //---for Displayer Test --------	
 	DISP_CMD_MEM_REQUEST = 0x2c0,
-	DISP_CMD_MEM_RELASE = 0x2c1,
+	DISP_CMD_MEM_RELEASE = 0x2c1,
 	DISP_CMD_MEM_GETADR = 0x2c2,
 	DISP_CMD_MEM_SELIDX = 0x2c3,
 	

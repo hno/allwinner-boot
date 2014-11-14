@@ -13,27 +13,19 @@
 
 extern void *NAND_IORemap(unsigned int base_addr, unsigned int size);
 
-//DMA
-extern __s32 NAND_DMAConfigStart(int rw, unsigned int buff_addr, int len);
-extern int NAND_RequestDMA(void);
-extern int NAND_WaitDmaFinish(void);
-
 //USE_SYS_CLK
-extern int NAND_ClkRequest(void);
-extern void NAND_ClkRelease(void);
-extern int NAND_AHBEnable(void);
-extern void NAND_AHBDisable(void);
-extern int NAND_ClkEnable(void);
-extern void NAND_ClkDisable(void);
-extern int NAND_SetClk(unsigned int nand_clk);
-extern int NAND_GetClk(void);
+extern int NAND_ClkRequest(unsigned int nand_index);
+extern void NAND_ClkRelease(unsigned int nand_index);
+extern int NAND_SetClk(unsigned int nand_index, unsigned int nand_clk);
+extern int NAND_GetClk(unsigned int nand_index);
 
-extern void NAND_PIORequest(void);
-extern void NAND_PIORelease(void);
+extern void NAND_PIORequest(unsigned int nand_index);
+extern void NAND_PIORelease(unsigned int nand_index);
 
 extern void NAND_EnRbInt(void);
 extern void NAND_ClearRbInt(void);
 extern int NAND_WaitRbReady(void);
+extern int NAND_WaitDmaFinish(void);
 extern void NAND_RbInterrupt(void);
 
 extern void* NAND_Malloc(unsigned int Size);

@@ -25,134 +25,144 @@
 static void  print_version(void);
 static __s32 reserved_init(void);
 static __s32 reserved_exit(void);
-#ifdef SCRIPT_INSTALL_EARLY
 static int script_relocation(void);
-#endif
-static int eGon2_storage_type_set(void);
 static void dram_para_set(void);
+static void dram_para0_transfer(void);
+//static void dram_para_transfer(void);
 
+__u32 timer_hd;
+static int  eGon2_storage_type_set(void);
+static int  eGon2_storage_type_get(void);
 /*******************************************************************************
-*º¯ÊıÃû³Æ: eGon2_start
-*º¯ÊıÔ­ĞÍ£ºvoid Boot1_C_part( void )
-*º¯Êı¹¦ÄÜ: Boot1ÖĞÓÃCÓïÑÔ±àĞ´µÄ²¿·ÖµÄÖ÷Á÷³Ì
-*Èë¿Ú²ÎÊı: void
-*·µ »Ø Öµ: void
-*±¸    ×¢:
+*å‡½æ•°åç§°: eGon2_start
+*å‡½æ•°åŸå‹ï¼švoid Boot1_C_part( void )
+*å‡½æ•°åŠŸèƒ½: Boot1ä¸­ç”¨Cè¯­è¨€ç¼–å†™çš„éƒ¨åˆ†çš„ä¸»æµç¨‹
+*å…¥å£å‚æ•°: void
+*è¿” å› å€¼: void
+*å¤‡    æ³¨:
 *******************************************************************************/
 void eGon2_start( void )
 {
-	__s32   i;
+	__s32   i, type;
 	__u32   default_clock;
 	__s32   exception;
 	__u32   boot_heap_base;
 	__s32   force_to_card0 = 0;
+	//void    *script_buf = NULL;
 	H_FILE  hfile = NULL;
 	FS_PART_OPTS_t   fs_ops;
 
 	/* init enviroment for running app */
 //	move_RW( );
+
+//	while((*(volatile unsigned int *)0x40000000) != 0x1234);
+
 	reposition_boot_standby();
 	clear_ZI( );
-
-    // ×öÁ½´Îµ÷Æµ£¬µÚÒ»´ÎÏÈµ½384M ???
+	memcpy((void *)BOOT_STANDBY_DRAM_PARA_ADDR, BT1_head.prvt_head.script_buf, 32 * 4);
+	cpu0_set_detected_paras();		// invalidå…¶å®ƒcpuçš„cache
+    // åšä¸¤æ¬¡è°ƒé¢‘ï¼Œç¬¬ä¸€æ¬¡å…ˆåˆ°384M ???
     //default_clock = eGon2_clock_set(0, 240);
-    default_clock = 384;
-    //ÆğÊ¼µØÖ·ÔÚ0x4X400000£¬±£Ö¤¶ÑÆğÊ¼µØÖ·ÔÚ0x4Y000000(Y = X + 1)
+    default_clock = 408;
+    //èµ·å§‹åœ°å€åœ¨0x4X400000ï¼Œä¿è¯å †èµ·å§‹åœ°å€åœ¨0x4Y000000(Y = X + 1)
     boot_heap_base = BOOT1_BASE + 0x01200000;
-    //ÉèÖÃ¶ÑµÄ´óĞ¡Îª16M
+    //è®¾ç½®å †çš„å¤§å°ä¸º16M
 	eGon2_create_heap( boot_heap_base, SZ_16M );
 
 	/* use mmu */
 	mmu_system_init(EGON2_DRAM_BASE, 1 * 1024, EGON2_MMU_BASE);                 // init mmu
 	mmu_enable( );                      // enable mmu
 
-	eGon2_timer_init( );				// timer ³õÊ¼»¯
-	eGon2_Int_Init( );                  // ¶ÔÖĞ¶ÏÏµÍ³½øĞĞ³õÊ¼»¯
+	eGon2_timer_init( );				// timer åˆå§‹åŒ–
+	eGon2_Int_Init( );                  // å¯¹ä¸­æ–­ç³»ç»Ÿè¿›è¡Œåˆå§‹åŒ–
+
 	reposition_arm_start( );            // reposition vect table
 	set_vect_low_addr( );               // set interrupt vector low address
     open_sys_int( );                    // open system interrupt
-
-	//³õÊ¼»¯UART
+	//åˆå§‹åŒ–UART
     serial_init(BT1_head.prvt_head.uart_port, (normal_gpio_cfg *)BT1_head.prvt_head.uart_ctrl, 115200, 24000000);
     print_version();
-
-    #ifdef SCRIPT_INSTALL_EARLY
     if(!script_relocation())
     {
-    	eGon2_printf("script installed early ok\n");
+    	eGon2_printf("script installed ok\n");
     }
     else
     {
-    	eGon2_printf("script installed early failed\n");
+    	eGon2_printf("script installed failed\n");
     }
-    #endif
-    //³õÊ¼»¯IIC, ÏÖÔÚ»¹Ã»ÓĞµ÷Õû¹ıÆµÂÊ£¬ÔËĞĞÔÚ384M
-    eGon2_twi_init(BT1_head.prvt_head.twi_port, (normal_gpio_cfg *)BT1_head.prvt_head.twi_ctrl, 24000000, 400000);
-#ifndef CONFIG_AW_FPGA_PLATFORM
-    //³õÊ¼»¯POWER£¬µ÷ÕûºËĞÄµçÑ¹
-    if(!eGon2_power_init((void *)&BT1_head.prvt_head.core_para))
+    //åˆå§‹åŒ–IIC, ç°åœ¨è¿˜æ²¡æœ‰è°ƒæ•´è¿‡é¢‘ç‡ï¼Œè¿è¡Œåœ¨384M
+    p2wi_init();
+    //åˆå§‹åŒ–POWERï¼Œè°ƒæ•´æ ¸å¿ƒç”µå‹
+#ifndef CONFIG_SUN6I_FPGA
+    if(!power_init(BT1_head.prvt_head.core_para.user_set_core_vol))
     {
-        //¿ªÊ¼µ÷ÕûÆµÂÊ£¬µçÑ¹ÒÑ¾­µ÷ÕûÍê±Ï
+        //å¼€å§‹è°ƒæ•´é¢‘ç‡ï¼Œç”µå‹å·²ç»è°ƒæ•´å®Œæ¯•
         if(default_clock != BT1_head.prvt_head.core_para.user_set_clock)
         {
+        	//eGon2_printf("set pll1 to %d\n", BT1_head.prvt_head.core_para.user_set_clock);
         	default_clock = eGon2_clock_set_ext(BT1_head.prvt_head.core_para.user_set_clock, BT1_head.prvt_head.core_para.user_set_core_vol);
     		//default_clock = eGon2_clock_set_ext(k, BT1_head.prvt_head.core_para.user_set_core_vol);
-    		eGon2_printf("set dcdc2=%dmv, clock=%dM successed\n", BT1_head.prvt_head.core_para.user_set_core_vol, default_clock);
+    		eGon2_printf("pll1 %d\n", default_clock);
         }
         else
         {
-        	eGon2_printf("set default clock=384M\n");
+        	eGon2_printf("set default clock=408M\n");
         }
     }
     else
     {
-    	eGon2_printf("set dcdc2 failed, set default clock 384M\n");
+    	eGon2_printf("set dcdc2 failed, set default clock 408M\n");
     }
+
 #else
-    eGon2_power_init((void *)&BT1_head.prvt_head.core_para);
-    eGon2_printf("set pll1 %d\n", BT1_head.prvt_head.core_para.user_set_clock);
-    default_clock = eGon2_clock_set_ext(BT1_head.prvt_head.core_para.user_set_clock, BT1_head.prvt_head.core_para.user_set_core_vol);
-    eGon2_printf("set dcdc2=%d, clock=%d successed\n", BT1_head.prvt_head.core_para.user_set_core_vol, default_clock);
+	power_init(BT1_head.prvt_head.core_para.user_set_core_vol);
+	eGon2_printf("set pll1 %d\n", BT1_head.prvt_head.core_para.user_set_clock);
+	default_clock = eGon2_clock_set_ext(BT1_head.prvt_head.core_para.user_set_clock, BT1_head.prvt_head.core_para.user_set_core_vol);
+	eGon2_printf("set dcdc2=%d, clock=%d successed\n", BT1_head.prvt_head.core_para.user_set_core_vol, default_clock);
 #endif
+	dram_para0_transfer();
 
-#ifdef CONFIG_AW_HOMELET_PRODUCT
-    {
-        user_gpio_set_t     gpio_pull[4];
-        int ret;
-
-        ret = eGon2_script_parser_mainkey_get_gpio_cfg("gpio_init", (void *)gpio_pull, 4);
-        if(!ret)
-        {
-            eGon2_GPIO_Request(gpio_pull, 4);
-        }
-    }
-#endif
-
+    eGon2_clock_set_pll6();
+    eGon2_clock_set_mbus();
+	eGon2_printf("power finish\n");
     eGon2_key_init();
-    //¼ì²éÊÇ·ñĞèÒªÖ±½Ó½øÈëfel£¬Í¨³£ÓÃÓÚÒì³£³öÏÖµÄÇé¿ö
-    exception = eGon2_boot_detect();
-    if(!exception)
-    {
-        eGon2_printf("key found, jump to fel\n");
 
-        eGon2_simple_jump_Fel();
-    }
-    else if(exception > 0)
+    //æ£€æŸ¥æ˜¯å¦éœ€è¦ç›´æ¥è¿›å…¥felï¼Œé€šå¸¸ç”¨äºå¼‚å¸¸å‡ºç°çš„æƒ…å†µ
+    if(eGon2_storage_type_get() != 1) 	//å¡0è¿è¡Œ
     {
-		boot1_file_head_t  *boot1_buf;
+    	exception = eGon2_boot_detect();
 
-		boot1_buf = (boot1_file_head_t *)BOOT1_BASE;
-    	boot1_buf->prvt_head.uart_port = exception;
-    }
-    else if(exception == -2)
-    {
-    	eGon2_printf("key found, try to debug mode\n");
+	    if(!exception)
+	    {
+	        eGon2_printf("key found, jump to fel\n");
 
-    	force_to_card0 = 1;
-    }
-    
+	        eGon2_simple_jump_Fel();
+	    }
+	    else if(exception > 0)
+	    {
+			boot1_file_head_t  *boot1_buf;
+
+			boot1_buf = (boot1_file_head_t *)BOOT1_BASE;
+	    	boot1_buf->prvt_head.uart_port = exception;
+	    }
+	    else if(exception == -2)
+	    {
+	    	eGon2_printf("key found, try to debug mode\n");
+
+	    	force_to_card0 = 1;
+	    }
+	}
+	//è®¾ç½®ç”µå‹
+	axp_set_charge_vol_limit();
+	axp_set_all_limit();
+	axp_set_hardware_poweron_vol();
+	axp_set_power_supply_output();
+
+	//check the factory mode
+	axp_probe_startup_check_factory_mode();
+
 	eGon2_printf("flash init start\n");
-    if(!eGon2_block_device_init())
+	if(!eGon2_block_device_init())
     {
     	eGon2_printf("flash init finish\n");
     }
@@ -182,8 +192,8 @@ void eGon2_start( void )
     	eGon2_jump_Fel( );
     }
     eGon2_printf("fs mount ok\n");
-	
-#ifndef SCRIPT_INSTALL_EARLY
+	//åŠ è½½é…ç½®æ–‡ä»¶
+//	script_buf = (void *)SCRIPT_BASE;
 	hfile = FS_fopen("c:\\script.bin", "r");
 	if(hfile)
 	{
@@ -194,44 +204,62 @@ void eGon2_start( void )
 		FS_fclose(hfile);
 		eGon2_script_parser_init((char *)SCRIPT_BASE);
 	}
-	else
-	{
-		eGon2_printf("unable to open script file, check it carefully\n");
-	}
-	eGon2_printf("script finish\n");
-#endif
-
-	//ÉèÖÃµçÑ¹
-	eGon2_set_power_on_vol();
-	eGon2_power_set_vol();
-	eGon2_config_charge_current(0);//¿ª»ú×´Ì¬ÏÂ³äµçµçÁ÷£¬300MA
-
-    dram_para_set();
-
+	dram_para_set();
+//	dram_para_transfer();
+//	else
+//	{
+//		eGon2_printf("unable to open script file, check it carefully\n");
+//	}
+    //åˆå§‹åŒ–è„šæœ¬
+//    if(script_exist)
+//    {
+//    	//å¦‚æœè„šæœ¬å­˜åœ¨
+//    	eGon2_printf("script installed early\n");
+//	    script_buf = (void *)SCRIPT_BASE;
+//		eGon2_script_parser_init((char *)script_buf);
+//    }
+//    else
+//    {
+//    	eGon2_printf("script install late\n");
+//    }
+	//eGon2_config_charge_current(0);
+	//è®¾ç½®nandå‚æ•°åˆ°è„šæœ¬ä¸­
+//	{
+//		while((*(int *)(0x40000000)) != 0x55);
+//	}
 #if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
-    eGon2_block_ratio();
+	eGon2_block_ratio();
 #endif
-	if(force_to_card0 == 1)
-	{
-		eGon2_force_to_debug();
-	}
+	type = eGon2_storage_type_set();
+//#endif
+//	if(force_to_card0 == 1)
+//	{
+//		eGon2_force_to_debug();
+//	}
     {
-
-        char  *str_pointer_array[1];
-		char  str_array0[32] = "c:\\boot.axf";
-		char  str_array1[32] = "c:\\sprite.axf";
-
+     	char  *str_pointer_array[1];
+     	char  str_array0[32] = "c:\\boot.axf";
+     	char  str_array1[32] = "c:\\sprite.axf";
+//#if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
+//		char  str_array0[32] = "c:\\boot.axf";
+//
 		str_pointer_array[0] = str_array0;
-
-		if(eGon2_storage_type_set() == 1)
+//#elif SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_SD_CARD
+//		char  str_array0[32] = "c:\\boot.axf";
+//		char  str_array1[32] = "c:\\sprite.axf";
+//
+//		str_pointer_array[0] = str_array0;
+//
+		str_pointer_array[0] = str_array0;
+		if(type == 1)
 		{
 			if(!BT1_head.boot_head.platform[7])
 			{
 				str_pointer_array[0] = str_array1;
 			}
 		}
-
-        eGon2_run_app(1, str_pointer_array);
+//#endif
+		eGon2_run_app(1, str_pointer_array);
     }
 
     for(;;)
@@ -252,13 +280,13 @@ static void print_version(void)
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -272,13 +300,13 @@ static __s32 reserved_init(void)
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -297,46 +325,34 @@ static int eGon2_storage_type_set(void)
 
 	if(!eGon2_script_parser_patch("target", "storage_type", type))
 	{
-		eGon2_printf("storage_type=%d\n", type);
+		eGon2_printf("type=%d\n", type);
 	}
-    #if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND
-        eGon2_script_parser_patch("nand_para", "nand_used", 1);
-        eGon2_script_parser_patch("mmc2_para", "sdc_used", 0);
-    #elif SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_SD_CARD
-    if(1 == type)
-    {
-        eGon2_script_parser_patch("mmc0_para", "sdc_used", 1);
-        eGon2_script_parser_patch("mmc0_para", "sdc_detmode", 3);
-    }else
-    if(2 == type)
-    {
-        eGon2_script_parser_patch("mmc2_para", "sdc_used", 1);
-        eGon2_script_parser_patch("mmc2_para", "sdc_detmode", 3);
-        eGon2_script_parser_patch("nand_para", "nand_used", 0);
-    }
-    #endif
-    
-	return type ;
+
+	return type;
 }
 
+static int eGon2_storage_type_get(void)
+{
+	boot_file_head_t  *bfh = (boot_file_head_t *)BOOT1_BASE;
+
+	return bfh->eGON_vsn[2];
+}
 /*
 ************************************************************************************************************
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
 */
-
-#ifdef SCRIPT_INSTALL_EARLY
 static int script_relocation(void)
 {
 	char *start;
@@ -344,14 +360,15 @@ static int script_relocation(void)
 
 	start = (char *)BOOT1_BASE + BT1_head.boot_head.boot1_length;
     size  = BT1_head.boot_head.length - BT1_head.boot_head.boot1_length;
-    __debug("total boot1 file length = %d\n", BT1_head.boot_head.length);
-	__debug("boot1 length = %d\n", BT1_head.boot_head.boot1_length);
-	__debug("script start addr = %x, size = %d\n", (__u32)start, size);
+#ifdef DEBUG
+    eGon2_printf("total length = %d\n", BT1_head.boot_head.length);
+	eGon2_printf("boot1 length = %d\n", BT1_head.boot_head.boot1_length);
+	eGon2_printf("start = %x, size = %d\n", (__u32)start, size);
 
-	__debug("script dest buffer = %x\n", SCRIPT_BASE);
+	eGon2_printf("dest buffer = %x\n", SCRIPT_BASE);
 
-	__debug("size=%d\n", size);
-
+	eGon2_printf("size=%d\n", size);
+#endif
 	if(size)
 	{
 		memcpy((void *)SCRIPT_BASE, start, size);
@@ -364,33 +381,223 @@ static int script_relocation(void)
 
     return 0;
 }
-#endif
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    å‡½æ•°åç§°ï¼š
+*
+*    å‚æ•°åˆ—è¡¨ï¼š
+*
+*    è¿”å›å€¼  ï¼š
+*
+*    è¯´æ˜    ï¼š
+*
+*
+************************************************************************************************************
+*/
+static void dram_para0_transfer(void)
+{
+	char *dest_addr = (char *)SCRIPT_BASE + SZ_64K - 1024;
 
+	eGon2_printf("dest addr = %x\n", (__u32)dest_addr);
+	memcpy(dest_addr, 0x28000 + 0, 512);
+
+	eGon2_printf("[MDFS]boot1 addr = 0x%x\n", BT1_head.prvt_head.script_buf);
+	{
+		int j;
+		int *addr = (int *)dest_addr;
+
+//	for(j=0;j<512/4;j++)
+//		{
+//			if(!(j&0x07))
+//			{
+//				eGon2_printf("\n");
+//			}
+//			eGon2_printf("%x\n", addr[j]);
+//		}
+	}
+
+	return;
+}
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    å‡½æ•°åç§°ï¼š
+*
+*    å‚æ•°åˆ—è¡¨ï¼š
+*
+*    è¿”å›å€¼  ï¼š
+*
+*    è¯´æ˜    ï¼š
+*
+*
+************************************************************************************************************
+*/
+//static void dram_para_transfer(void)
+//{
+//	__u32 value;
+//
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_clk", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_type", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_zq", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_odt_en", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_para1", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_para2", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_mr0", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_mr1", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_mr2", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_mr3", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//
+//
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr0", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr1", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr2", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr3", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr4", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr5", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr6", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr7", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr8", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr9", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr10", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr11", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr12", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//	if(!eGon2_script_parser_fetch("dram_para", "dram_tpr13", &value, 1))
+//	{
+//		eGon2_printf("%x\n", value);
+//	}
+//
+//	return;
+//}
+/*
+************************************************************************************************************
+*
+*                                             function
+*
+*    å‡½æ•°åç§°ï¼š
+*
+*    å‚æ•°åˆ—è¡¨ï¼š
+*
+*    è¿”å›å€¼  ï¼š
+*
+*    è¯´æ˜    ï¼š
+*
+*
+************************************************************************************************************
+*/
 static void dram_para_set(void)
 {
-    __u32 *addr = (__u32 *)&BT1_head.prvt_head.dram_para;
+//	char *dest_addr = (char *)SCRIPT_BASE + SZ_64K - 2048;
+//
+//	eGon2_printf("dest addr = %x\n", (__u32)dest_addr);
+//	memcpy(dest_addr, BT1_head.prvt_head.script_buf, 512);
+	__u32 value;
+	int   i;
+	__u32 *addr = (__u32 *)BT1_head.prvt_head.script_buf;
 
-    __debug("dram_para_set start\n");
-    eGon2_script_parser_patch("dram_para", "dram_baseaddr", addr[0]);
-    eGon2_script_parser_patch("dram_para", "dram_clk", addr[1]);
-    eGon2_script_parser_patch("dram_para", "dram_type", addr[2]);
-    eGon2_script_parser_patch("dram_para", "dram_rank_num", addr[3]);
-    eGon2_script_parser_patch("dram_para", "dram_chip_density", addr[4]);
-    eGon2_script_parser_patch("dram_para", "dram_io_width", addr[5]);
-    eGon2_script_parser_patch("dram_para", "dram_bus_width", addr[6]);
-    eGon2_script_parser_patch("dram_para", "dram_cas", addr[7]);
-    eGon2_script_parser_patch("dram_para", "dram_zq", addr[8]);
-    eGon2_script_parser_patch("dram_para", "dram_odt_en", addr[9]);
-    eGon2_script_parser_patch("dram_para", "dram_size", addr[10]);
-    eGon2_script_parser_patch("dram_para", "dram_tpr0", addr[11]);
-    eGon2_script_parser_patch("dram_para", "dram_tpr1", addr[12]);
-    eGon2_script_parser_patch("dram_para", "dram_tpr2", addr[13]);
-    eGon2_script_parser_patch("dram_para", "dram_tpr3", addr[14]);
-    eGon2_script_parser_patch("dram_para", "dram_tpr4", addr[15]);
-    eGon2_script_parser_patch("dram_para", "dram_tpr5", addr[16]);
-    eGon2_script_parser_patch("dram_para", "dram_emr1", addr[17]);
-    eGon2_script_parser_patch("dram_para", "dram_emr2", addr[18]);
-    eGon2_script_parser_patch("dram_para", "dram_emr3", addr[19]);
-    __debug("dram_para_set end\n");
+	__inf("dram_para_set start\n");
+	eGon2_script_parser_patch("dram_para", "dram_clk", addr[0]);
+	eGon2_script_parser_patch("dram_para", "dram_type", addr[1]);
+	eGon2_script_parser_patch("dram_para", "dram_zq", addr[2]);
+	eGon2_script_parser_patch("dram_para", "dram_odt_en", addr[3]);
+
+	eGon2_script_parser_patch("dram_para", "dram_para1", addr[4]);
+	eGon2_script_parser_patch("dram_para", "dram_para2", addr[5]);
+
+	eGon2_script_parser_patch("dram_para", "dram_mr0", addr[6]);
+	eGon2_script_parser_patch("dram_para", "dram_mr1", addr[7]);
+	eGon2_script_parser_patch("dram_para", "dram_mr2", addr[8]);
+	eGon2_script_parser_patch("dram_para", "dram_mr3", addr[9]);
+
+	eGon2_script_parser_patch("dram_para", "dram_tpr0", addr[10]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr1", addr[11]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr2", addr[12]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr3", addr[13]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr4", addr[14]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr5", addr[15]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr6", addr[16]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr7", addr[17]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr8", addr[18]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr9", addr[19]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr10", addr[20]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr11", addr[21]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr12", addr[22]);
+	eGon2_script_parser_patch("dram_para", "dram_tpr13", addr[23]);
+	__inf("dram_para_set end\n");
+
+	return;
 }
 

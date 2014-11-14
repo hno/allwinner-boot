@@ -71,7 +71,8 @@
 
 #define BOOT0_BASE                      ( EGON2_SRAM_BASE                       )
 #define BOOT1_BASE                      ( EGON2_DRAM_BASE  + EGON2_BOOT1_OFFSET )
-#define FEL_BASE                        ( EGON2_RESET_BASE + 0x20               )
+//#define FEL_BASE                        ( EGON2_RESET_BASE + 0x20               )
+#define FEL_BASE                        ( EGON2_RESET_BASE + 0x4004             )
 #define SCRIPT_BASE						( BOOT1_BASE       + 0x00C00000			)
 
 
@@ -120,6 +121,8 @@ typedef struct _boot_dram_para_t
     __u32           dram_emr2;
     __u32           dram_emr3;
 }boot_dram_para_t;
+
+
 /******************************************************************************/
 /*                              file head of Boot                             */
 /******************************************************************************/

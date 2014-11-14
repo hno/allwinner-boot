@@ -1,101 +1,115 @@
 
 #include "lcd_panel_cfg.h"
+#include "lcd_bak/lcd_edp_anx9804.h"
+#include "lcd_bak/lcd_edp_anx6345.h"
 
-//delete this line if you want to use the lcd para define in sys_config1.fex
-//#define LCD_PARA_USE_CONFIG
+static void LCD_panel_init(__u32 sel);
+static void LCD_panel_exit(__u32 sel);
 
-#ifdef LCD_PARA_USE_CONFIG
-static __u8 g_gamma_tbl[][2] = 
-{
-//{input value, corrected value}
-    {0, 0},
-    {15, 15},
-    {30, 30},
-    {45, 45},
-    {60, 60},
-    {75, 75},
-    {90, 90},
-    {105, 105},
-    {120, 120},
-    {135, 135},
-    {150, 150},
-    {165, 165},
-    {180, 180},
-    {195, 195},
-    {210, 210},
-    {225, 225},
-    {240, 240},
-    {255, 255},
-};
-
-static void LCD_cfg_panel_info(__panel_para_t * info)
+static void LCD_cfg_panel_info(__panel_extend_para_t * info)
 {
     __u32 i = 0, j=0;
-    
-    memset(info,0,sizeof(__panel_para_t));
-
-    info->lcd_x             = 800;
-    info->lcd_y             = 480;
-    info->lcd_dclk_freq     = 33;       //MHz
-    
-    info->lcd_pwm_not_used  = 0;
-    info->lcd_pwm_ch        = 1;
-    info->lcd_pwm_freq      = 10000;     //Hz
-    info->lcd_pwm_pol       = 0;
-
-    info->lcd_if            = 0;        //0:hv(sync+de); 1:8080; 2:ttl; 3:lvds
-
-    info->lcd_hbp           = 215;      //hsync back porch
-    info->lcd_ht            = 1055;     //hsync total cycle
-    info->lcd_hspw       = 0;        //hsync plus width
-    info->lcd_vbp           = 34;       //vsync back porch
-    info->lcd_vt            = 2 * 525;  //vysnc total cycle *2
-    info->lcd_vspw       = 0;        //vysnc plus width
-
-    info->lcd_hv_if         = 0;        //0:hv parallel 1:hv serial 
-    info->lcd_hv_smode      = 0;        //0:RGB888 1:CCIR656
-    info->lcd_hv_s888_if    = 0;        //serial RGB format
-    info->lcd_hv_syuv_if    = 0;        //serial YUV format
-
-    info->lcd_cpu_if        = 0;        //0:18bit 4:16bit
-    info->lcd_frm           = 0;        //0: disable; 1: enable rgb666 dither; 2:enable rgb656 dither
-
-    info->lcd_lvds_ch       = 0;        //0:single channel; 1:dual channel
-    info->lcd_lvds_mode     = 0;        //0:NS mode; 1:JEIDA mode
-    info->lcd_lvds_bitwidth = 0;        //0:24bit; 1:18bit
-    info->lcd_lvds_io_cross = 0;        //0:normal; 1:pn cross
-
-    info->lcd_io_cfg0       = 0x10000000;
-
-    info->lcd_gamma_correction_en = 0;
-    if(info->lcd_gamma_correction_en)
+    __u32 items;
+    __u8 lcd_gamma_tbl[][2] = 
     {
-        __u32 items = sizeof(g_gamma_tbl)/2;
-        
-        for(i=0; i<items-1; i++)
+    //{input value, corrected value}
+        {0, 0},
+        {15, 15},
+        {30, 30},
+        {45, 45},
+        {60, 60},
+        {75, 75},
+        {90, 90},
+        {105, 105},
+        {120, 120},
+        {135, 135},
+        {150, 150},
+        {165, 165},
+        {180, 180},
+        {195, 195},
+        {210, 210},
+        {225, 225},
+        {240, 240},
+        {255, 255},
+    };
+
+    __u8 lcd_bright_curve_tbl[][2] = 
+    {
+        //{input value, corrected value}
+        {0    ,0  },//0
+        {15   ,3  },//0
+        {30   ,6  },//0
+        {45   ,9  },// 1
+        {60   ,12  },// 2
+        {75   ,16  },// 5
+        {90   ,22  },//9
+        {105   ,28 }, //15
+        {120  ,36 },//23
+        {135  ,44 },//33
+        {150  ,54 },
+        {165  ,67 },
+        {180  ,84 },
+        {195  ,108}, 
+        {210  ,137}, 
+        {225 ,171}, 
+        {240 ,210}, 
+        {255 ,255},
+    };
+
+    __u32 lcd_cmap_tbl[2][3][4] = {
+    		{
+                {LCD_CMAP_G0,LCD_CMAP_B1,LCD_CMAP_G2,LCD_CMAP_B3},
+        		{LCD_CMAP_B0,LCD_CMAP_R1,LCD_CMAP_B2,LCD_CMAP_R3},
+        		{LCD_CMAP_R0,LCD_CMAP_G1,LCD_CMAP_R2,LCD_CMAP_G3},
+            },
+    		{
+                {LCD_CMAP_B3,LCD_CMAP_G2,LCD_CMAP_B1,LCD_CMAP_G0},
+        		{LCD_CMAP_R3,LCD_CMAP_B2,LCD_CMAP_R1,LCD_CMAP_B0},
+        		{LCD_CMAP_G3,LCD_CMAP_R2,LCD_CMAP_G1,LCD_CMAP_R0},
+            },
+    };
+
+    memset(info,0,sizeof(__panel_extend_para_t));
+
+    items = sizeof(lcd_gamma_tbl)/2;   
+    for(i=0; i<items-1; i++)
+    {
+        __u32 num = lcd_gamma_tbl[i+1][0] - lcd_gamma_tbl[i][0];
+
+        for(j=0; j<num; j++)
         {
-            __u32 num = g_gamma_tbl[i+1][0] - g_gamma_tbl[i][0];
+            __u32 value = 0;
 
-            //__inf("handling{%d,%d}\n", g_gamma_tbl[i][0], g_gamma_tbl[i][1]);
-            for(j=0; j<num; j++)
-            {
-                __u32 value = 0;
-
-                value = g_gamma_tbl[i][1] + ((g_gamma_tbl[i+1][1] - g_gamma_tbl[i][1]) * j)/num;
-                info->lcd_gamma_tbl[g_gamma_tbl[i][0] + j] = (value<<16) + (value<<8) + value;
-                //__inf("----gamma %d, %d\n", g_gamma_tbl[i][0] + j, value);
-            }
+            value = lcd_gamma_tbl[i][1] + ((lcd_gamma_tbl[i+1][1] - lcd_gamma_tbl[i][1]) * j)/num;
+            info->lcd_gamma_tbl[lcd_gamma_tbl[i][0] + j] = (value<<16) + (value<<8) + value;
         }
-        info->lcd_gamma_tbl[255] = (g_gamma_tbl[items-1][1]<<16) + (g_gamma_tbl[items-1][1]<<8) + g_gamma_tbl[items-1][1];
-        //__inf("----gamma 255, %d\n", g_gamma_tbl[items-1][1]);
     }
+    info->lcd_gamma_tbl[255] = (lcd_gamma_tbl[items-1][1]<<16) + (lcd_gamma_tbl[items-1][1]<<8) + lcd_gamma_tbl[items-1][1];
+
+    items = sizeof(lcd_bright_curve_tbl)/2;   
+    for(i=0; i<items-1; i++)
+    {
+        __u32 num = lcd_bright_curve_tbl[i+1][0] - lcd_bright_curve_tbl[i][0];
+
+        for(j=0; j<num; j++)
+        {
+            __u32 value = 0;
+
+            value = lcd_bright_curve_tbl[i][1] + ((lcd_bright_curve_tbl[i+1][1] - lcd_bright_curve_tbl[i][1]) * j)/num;
+            info->lcd_bright_curve_tbl[lcd_bright_curve_tbl[i][0] + j] = value;
+        }
+    }
+    info->lcd_bright_curve_tbl[255] = lcd_bright_curve_tbl[items-1][1];
+
+    memcpy(info->lcd_cmap_tbl, lcd_cmap_tbl, sizeof(lcd_cmap_tbl));
+
 }
-#endif
 
 static __s32 LCD_open_flow(__u32 sel)
 {
 	LCD_OPEN_FUNC(sel, LCD_power_on, 50);   //open lcd power, and delay 50ms
-	LCD_OPEN_FUNC(sel, TCON_open, 500);     //open lcd controller, and delay 500ms
+	LCD_OPEN_FUNC(sel, LCD_panel_init,	200);   //open lcd power, than delay 200ms
+	LCD_OPEN_FUNC(sel, TCON_open, 100);     //open lcd controller, and delay 100ms
 	LCD_OPEN_FUNC(sel, LCD_bl_open, 0);     //open lcd backlight, and delay 0ms
 
 	return 0;
@@ -105,7 +119,8 @@ static __s32 LCD_close_flow(__u32 sel)
 {	
 	LCD_CLOSE_FUNC(sel, LCD_bl_close, 0);       //close lcd backlight, and delay 0ms
 	LCD_CLOSE_FUNC(sel, TCON_close, 0);         //close lcd controller, and delay 0ms
-	LCD_CLOSE_FUNC(sel, LCD_power_off, 1000);   //close lcd power, and delay 1000ms
+	LCD_CLOSE_FUNC(sel, LCD_panel_exit,	200);   //open lcd power, than delay 200ms
+	LCD_CLOSE_FUNC(sel, LCD_power_off, 500);   //close lcd power, and delay 500ms
 
 	return 0;
 }
@@ -132,6 +147,32 @@ static void LCD_bl_close(__u32 sel)
     LCD_PWM_EN(sel, 0);//close pwm module
 }
 
+static void LCD_panel_init(__u32 sel)
+{
+    __panel_para_t *info = OSAL_malloc(sizeof(__panel_para_t));
+
+    lcd_get_panel_para(sel, info);
+    if((info->lcd_if == LCD_IF_EDP) && (info->lcd_edp_tx_ic == 0))
+    {
+        //__inf("edp select anx9804 ic\n");
+        anx9804_init(info);
+    }
+    else if((info->lcd_if == LCD_IF_EDP) && (info->lcd_edp_tx_ic == 1))
+    {
+        //__inf("edp select anx6345 ic\n");
+        anx6345_init(info);
+    }
+
+    OSAL_free(info);
+
+    return;
+}
+
+static void LCD_panel_exit(__u32 sel)
+{
+	return ;
+}
+
 //sel: 0:lcd0; 1:lcd1
 static __s32 LCD_user_defined_func(__u32 sel, __u32 para1, __u32 para2, __u32 para3)
 {
@@ -140,9 +181,7 @@ static __s32 LCD_user_defined_func(__u32 sel, __u32 para1, __u32 para2, __u32 pa
 
 void LCD_get_panel_funs_1(__lcd_panel_fun_t * fun)
 {
-#ifdef LCD_PARA_USE_CONFIG
     fun->cfg_panel_info = LCD_cfg_panel_info;//delete this line if you want to use the lcd para define in sys_config1.fex
-#endif
     fun->cfg_open_flow = LCD_open_flow;
     fun->cfg_close_flow = LCD_close_flow;
     fun->lcd_user_defined_func = LCD_user_defined_func;

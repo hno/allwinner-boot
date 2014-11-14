@@ -111,10 +111,11 @@ void UART_open( __s32 uart_port, void  *uart_ctrl, __u32 apb_freq )
 	*reg &= ~(1 << (16 + port));
 	for( i = 0; i < 100; i++ );
 	*reg |=  (1 << (16 + port));
+
+	(*(volatile unsigned int *)0x01c202D8) |= (1 << (16 + port));
 	// config uart gpio
 	// config tx gpio
 	boot_set_gpio((normal_gpio_cfg *)uart_ctrl, 2, 1);
-
     // Set Baudrate
     uart_clk = ( apb_freq + 8*UART_BAUD ) / (16*UART_BAUD);
     lcr = UART_REG_LCR(port);

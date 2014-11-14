@@ -52,8 +52,7 @@ __s32 eGon2_dispatch_parameters(__u32 para_name, void *para_addr)
 			boot_nand_para_t *nand_info = (boot_nand_para_t *)BT1_head.prvt_head.storage_data;
 
             memset( p, 0, sizeof(boot_nand_para_t) );
-	        // p->good_block_ratio = nand_info->good_block_ratio;
-	        p->good_block_ratio = 960;
+	        p->good_block_ratio = nand_info->good_block_ratio;
         }
         break;
 

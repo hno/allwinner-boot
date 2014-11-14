@@ -48,7 +48,7 @@ typedef struct sunxi_mbr
 {
 	unsigned  int       crc32;				        // crc 1k - 4
 	unsigned  int       version;			        // 版本信息， 0x00000100
-	unsigned  char 	    magic[8];			        //"softw411"
+	unsigned  char 	    magic[8];			        //"softw311"
 	unsigned  int 	    copy;				        //分数
 	unsigned  int 	    index;				        //第几个MBR备份
 	unsigned  int       PartCount;			        //分区个数
@@ -139,5 +139,4 @@ dynamic_boot_head;
 #endif	//_WBOOT_MBR_H_
 
 /* end of _WBOOT_MBR_H_ */
-
 

@@ -19,6 +19,8 @@
 #include "include.h"
 #include "sw_iic.h"
 
+#if 0
+
 #define   i2c_ctl    twi_ports[twi_index]
 
 
@@ -398,9 +400,9 @@ __s32 eGon2_twi_init(__s32 twi_port, void *twi_ctrl, __u32 system_clock, __u32 t
 {
     __s32   reset_delay;
 
-    CCMU_REG_APB_MOD1 &= ~(1 << (0 + twi_port));
+    CCMU_REG_APB2_GATING &= ~(1 << (0 + twi_port));
     _for_loop(100);
-    CCMU_REG_APB_MOD1 |=  (1 << (0 + twi_port));
+    CCMU_REG_APB2_GATING |=  (1 << (0 + twi_port));
 
     eGon2_GPIO_Set_cfg((normal_gpio_cfg *)twi_ctrl, 2, 1);
 
@@ -492,7 +494,7 @@ set_clk:
 */
 __s32 eGon2_twi_exit(void)
 {
-    CCMU_REG_APB_MOD1 &= ~(1 << (0 + twi_index));
+    CCMU_REG_APB2_GATING &= ~(1 << (0 + twi_index));
 
     return 0;
 }
@@ -737,7 +739,7 @@ __s32  BOOT_TWI_WriteEx(__u32 arg1, __u8 *arg2, __u8 *arg3, __u8 count)
     return eGon2_twi_write((void *)&twi_data);
 }
 
-
+#endif
 
 
 

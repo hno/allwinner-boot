@@ -235,31 +235,24 @@ __s32 NF_read( __u32 sector_num, void *buffer, __u32 N )
 *          NF_ERROR          ²Ù×÷Ê§°Ü
 *±¸    ×¢:
 *******************************************************************************/
-static __u8  page_buf[MAX_PAGE_SIZE];
 __s32 NF_read_status( __u32 blk_num )
 {
 	struct boot_physical_param  para;
 	__u8  oob_buf[MAX_PAGE_SIZE/NF_SECTOR_SIZE * OOB_BUF_SIZE_PER_SECTOR];
-	
+	__u8  page_buf[MAX_PAGE_SIZE];
+
 	para.chip = 0;
 	para.block = blk_num;
 	para.page = page_with_bad_block;
 	para.mainbuf = page_buf;
 	para.oobbuf = oob_buf;
-   
+
 	if( NAND_PhyRead( &para ) == FAIL )
 		return NF_ERROR;
 	if( oob_buf[0] != (__u8)0xFF )
-	{
-        
 		return NF_BAD_BLOCK;
-         
-	}
 	else
-     {
-       
 		return NF_GOOD_BLOCK;
-	}
 }
 
 

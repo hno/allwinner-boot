@@ -32,6 +32,26 @@ int					  cue;
 
 extern  __u32 usb_start(void);
 extern  __u32 usb_run(void);
+
+static void SIMD_HW_enable(void)
+{
+#ifdef __NEON_SIMD__
+__asm__ __volatile__ (
+"push {r0 ,r1}\n\t"
+"MRC p15, #0, r1, c1, c0, #2 \n\t"/* r1 = Access Control Register*/
+"ORR r1, r1, #(0xf << 20)\n\t" /* enable full access for p10,11*/
+"MCR p15, #0, r1, c1, c0, #2\n\t" /*Access Control Register = r1*/
+"MOV r1, #0\n\t"
+"MCR p15, #0, r1, c7, c5, #4\n\t" /*flush prefetch buffer because of FMXR below*/
+"MOV r0,#0x40000000\n\t" /*and CP 10 & 11 were only just enabled,Enable VFP itself*/
+"FMXR FPEXC, r0\n\t" /*FPEXC = r0*/
+"pop {r0 ,r1}\n\t"
+"isb sy\n\t"
+"dsb sy\n\t"
+);
+#endif
+}
+
 /*
 *******************************************************************************
 *                     BootMain
@@ -53,11 +73,11 @@ extern  __u32 usb_run(void);
 int BootMain(int argc, char **argv)
 {
 	__s32                 ret;
-    int                   erase_flash;
+	int                   erase_flash;
 	MBR					  mbr_info;
     boot_global_info_t   *global_info;
 
-    DMSG_INFO("big firmware! here we go !\n");
+    SIMD_HW_enable();
 	DMSG_INFO("Sprite start\n");
 	{
 		char ch;
@@ -96,8 +116,7 @@ int BootMain(int argc, char **argv)
 	   			break;
 	   	}
 	}
-	*(volatile unsigned int *)(0x1c20C00 + 0x118) = 0;
-	*(volatile unsigned int *)(0x1c20C00 + 0x11C) = 3;
+	__inf("card sprite begin\n");
 	//数据初始化
 	memset(&board_res, 0, sizeof(boot_hardware_res));
     //申请内存，填充第一个启动脚本
@@ -139,7 +158,7 @@ int BootMain(int argc, char **argv)
         return -1;
 	}
 	boot_ui_check_device_open();
-    
+
 	ret = wBoot_script_parser_fetch("platform", "eraseflag", &erase_flash, 1);
 	if((!ret) && (erase_flash))
 	{
@@ -149,9 +168,9 @@ int BootMain(int argc, char **argv)
 	{
 		erase_flash = 0;
 	}
-    
+
     //开始准备系统数据
-    ret = card_sprite((void *)&mbr_info,erase_flash, cue);
+    ret = card_sprite((void *)&mbr_info, erase_flash, cue);
 
 	sprite_wrn_exit();
 	sprite_led_exit(ret);

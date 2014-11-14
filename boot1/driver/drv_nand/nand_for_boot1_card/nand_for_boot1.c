@@ -1,14 +1,18 @@
 #include "egon2.h"
 #include "boot0_v2.h"
-#include "bsp_nand.h"
+#include "boot1_v2.h"
+#include "../bsp_nand.h"
 #include "string.h"
 
-#define  NAND_FOR_CARD_PHONIX
 #define  OOB_BUF_SIZE                   32
 
-static __u32 nand_good_block_ratio_flag = 0;
-static __u32 nand_good_blk_ratio = 0;
 
+
+
+static __u32 nand_good_block_ratio_flag = 0;
+
+static __u32 bad_block_scan_flag = 0;
+static __u32 nand_good_blk_ratio=0; 
 
 extern __s32 NAND_Print(const char * str, ...);
 /*
@@ -27,6 +31,13 @@ __s32 NAND_PhyRead (struct boot_physical_param *readop)
 {
 
 	return(PHY_SimpleRead (readop));
+
+}
+
+__s32 NAND_PhyRead_2CH (struct boot_physical_param *readop)
+{
+
+	return(PHY_SimpleRead_2CH (readop));
 
 }
 
@@ -101,6 +112,11 @@ __s32 NAND_PhyErase(struct boot_physical_param *eraseop)
 	return (PHY_SimpleErase (eraseop ));
 }
 
+__s32 NAND_PhyErase_2CH(struct boot_physical_param *eraseop)
+{
+	return (PHY_SimpleErase_2CH (eraseop ));
+}
+
 /*
 ************************************************************************************************************************
 *                       INIT NAND FLASH
@@ -116,23 +132,9 @@ __s32 NAND_PhyErase(struct boot_physical_param *eraseop)
 __s32 NAND_PhyInit(void)
 {
 	__s32 ret;
-//	__u32 nand_good_blk_ratio;
+	//__u32 nand_good_blk_ratio;
 	boot_nand_para_t param;
 
-//	if(!nand_good_block_ratio_flag)
-//	{
-//    	if(wBoot_get_para( WBOOT_PARA_NANDFLASH_INFO, (void *)&param))
-//    	{
-//			NAND_Print("get good block ratio info failed.\n");
-//			return -1;
-//    	}
-//    	nand_good_blk_ratio = param.good_block_ratio;
-//    }
-//    else
-//    {
-//    	nand_good_blk_ratio = nand_good_block_ratio_flag;
-//    }
-//	NAND_Print("get the good blk ratio from hwscan : %d \n", nand_good_blk_ratio);
 	NAND_Print("NB1 : enter phy init\n");
 
     ret = PHY_Init();
@@ -148,39 +150,21 @@ __s32 NAND_PhyInit(void)
 		NAND_Print("NB1 : nand scan fail\n");
 		return ret;
 	}
-#ifdef NAND_FOR_CARD_PHONIX
-	if(!nand_good_block_ratio_flag)
+
+	if(!bad_block_scan_flag)
 	{
 		NAND_GetParam((void *)&param);
 		nand_good_blk_ratio =  NAND_BadBlockScan((void *)&param);
 		NAND_SetValidBlkRatio(nand_good_blk_ratio);
-	  NAND_Print("get the good blk ratio from bad block scan : %d \n", nand_good_blk_ratio);
-	  nand_good_block_ratio_flag = 1;
+	    NAND_Print("get the good blk ratio from bad block scan : %d \n", nand_good_blk_ratio);
+	    bad_block_scan_flag = 1;
 	}
 	else
 	{
-		NAND_Print(" bad blcok has done before,nand good block ratio is : %d \n", nand_good_blk_ratio);
+		NAND_Print(" [NandPhyinit]bad blcok has done before,nand good block ratio is : %d \n", nand_good_blk_ratio);
 		NAND_SetValidBlkRatio(nand_good_blk_ratio);	
 	}
-#else
-	//modify ValidBlkRatio
-	if(wBoot_get_para( WBOOT_PARA_NANDFLASH_INFO, (void *)&param))
-  {
-		NAND_Print("get good block ratio info failed.\n");
-		return -1;
-  }
-  else
-  {
-  	nand_good_blk_ratio = param.good_block_ratio;
-  	if(nand_good_blk_ratio == 0)
-  		 NAND_Print("get the good blk ratio is 0,use preset value\n");
-  	else
-  	{
-  		NAND_SetValidBlkRatio(nand_good_blk_ratio);
-  		NAND_Print("get the good blk ratio from hwscan : %d \n", nand_good_blk_ratio);
-		}
-	}
-#endif   
+
 	NAND_Print("NB1 : nand phy init ok\n");
 	return(PHY_ChangeMode(1));
 }
@@ -301,6 +285,7 @@ __s32 NAND_Init(void)
          return -8;
     }
 #ifdef BOOT_CACHE_OPEN
+    NAND_Print("NB1 : NAND_CacheOpen!!!!\n");
     result = NAND_CacheOpen();
 #endif
 
@@ -324,6 +309,7 @@ __s32 NAND_Exit(void)
 	__s32   result;
 
 #ifdef BOOT_CACHE_OPEN
+     NAND_Print("NB1 : NAND_CacheClose!!!!\n");
     NAND_CacheClose();
 #endif
 
@@ -376,7 +362,8 @@ __s32 NAND_HWScanStart(boot_nand_para_t *nand_param)
 
 	NAND_GetParam(nand_param);
 
-	nand_good_block_ratio_flag = nand_param->good_block_ratio;
+	//nand_good_block_ratio_flag = nand_param->good_block_ratio;
+	//NAND_Print("NHW : nand_good_block_ratio_flag is %d\n", nand_good_block_ratio_flag);
 	NAND_Print("NHW : nand hw scan ok\n");
 
 	return(PHY_ChangeMode(1));
@@ -758,7 +745,7 @@ __s32  NAND_EraseChip( const boot_nand_para_t *nand_param)
 	__u32  die_skip_flag = (nand_param->OperationOpt)&(0x1<<11);
 	__u32  block_cnt_of_die = (nand_param->BlkCntPerDie);
 
-
+	bad_block_scan_flag = 0;
 
     page_buf_read = (__u8*)wBoot_malloc(32 * 1024);
     if(!page_buf_read)
@@ -847,10 +834,10 @@ __s32  NAND_EraseChip( const boot_nand_para_t *nand_param)
 				if( para_read.page== 0xEE)
 				    break;
 
-				ret = NAND_PhyRead(& para_read );
+				ret = NAND_PhyRead_2CH(& para_read );
 
 				//check the current block is a all 0x00 block
-
+			#if 0
 				for(m=0; m<8; m++)   //check user data, 8 byte
 			    {
 			        if(oob_buf_read[m] == ((__u8)0x0) )
@@ -872,13 +859,22 @@ __s32  NAND_EraseChip( const boot_nand_para_t *nand_param)
 					NAND_Print("find a all 0x00 block %u\n", j);
 					break;
 				}
+			#else
+				if(oob_buf_read[0] == 0x0)
+				{
+					bad_block_flag = 1;
+					NAND_Print("find a bad block %u\n", j);
+					break;
+				}
+			#endif
+				
 
 			}
 
 			if(bad_block_flag)
 				continue;
 
-			ret = NAND_PhyErase( &para_read );
+			ret = NAND_PhyErase_2CH( &para_read );
 			if( ret != 0 )
 	    		{
 	    		    NAND_Print("erasing block %u failed.\n", j );
@@ -931,202 +927,301 @@ __s32 NAND_BadBlockScan(const boot_nand_para_t *nand_param)
 	__u8*  page_buf;
 	__u32  die_skip_flag = (nand_param->OperationOpt)&(0x1<<11);
 	__u32  block_cnt_of_die = (nand_param->BlkCntPerDie);
+	__u32  nand_operation_param;
+	__u32 sup_twoplane = 1;
+	
+	if(bad_block_scan_flag==0)
+	{
+		for(i=0; i<8; i++)
+		    bad_block_cnt[i] = 0;
 
-	for(i=0; i<8; i++)
-	    bad_block_cnt[i] = 0;
+		NAND_Print("Ready to scan bad blocks.\n");
 
-	NAND_Print("Ready to scan bad blocks.\n");
+	    // get nand info to cal
+		NAND_Print("nfb phy init ok.\n");
+		if( NAND_GetFlashInfo( &info ) )
+		    {
+	    		NAND_Print("get flash info failed.\n");
+	    		return -1;
+	    	}
+		NAND_Print("Succeed in getting flash info.\n");
 
-    // get nand info to cal
-	NAND_Print("nfb phy init ok.\n");
-	if( NAND_GetFlashInfo( &info ) )
+		//cal nand parameters
+		//page_buf = (__u8*)(BAD_BLK_SCAN_BUF_ADR);
+	    page_buf = (__u8*)wBoot_malloc(32 * 1024);
+	    if(!page_buf)
 	    {
-    		NAND_Print("get flash info failed.\n");
-    		return -1;
-    	}
-	NAND_Print("Succeed in getting flash info.\n");
+	        NAND_Print("malloc memory for page buf fail\n");
+	        return -1;
+	    }
 
-	//cal nand parameters
-	//page_buf = (__u8*)(BAD_BLK_SCAN_BUF_ADR);
-    page_buf = (__u8*)wBoot_malloc(32 * 1024);
-    if(!page_buf)
-    {
-        NAND_Print("malloc memory for page buf fail\n");
-        return -1;
-    }
+		page_with_bad_block = info.pagewithbadflag;
+		page_per_block = info.blocksize/info.pagesize;
 
-	page_with_bad_block = info.pagewithbadflag;
-	page_per_block = info.blocksize/info.pagesize;
+		//read the first, second, last, last-1 page for check bad blocks
+		page_index[0] = 0;
+		page_index[1] = 0xEE;
+		page_index[2] = 0xEE;
+		page_index[3] = 0xEE;
 
-	//read the first, second, last, last-1 page for check bad blocks
-	page_index[0] = 0;
-	page_index[1] = 0xEE;
-	page_index[2] = 0xEE;
-	page_index[3] = 0xEE;
+	    switch(page_with_bad_block & 0x03)
+	    {
+	        case 0x00:
+	            //the bad block flag is in the first page, same as the logical information, just read 1 page is ok
+	            break;
 
-    switch(page_with_bad_block & 0x03)
-    {
-        case 0x00:
-            //the bad block flag is in the first page, same as the logical information, just read 1 page is ok
-            break;
+	        case 0x01:
+	            //the bad block flag is in the first page or the second page, need read the first page and the second page
+	            page_index[1] = 1;
+	            break;
 
-        case 0x01:
-            //the bad block flag is in the first page or the second page, need read the first page and the second page
-            page_index[1] = 1;
-            break;
+	        case 0x02:
+	            //the bad block flag is in the last page, need read the first page and the last page
+	            page_index[1] = page_per_block - 1;
+	            break;
 
-        case 0x02:
-            //the bad block flag is in the last page, need read the first page and the last page
-            page_index[1] = page_per_block - 1;
-            break;
+	        case 0x03:
+	            //the bad block flag is in the last 2 page, so, need read the first page, the last page and the last-1 page
+	            page_index[1] = page_per_block - 1;
+	            page_index[2] = page_per_block - 2;
+	            break;
+	    }
 
-        case 0x03:
-            //the bad block flag is in the last 2 page, so, need read the first page, the last page and the last-1 page
-            page_index[1] = page_per_block - 1;
-            page_index[2] = page_per_block - 2;
-            break;
-    }
+	    //scan bad blocks
+		for( i = 0;  i < info.chip_cnt;  i++ ){
 
-    //scan bad blocks
-	for( i = 0;  i < info.chip_cnt;  i++ ){
+			chip = _cal_real_chip( i, nand_param->ChipConnectInfo );
+			NAND_Print("scan CE %u\n", chip);
+			bad_block_cnt[chip] = 0;
 
-		chip = _cal_real_chip( i, nand_param->ChipConnectInfo );
-		NAND_Print("scan CE %u\n", chip);
-		bad_block_cnt[chip] = 0;
-
-		for( j = 0;  j < info.blk_cnt_per_chip;  j++ )
-		{
-			para.chip = chip;
-			if(!die_skip_flag)
-			    para.block = j;
-			else
-			    para.block = j%block_cnt_of_die + 2*block_cnt_of_die*(j/block_cnt_of_die);
-			para.mainbuf = page_buf;
-			para.oobbuf = oob_buf;
-
-			for(k = 0; k<4; k++)
+			for( j = 0;  j < info.blk_cnt_per_chip;  j++ )
 			{
-				// read pages for check
-				para.page = page_index[k];
-				if(para.page == 0xEE)
-				    continue;
-				NAND_PhyRead(&para );
+				para.chip = chip;
+				if(!die_skip_flag)
+				    para.block = j;
+				else
+				    para.block = j%block_cnt_of_die + 2*block_cnt_of_die*(j/block_cnt_of_die);
+				para.mainbuf = page_buf;
+				para.oobbuf = oob_buf;
 
-				// find bad blocks
-				if(oob_buf[0] != 0xff)
+				for(k = 0; k<4; k++)
 				{
-				    NAND_Print("find defined bad block in chip %u, block %u.\n", i, j);
-					bad_block_cnt[chip]++;
-                    break;
+					// read pages for check
+					para.page = page_index[k];
+					if(para.page == 0xEE)
+					    continue;
+					NAND_PhyRead_2CH(&para );
+
+					// find bad blocks
+					if(oob_buf[0] != 0xff)
+					{
+					    NAND_Print("find defined bad block in chip %u, block %u.\n", i, j);
+						bad_block_cnt[chip]++;
+	                    break;
+					}
 				}
 			}
 		}
-	}
 
-	// cal bad block num
-	if(info.chip_cnt == 0x1)        //for one CE
-    	{
-    	    if(nand_param->ChipConnectInfo == 0x1)
-    	        {
-    	            bad_block_num = bad_block_cnt[0]<<1;
-    	        }
-    		else
-    		    {
-    		        NAND_Print("chip connect parameter %x error \n", nand_param->ChipConnectInfo);
-    		        wBoot_free(page_buf);
+		// cal bad block num
+		nand_operation_param = nand_param->OperationOpt;
+		NAND_Print("nand param operation value: %x \n",nand_operation_param);
+		if(nand_operation_param & (0x1<<3))
+			sup_twoplane = 1; //support twoplane write
+		else
+			sup_twoplane = 0; //don't support twoplane write
 
-        			return -1;
-    		    }
-    	}
-	else if(info.chip_cnt == 2)     //for two CE
-    	{
-    		if(nand_param->ChipConnectInfo == 0x3)
-    		    {
-    			    bad_block_num = (bad_block_cnt[0] + bad_block_cnt[1])<<1;
-    		    }
-    		else if(nand_param->ChipConnectInfo == 0x5)
-        		{
-        			bad_block_num = (bad_block_cnt[0] + bad_block_cnt[2])<<1;
-        		}
-    		else if(nand_param->ChipConnectInfo == 0x81)
-        		{
-        			bad_block_num = (bad_block_cnt[0] + bad_block_cnt[7])<<1;
-        		}
-    		else
-        		{
-        			NAND_Print("chip connect parameter %x error \n", nand_param->ChipConnectInfo);
-        			wBoot_free(page_buf);
+		if(sup_twoplane) //support twoplane, don't support ext-interleave
+		{
+			NAND_Print("nand support twoplane ,don't support ext-interleave \n");
+		if(info.chip_cnt == 0x1)        //for one CE
+	    	{
+	    	    if(nand_param->ChipConnectInfo == 0x1)
+	    	        {
+	    	            bad_block_num = bad_block_cnt[0]<<1;
+	    	        }
+	    		else
+	    		    {
+	    		        NAND_Print("chip connect parameter %x error \n", nand_param->ChipConnectInfo);
+	    		        wBoot_free(page_buf);
 
-        			return -1;
-        		}
-    	}
-	else if(info.chip_cnt == 4)     //for four CE
-	    {
-    		if(nand_param->ChipConnectInfo == 0xf)
-    		    {
-    			    bad_block_num = max_badblk((bad_block_cnt[0] + bad_block_cnt[2]),(bad_block_cnt[1] + bad_block_cnt[3]))<<1;
-    		    }
-    		else if(nand_param->ChipConnectInfo == 0x55)
-    		    {
-    			    bad_block_num = max_badblk((bad_block_cnt[0] + bad_block_cnt[2]),(bad_block_cnt[4] + bad_block_cnt[6]))<<1;
-    		    }
-    		else
-    		    {
-    			    NAND_Print("chip connect parameter %x error \n",nand_param->ChipConnectInfo);
-    			    wBoot_free(page_buf);
+	        			return -1;
+	    		    }
+	    	}
+		else if(info.chip_cnt == 2)     //for two CE
+	    	{
+	    		if(nand_param->ChipConnectInfo == 0x3)
+	    		    {
+		    			    bad_block_num = (max_badblk(bad_block_cnt[0] , bad_block_cnt[1]))<<1;
+		    		    }
+		    		else if(nand_param->ChipConnectInfo == 0x5)
+		        		{
+		        			bad_block_num = (max_badblk(bad_block_cnt[0] , bad_block_cnt[2]))<<1;
+		        		}
+		    		else if(nand_param->ChipConnectInfo == 0x81)
+		        		{
+		        			bad_block_num = (max_badblk(bad_block_cnt[0] , bad_block_cnt[7]))<<1;
+	        		}
+	    		else
+	        		{
+	        			NAND_Print("chip connect parameter %x error \n", nand_param->ChipConnectInfo);
+	        			wBoot_free(page_buf);
 
-    			    return -1;
-    		    }
-
-	    }
-	else if(info.chip_cnt == 8)     //for eight CE
-	    {
-    		if(nand_param->ChipConnectInfo == 0xff)
-    		    {
-        			bad_block_num = max_badblk((bad_block_cnt[0] + bad_block_cnt[2]),(bad_block_cnt[1] + bad_block_cnt[3]));
-        			bad_block_num = 2*max_badblk(bad_block_num, max_badblk((bad_block_cnt[4] + bad_block_cnt[6]),(bad_block_cnt[5] + bad_block_cnt[7])));
-
-        		}
-    		else
-    		    {
-        			NAND_Print("chip connect parameter %x error \n",nand_param->ChipConnectInfo);
-        			wBoot_free(page_buf);
-
-        			return -1;
-        		}
-	    }
-	else
-	    {
-	        NAND_Print("chip cnt parameter %x error \n",nand_param->ChipCnt);
-	        wBoot_free(page_buf);
-
-        	return -1;
-	    }
-
-
-	//cal good block num required per 1024 blocks
-	good_block_num = (1024*(info.blk_cnt_per_chip - bad_block_num))/info.blk_cnt_per_chip -50;
-    for(i=0; i<info.chip_cnt; i++)
-    {
-		chip = _cal_real_chip( i, nand_param->ChipConnectInfo );
-		NAND_Print(" %d bad blocks in CE %u \n", bad_block_cnt[chip], chip);
-	}
-	NAND_Print("cal bad block num is %u \n", bad_block_num);
-	NAND_Print("cal good block num is %u \n", good_block_num);
-
-    //cal good block ratio
-	for(i=0; i<10; i++)
-	{
-		if(good_block_num >= (nand_param->good_block_ratio - 32*i))
+	        			return -1;
+	        		}
+	    	}
+		else if(info.chip_cnt == 4)     //for four CE
 		    {
-    			good_block_ratio = (nand_param->good_block_ratio - 32*i);
-    			NAND_Print("good block ratio is %u \n",good_block_ratio);
-    			break;
-    		}
-	}
-    wBoot_free(page_buf);
+	    		if(nand_param->ChipConnectInfo == 0xf)
+	    		    {
+		    			    bad_block_num = max_badblk(max_badblk(bad_block_cnt[0] , bad_block_cnt[2]),max_badblk(bad_block_cnt[1] , bad_block_cnt[3]))<<1;
+		    		    }
+		    		else if(nand_param->ChipConnectInfo == 0x55)
+		    		    {
+		    			    bad_block_num = max_badblk(max_badblk(bad_block_cnt[0] , bad_block_cnt[2]),max_badblk(bad_block_cnt[4] , bad_block_cnt[6]))<<1;
+		    		    }
+	    		else
+	    		    {
+	    			    NAND_Print("chip connect parameter %x error \n",nand_param->ChipConnectInfo);
+	    			    wBoot_free(page_buf);
 
+	    			    return -1;
+	    		    }
+
+		    }
+		else if(info.chip_cnt == 8)     //for eight CE
+		    {
+	    		if(nand_param->ChipConnectInfo == 0xff)
+	    		    {
+		        			bad_block_num = max_badblk(max_badblk(bad_block_cnt[0] , bad_block_cnt[2]),max_badblk(bad_block_cnt[1] , bad_block_cnt[3]));
+		        			bad_block_num = 2*max_badblk(bad_block_num, max_badblk(max_badblk(bad_block_cnt[4] , bad_block_cnt[6]),max_badblk(bad_block_cnt[5] , bad_block_cnt[7])));
+
+	        		}
+	    		else
+	    		    {
+	        			NAND_Print("chip connect parameter %x error \n",nand_param->ChipConnectInfo);
+	        			wBoot_free(page_buf);
+
+	        			return -1;
+	        		}
+		    }
+		else
+		    {
+		        NAND_Print("chip cnt parameter %x error \n",nand_param->ChipCnt);
+		        wBoot_free(page_buf);
+
+	        	return -1;
+		    }
+			}
+			else //don't support twoplane, don't support ext-interleave
+		{
+			NAND_Print("nand don't support twoplane ,don't support ext-interleave \n");
+			if(info.chip_cnt == 0x1)		//for one CE
+				{
+					if(nand_param->ChipConnectInfo == 0x1)
+						{
+							bad_block_num = bad_block_cnt[0];
+						}
+					else
+						{
+							NAND_Print("chip connect parameter %x error \n", nand_param->ChipConnectInfo);
+							wBoot_free(page_buf);
+							return -1;
+						}
+				}
+			else if(info.chip_cnt == 2) 	//for two CE
+				{
+					if(nand_param->ChipConnectInfo == 0x3)
+						{
+							bad_block_num = (max_badblk(bad_block_cnt[0] , bad_block_cnt[1]));
+						}
+					else if(nand_param->ChipConnectInfo == 0x5)
+						{
+							bad_block_num = (max_badblk(bad_block_cnt[0] , bad_block_cnt[2]));
+						}
+					else if(nand_param->ChipConnectInfo == 0x81)
+						{
+							bad_block_num = (max_badblk(bad_block_cnt[0] , bad_block_cnt[7]));
+						}
+					else
+						{
+							NAND_Print("chip connect parameter %x error \n", nand_param->ChipConnectInfo);
+							wBoot_free(page_buf);
+							return -1;
+						}
+				}
+			else if(info.chip_cnt == 4) 	//for four CE
+				{
+					if(nand_param->ChipConnectInfo == 0xf)
+						{
+							bad_block_num = max_badblk(max_badblk(bad_block_cnt[0] , bad_block_cnt[2]),max_badblk(bad_block_cnt[1] , bad_block_cnt[3]));
+						}
+					else if(nand_param->ChipConnectInfo == 0x55)
+						{
+							bad_block_num = max_badblk(max_badblk(bad_block_cnt[0] , bad_block_cnt[2]),max_badblk(bad_block_cnt[4] , bad_block_cnt[6]));
+						}
+					else
+						{
+							NAND_Print("chip connect parameter %x error \n",nand_param->ChipConnectInfo);
+							wBoot_free(page_buf);
+							return -1;
+						}
+
+				}
+			else if(info.chip_cnt == 8) 	//for eight CE
+				{
+					if(nand_param->ChipConnectInfo == 0xff)
+						{
+							bad_block_num = max_badblk(max_badblk(bad_block_cnt[0] , bad_block_cnt[2]),max_badblk(bad_block_cnt[1] , bad_block_cnt[3]));
+							bad_block_num = max_badblk(bad_block_num, max_badblk(max_badblk(bad_block_cnt[4] , bad_block_cnt[6]),max_badblk(bad_block_cnt[5] , bad_block_cnt[7])));
+
+						}
+					else
+						{
+							NAND_Print("chip connect parameter %x error \n",nand_param->ChipConnectInfo);
+							wBoot_free(page_buf);
+							return -1;
+						}
+				}
+			else
+				{
+	        			NAND_Print("chip connect parameter %x error \n",nand_param->ChipConnectInfo);
+	        			wBoot_free(page_buf);
+					return -1;
+				}
+
+		}
+
+		//cal good block num required per 1024 blocks
+		good_block_num = (1024*(info.blk_cnt_per_chip - bad_block_num))/info.blk_cnt_per_chip -90;
+	    for(i=0; i<info.chip_cnt; i++)
+	    {
+			chip = _cal_real_chip( i, nand_param->ChipConnectInfo );
+			NAND_Print(" %d bad blocks in CE %u \n", bad_block_cnt[chip], chip);
+		}
+		NAND_Print("cal bad block num is %u \n", bad_block_num);
+		NAND_Print("cal good block num is %u \n", good_block_num);
+
+	    //cal good block ratio
+		for(i=0; i<5; i++)
+		{
+			if(good_block_num >= (nand_param->good_block_ratio - 32*i))
+			    {
+	    			good_block_ratio = (nand_param->good_block_ratio - 32*i);
+	    			NAND_Print("good block ratio is %u \n",good_block_ratio);
+	    			break;
+	    		}
+		}
+	    wBoot_free(page_buf);
+	}
+	else
+	{
+		good_block_ratio = nand_good_blk_ratio;
+		NAND_Print(" [Bad block scan]bad blcok has done before,nand good block ratio is : %d \n", good_block_ratio);
+	}
+	bad_block_scan_flag = 1;
+	nand_good_blk_ratio = good_block_ratio;
+	NAND_SetValidBlkRatio(nand_good_blk_ratio);	
  	return good_block_ratio;
 }
-
 

@@ -30,29 +30,22 @@
 ************************************************************************************************************************
 */
 #include "boot0_i.h"
-#include "arm_a8.h"
 
 #include <string.h>
 
 extern const boot0_file_head_t  BT0_head;
-extern __u32 super_standby_flag;
+
 __u32 odt_status;
 
-static void move_RW( void );
+//static void move_RW( void );
 static void clear_ZI( void );
-static int  check_bootid(void);
 static void timer_init(void);
 static void print_version(void);
 static __u32 check_odt(int ms);
-static void open_cpuX(__u32 cpu);
-static void close_cpuX(__u32 cpu);
-
-
-static __u32 cpu_freq = 0;
-static __u32 overhead = 0;
-#define CCU_REG_VA (0xF1c20000)
-#define CCU_REG_PA (0x01c20000)
-
+static void bias_calibration(void);
+static void pll_reset( void );
+void __msdelay(__u32 ms);
+//void dram_para_display(void);
 /*******************************************************************************
 *函数名称: Boot0_C_part
 *函数原型：void Boot0_C_part( void )
@@ -65,64 +58,113 @@ void Boot0_C_part( void )
 {
 	__u32 status;
 	__s32 dram_size;
+	int	index = 0;
+	int   ddr_aotu_scan = 0;
+	volatile unsigned int *reg_addr = 0;
 
-	move_RW( );
+//	move_RW( );
 	clear_ZI( );
 
-	if(check_bootid())
-    {
-    	jump_to( FEL_BASE );
-    }
-    
+	bias_calibration();
 
     timer_init();
     UART_open( BT0_head.prvt_head.uart_port, (void *)BT0_head.prvt_head.uart_ctrl, 24*1000*1000 );
-	odt_status = check_odt(5);
+	//odt_status = check_odt(5);
     if( BT0_head.prvt_head.enable_jtag )
     {
 		jtag_init( (normal_gpio_cfg *)BT0_head.prvt_head.jtag_gpio );
     }
 	msg("HELLO! BOOT0 is starting!\n");
 	print_version();
-    
-    init_perfcounters(1, 0);
-	change_runtime_env(0);
 
-    open_cpuX(1);
-    close_cpuX(1);
-    
+	{
+		__u32 reg_val;
+		__u32 fel_flag;
+
+		fel_flag = *(volatile unsigned int *)(0x01f00000 + 0x108);
+		//print smp status.
+		index = 0;
+		while(index < 0x18)
+		{
+			reg_addr = (volatile unsigned int *)(0x01f00000 + 0x100 + index);
+			reg_val = *reg_addr;
+	    		*reg_addr = 0;
+	    		msg("reg_addr %x =%x\n", reg_addr, reg_val);
+	    		index+=0x4;
+		}
+
+
+//		reg_val = *(volatile unsigned int *)(0x01f00000 + 0x108);
+//		*(volatile unsigned int *)(0x01f00000 + 0x108) = 0;
+//		msg("fel_flag=%x\n", fel_flag);
+		if(fel_flag == 0x5AA5A55A)
+		{
+			msg("eraly jump fel\n");
+
+			pll_reset();
+			__msdelay(10);
+
+			jump_to( FEL_BASE );
+		}
+
+	}
+
 	mmu_system_init(EGON2_DRAM_BASE, 1 * 1024, EGON2_MMU_BASE);
 	mmu_enable();
-    
-    if(BT0_head.boot_head.platform[7])
-    {
-        msg("read dram para.\n");
-    }else
-    {
-        msg("try dram para.\n");
-    }
-	dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // 初始化DRAM
 
-
-    if(dram_size)
+	//dram_size = init_DRAM(BT0_head.boot_head.platform[7]);                                // 初始化DRAM
+//#ifdef  CONFIG_SUN6I_FPGA
+//	ddr_aotu_scan = 1;
+//	msg("config fpga\n");
+//#else
+//	ddr_aotu_scan = BT0_head.boot_head.platform[7];
+//	msg("not config fpga\n");
+//#endif
+    ddr_aotu_scan = 0;
+#ifdef DEBUG
 	{
-		msg("dram size =%dMB\n", dram_size);
+		int k;
+
+		for(k=0;k<16;k++)
+		{
+			msg("%x\n", BT0_head.prvt_head.dram_para[k]);
+		}
+	}
+#endif
+//	msg("------------before------------\n");
+//	dram_para_display();
+
+	dram_size = init_DRAM(ddr_aotu_scan, (void *)BT0_head.prvt_head.dram_para);
+	if(dram_size)
+	{
+		mdfs_save_value((void *)BT0_head.prvt_head.dram_para);
+		msg("dram size =%d\n", dram_size);
 	}
 	else
 	{
 		msg("initializing SDRAM Fail.\n");
 		mmu_disable( );
+
+		pll_reset();
+		__msdelay(10);
+
 		jump_to( FEL_BASE );
 	}
-	msg("%x\n", *(volatile int *)0x52000000);
-	msg("super_standby_flag = %d\n", super_standby_flag);
-	if(1 == super_standby_flag)
-	{
-		//tmr_enable_watchdog();
-		//disable_icache();
-		jump_to( 0x52000000 );
-	}
 
+//	{
+//		__u32 reg_val;
+//
+//		reg_val = *(volatile __u32 *)(0x1c20d20);
+//		*(volatile __u32 *)(0x1c20d20) = 0;
+//		msg("reg_val=%x, %x\n", reg_val, *(volatile __u32 *)(0x1c20d24));
+//		if(reg_val & 0x01)
+//		{
+//			mmu_disable( );
+//			jump_to( 0x40100000 );
+//		}
+//	}
+//	msg("------------end------------\n");
+//	dram_para_display();
 	#if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND_FLASH
 		status = load_Boot1_from_nand( );         // 载入Boot1
 	#elif SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_SPI_NOR_FLASH
@@ -145,11 +187,6 @@ void Boot0_C_part( void )
 		//set_dram_size(dram_size );
 		//跳转之前，把所有的dram参数写到boot1中
 		set_dram_para((void *)&BT0_head.prvt_head.dram_para, dram_size);
-        
-        #if SYS_STORAGE_MEDIA_TYPE == SYS_STORAGE_MEDIA_NAND_FLASH
-        set_nand_good_block_ratio_para((void *)&BT0_head.prvt_head.storage_data);
-        #endif
-        
 		msg("Succeed in loading Boot1.\n"
 		    "Jump to Boot1.\n");
 		jump_to( BOOT1_BASE );                    // 如果载入Boot1成功，跳转到Boot1处执行
@@ -160,6 +197,10 @@ void Boot0_C_part( void )
 
 		msg("Fail in loading Boot1.\n"
 		    "Jump to Fel.\n");
+
+		pll_reset();
+		__msdelay(10);
+
 		jump_to( FEL_BASE );                      // 如果载入Boot1失败，将控制权交给Fel
 	}
 }
@@ -173,31 +214,47 @@ void Boot0_C_part( void )
 *******************************************************************************/
 void set_pll( void )
 {
-	__u32 reg_val, i;
+	__u32 reg_val;
 
-	//切换到24M
-	CCMU_REG_AHB_APB = 0x00010010;
-	//设置PLL1到384M
-	reg_val = (0x21005000) | (0x80000000);
+	//切换到24M，设置AXI分频为2
+	CCMU_REG_AXI_MOD = 0x00010001;
+	//设置PLL1到408M
+	reg_val = (0x00011011) | (0x80000000);
 	CCMU_REG_PLL1_CTRL = reg_val;
-	//延时
-	for(i=0;i<200;i++);
+	//等待lock
+#ifndef CONFIG_SUN6I_FPGA
+	do
+	{
+		reg_val = CCMU_REG_PLL1_CTRL;
+	}
+	while(!(reg_val & (0x1 << 28)));
+#endif
+	//设置CPU:AXI:AHB:APB分频 4:2:2:1
+	CCMU_REG_AHB1_APB1 = 0x02 << 12;
+	//设置ATP分频为2
+	reg_val = CCMU_REG_AXI_MOD;
+	reg_val &= ~(3 << 8);
+	reg_val |=  (1 << 8);
+	CCMU_REG_AXI_MOD = reg_val;
 	//切换到PLL1
-	reg_val = CCMU_REG_AHB_APB;
+	reg_val = CCMU_REG_AXI_MOD;
 	reg_val &= ~(3 << 16);
 	reg_val |=  (2 << 16);
-	CCMU_REG_AHB_APB = reg_val;
+	CCMU_REG_AXI_MOD = reg_val;
 	//打开DMA
-	CCMU_REG_AHB_MOD0 |= 1 << 6;
-
-	//打开PLL6，设置到默认频率600M
-	reg_val = CCMU_REG_PLL6_CTRL;
-	reg_val |= 1<<31;
-	CCMU_REG_PLL6_CTRL = reg_val;
+	*(volatile unsigned int *)(0x01c20000 + 0x60)  |= 1 << 6;
+	*(volatile unsigned int *)(0x01c20000 + 0x2C0) |= 1 << 6;
 
 	return ;
 }
 
+static void pll_reset( void )
+{
+	CCMU_REG_AXI_MOD = 0x00010000;
+	CCMU_REG_PLL1_CTRL = 0x00001000;
+	CCMU_REG_AHB1_APB1 = 0x00001010;
+
+}
 
 static __u32 check_odt(int ms)
 {
@@ -235,24 +292,6 @@ static __u32 check_odt(int ms)
 	return 0;
 }
 
-static __s32 check_bootid(void)
-{
-#if 0
-	__u32 reg = 0x01c23800;
-	__u32 value, i;
-
-	for(i=0;i<4;i++)
-	{
-		value = *(volatile __u32 *)(reg + 0x10 + (i<<2));
-		if(value)
-		{
-			return -1;
-		}
-	}
-#endif
-	return 0;
-}
-
 static void timer_init(void)
 {
 	*(volatile unsigned int *)(0x01c20000 + 0x144) |= (1U << 31);
@@ -268,49 +307,49 @@ static void print_version(void)
 	return;
 }
 
-static void move_RW( void )
-{
-	__u8    *psrc8;
-	__u8    *pdst8;
-	__u32   *psrc32;
-	__u32   *pdst32;
-	__u32   size;
-	__u32   N;
-
-	extern unsigned char Load$$Boot0_RW_ZI$$Base;
-	extern unsigned char Image$$Boot0_RW_ZI$$Base;
-	extern unsigned char Image$$Boot0_RW_ZI$$Length;
-
-	size = (__u32) &Image$$Boot0_RW_ZI$$Length;
-	psrc32  = (__u32 *)&Load$$Boot0_RW_ZI$$Base;
-	pdst32  = (__u32 *)&Image$$Boot0_RW_ZI$$Base;
-
-	N = size >> 4;
-	while( N-- > 0 )
-	{
-		*pdst32++ = *psrc32++;
-		*pdst32++ = *psrc32++;
-		*pdst32++ = *psrc32++;
-		*pdst32++ = *psrc32++;
-	}
-
-	N = size & ( ( 1 << 4 ) - 1 );
-	psrc8 = (__u8 *)psrc32;
-	pdst8 = (__u8 *)pdst32;
-	while( N--)
-	{
-		*pdst8++ = *psrc8++;
-	}
-}
+//static void move_RW( void )
+//{
+//	__u8    *psrc8;
+//	__u8    *pdst8;
+//	__u32   *psrc32;
+//	__u32   *pdst32;
+//	__u32   size;
+//	__u32   N;
+//
+//	extern unsigned char Load$$Boot0_RW_ZI$$Base;
+//	extern unsigned char Image$$Boot0_RW_ZI$$Base;
+//	extern unsigned char Image$$Boot0_RW_ZI$$Length;
+//
+//	size = (__u32) &Image$$Boot0_RW_ZI$$Length;
+//	psrc32  = (__u32 *)&Load$$Boot0_RW_ZI$$Base;
+//	pdst32  = (__u32 *)&Image$$Boot0_RW_ZI$$Base;
+//
+//	N = size >> 4;
+//	while( N-- > 0 )
+//	{
+//		*pdst32++ = *psrc32++;
+//		*pdst32++ = *psrc32++;
+//		*pdst32++ = *psrc32++;
+//		*pdst32++ = *psrc32++;
+//	}
+//
+//	N = size & ( ( 1 << 4 ) - 1 );
+//	psrc8 = (__u8 *)psrc32;
+//	pdst8 = (__u8 *)pdst32;
+//	while( N--)
+//	{
+//		*pdst8++ = *psrc8++;
+//	}
+//}
 
 
 
 static void clear_ZI( void )
 {
-	__u8  *p8;
+//	__u8  *p8;
 	__u32 *p32;
 	__u32 size;
-	__u32 N;
+//	__u32 N;
 
 	extern unsigned char Image$$Boot0_RW_ZI$$ZI$$Base;
 	extern unsigned char Image$$Boot0_RW_ZI$$ZI$$Length;
@@ -318,254 +357,125 @@ static void clear_ZI( void )
 	size = (__u32)  &Image$$Boot0_RW_ZI$$ZI$$Length;
 	p32  = (__u32 *)&Image$$Boot0_RW_ZI$$ZI$$Base;
 
-	N = size >> 4;
-	while( N-- > 0 )
-	{
-		*p32++ = 0;
-		*p32++ = 0;
-		*p32++ = 0;
-		*p32++ = 0;
-	}
-
-	N = size & ( ( 1 << 4 ) - 1 );
-	p8 = (__u8 *)p32;
-	while( N--)
-	{
-		*p8++ = 0;
-	}
+	memset(p32, 0, size);
+//	N = size >> 4;
+//	while( N-- > 0 )
+//	{
+//		*p32++ = 0;
+//		*p32++ = 0;
+//		*p32++ = 0;
+//		*p32++ = 0;
+//	}
+//
+//	N = size & ( ( 1 << 4 ) - 1 );
+//	p8 = (__u8 *)p32;
+//	while( N--)
+//	{
+//		*p8++ = 0;
+//	}
 }
 
-
-__u32 get_cyclecount (void)
+static void bias_calibration(void)
 {
-	__u32 value;
-	// Read CCNT Register
-	__asm{MRC p15, 0, value, c9, c13, 0}
-	return value;
+	//open codec apb gate
+	*(volatile unsigned int *)(0x1c20000 + 0x68) |= 1;
+	//disable codec soft reset
+	*(volatile unsigned int *)(0x1c20000 + 0x2D0) |= 1;
+	//enable HBIASADCEN
+	*(volatile unsigned int *)(0x1c22C00 + 0x28) |= (1 << 29);
 }
 
-void init_perfcounters (__u32 do_reset, __u32 enable_divider)
+void disbale_cpus(void)
 {
-	// in general enable all counters (including cycle counter)
-	__u32 value = 1;
-
-	// peform reset:
-	if (do_reset)
-	{
-		value |= 2;     // reset all counters to zero.
-		value |= 4;     // reset cycle counter to zero.
-	}
-
-	if (enable_divider)
-		value |= 8;     // enable "by 64" divider for CCNT.
-
-	value |= 16;
-
-	// program the performance-counter control-register:
-	__asm {MCR p15, 0, value, c9, c12, 0}
-
-	// enable all counters:
-	value = 0x8000000f;
-	__asm {MCR p15, 0, value, c9, c12, 1}
-
-	// clear overflows:
-	__asm {MCR p15, 0, value, c9, c12, 3}
-
-	return;
+	//disable watchdog
+	*(volatile unsigned int *)(0x01f01000 + 0x00) = 0;
+	*(volatile unsigned int *)(0x01f01000 + 0x04) = 1;
+	*(volatile unsigned int *)(0x01f01000 + 0x18) &= ~1;
+	//assert cups
+	*(volatile unsigned int *)(0x01f01C00 + 0x00) = 0;
+	//disable cpus module gating
+	*(volatile unsigned int *)(0x01f01400 + 0x28) = 0;
+	//disable cpus module assert
+	*(volatile unsigned int *)(0x01f01400 + 0xb0) = 0;
 }
-
-void change_runtime_env(__u32 mmu_flag)
-{
-	__u32 factor_n = 0;
-	__u32 factor_k = 0;
-	__u32 factor_m = 0;
-	__u32 factor_p = 0;
-	__u32 start = 0;
-	__u32 cmu_reg = 0;
-	volatile __u32 reg_val = 0;
-
-	if(mmu_flag){
-		cmu_reg = CCU_REG_VA;
-	}else{
-		cmu_reg = CCU_REG_PA;
-	}
-	//init counters:
-	//init_perfcounters (1, 0);
-	// measure the counting overhead:
-	start = get_cyclecount();
-	overhead = get_cyclecount() - start;
-	//busy_waiting();
-	//get runtime freq: clk src + divider ratio
-	//src selection
-	reg_val = *(volatile int *)(cmu_reg + 0x54);
-	reg_val >>= 16;
-	reg_val &= 0x3;
-	if(0 == reg_val){
-		//32khz osc
-		cpu_freq = 32;
-
-	}else if(1 == reg_val){
-		//hosc, 24Mhz
-		cpu_freq = 24000; 			//unit is khz
-	}else if(2 == reg_val){
-		//get pll_factor
-		reg_val = *(volatile int *)(cmu_reg + 0x00);
-		factor_p = 0x3 & (reg_val >> 16);
-		factor_p = 1 << factor_p;		//1/2/4/8
-		factor_n = 0x1f & (reg_val >> 8); 	//the range is 0-31
-		factor_k = (0x3 & (reg_val >> 4)) + 1; 	//the range is 1-4
-		factor_m = (0x3 & (reg_val >> 0)) + 1; 	//the range is 1-4
-
-		cpu_freq = (24000*factor_n*factor_k)/(factor_p*factor_m);
-		//cpu_freq = raw_lib_udiv(24000*factor_n*factor_k, factor_p*factor_m);
-		//msg("cpu_freq = dec(%d). \n", cpu_freq);
-		//busy_waiting();
-	}
-
-}
-
 /*
- * input para range: 1-1000 us, so the max us_cnt equal = 1008*1000;
- */
-void delay_us(__u32 us)
+************************************************************************************************************
+*
+*                                             function
+*
+*    函数名称：
+*
+*    参数列表：
+*
+*    返回值  ：
+*
+*    说明    ：
+*
+*
+************************************************************************************************************
+*/
+void __msdelay(__u32 ms)
 {
-	__u32 us_cnt = 0;
-	__u32 cur = 0;
-	__u32 target = 0;
+	__u32 t1, t2;
 
-	//us_cnt = ((raw_lib_udiv(cpu_freq, 1000)) + 1)*us;
-	us_cnt = ((cpu_freq/1000) + 1)*us;
-	cur = get_cyclecount();
-	target = cur - overhead + us_cnt;
-
-#if 1
-	while(!counter_after_eq(cur, target))
+	t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	t2 = t1 + ms;
+	do
 	{
-		cur = get_cyclecount();
-		//cnt++;
+		t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
 	}
-#endif
+	while(t2 >= t1);
 
-
-	return;
+	return ;
 }
 
-
-__asm void cpuX_startup_to_wfi(void)
+void config_pll1_para(void)
 {
+	volatile unsigned int value;
 
-    mrs r0, cpsr
-    bic r0, r0, #ARMV7_MODE_MASK
-    orr r0, r0, #ARMV7_SVC_MODE
-    orr r0, r0, #( ARMV7_IRQ_MASK | ARMV7_FIQ_MASK )   // After reset, ARM automaticly disables IRQ and FIQ, and runs in SVC mode.
-    bic r0, r0, #ARMV7_CC_E_BIT                         // set little-endian
-    msr cpsr_c, r0
+	//by sunny at 2013-1-20 17:53:21.
+	value = *(volatile unsigned int *)(0x1c20250);
+	value &= ~(1 << 26);
+	value |= (1 << 26);
+	value &= ~(0x7 << 23);
+	value |= (0x7 << 23);
+	*(volatile unsigned int *)(0x1c20250) = value;
 
-    // configure memory system : disable MMU,cache and write buffer; set little_endian;
-    mrc p15, 0, r0, c1, c0
-    bic r0, r0, #( ARMV7_C1_M_BIT | ARMV7_C1_C_BIT )// disable MMU, data cache
-    bic r0, r0, #( ARMV7_C1_I_BIT | ARMV7_C1_Z_BIT )// disable instruction cache, disable flow prediction
-    bic r0, r0, #( ARMV7_C1_A_BIT)                  // disable align
-    mcr p15, 0, r0, c1, c0                          
-    // set SP for SVC mode
-    mrs r0, cpsr
-    bic r0, r0, #ARMV7_MODE_MASK
-    orr r0, r0, #ARMV7_SVC_MODE
-    msr cpsr_c, r0
-    ldr sp, =0xb400
-
-    //let the cpu1+ enter wfi state;
-    /* step3: execute a CLREX instruction */
-    clrex
-    /* step5: execute an ISB instruction */
-    isb sy
-    /* step6: execute a DSB instruction  */
-    dsb sy
-    /* step7: execute a WFI instruction */
-    wfi
-    /* step8:wait here */
-    b .
+	value = *(volatile unsigned int *)(0x1c20220);
+	value &= ~(0xf << 24);
+	value |= (0xf << 24);
+	*(volatile unsigned int *)(0x1c20220) = value;
 }
 
-#define SW_PA_CPUCFG_IO_BASE              0x01c25c00
-/*
- * CPUCFG
- */
-#define AW_CPUCFG_P_REG0            0x01a4
-#define CPUX_RESET_CTL(x) (0x40 + (x)*0x40)
-#define CPUX_CONTROL(x)   (0x44 + (x)*0x40)
-#define CPUX_STATUS(x)    (0x48 + (x)*0x40)
-#define AW_CPUCFG_GENCTL            0x0184
-#define AW_CPUCFG_DBGCTL0           0x01e0
-#define AW_CPUCFG_DBGCTL1           0x01e4
+//void dram_para_display(void)
+//{
+//	int i;
+//	__u32 *value = (void *)BT0_head.prvt_head.dram_para;
+//
+//	for(i=0;i<32;i++)
+//	{
+//		msg("para %d value %x\n", i, value[i]);
+//	}
+//
+//	return ;
+//}
 
-#define AW_CPU1_PWR_CLAMP         0x01b0
-#define AW_CPU1_PWROFF_REG        0x01b4
-#define readl(addr)		(*((volatile unsigned long  *)(addr)))
-#define writel(v, addr)	(*((volatile unsigned long  *)(addr)) = (unsigned long)(v))
-
-#define IO_ADDRESS(IO_ADDR) (IO_ADDR)
-#define IS_WFI_MODE(cpu)    (readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + CPUX_STATUS(cpu)) & (1<<2))
-
-void open_cpuX(__u32 cpu)
+void  set_vldo_for_pll(void)
 {
-    long paddr;
-    __u32 pwr_reg;
+	volatile unsigned int reg_val;
+	/* set voltage and ldo for pll */
 
-    paddr = (__u32)cpuX_startup_to_wfi;
-    writel(paddr, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_P_REG0);
+	reg_val = *(volatile unsigned int *)(0X01F01400+0x44);
+	reg_val &= ~(0xffU << 24);
+  	reg_val |= 0xa7U << 24;
+  	*(volatile unsigned int *)(0X01F01400+0x44) = reg_val;
 
-    /* step1: Assert nCOREPORESET LOW and hold L1RSTDISABLE LOW.
-              Ensure DBGPWRDUP is held LOW to prevent any external
-              debug access to the processor.
-    */
-    /* assert cpu core reset */
-    writel(0, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + CPUX_RESET_CTL(cpu));
-    /* L1RSTDISABLE hold low */
-    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_GENCTL);
-    pwr_reg &= ~(1<<cpu);
-    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_GENCTL);
-    /* DBGPWRDUP hold low */
-    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
-    pwr_reg &= ~(1<<cpu);
-    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
+	reg_val = *(volatile unsigned int *)(0X01F01400+0x44);
+	reg_val &= ~(0x1 << 15);
+	reg_val &= ~(0x7 << 16);
+	reg_val |= 0x7 << 16;
+	reg_val |= 0xa7U << 24;
+  	*(volatile unsigned int *)(0X01F01400+0x44) = reg_val;
 
-
-    /* step3: clear power-off gating */
-    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPU1_PWROFF_REG);
-    pwr_reg &= ~(1);
-    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPU1_PWROFF_REG);
-    delay_us(1000);
-
-    /* step4: de-assert core reset */
-    writel(3, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + CPUX_RESET_CTL(cpu));
-
-    /* step5: assert DBGPWRDUP signal */
-    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
-    pwr_reg |= (1<<cpu);
-    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
-
+	return ;
 }
-
-void close_cpuX(__u32 cpu)
-{
-    __u32 pwr_reg;
-
-    while(!IS_WFI_MODE(cpu));
-    /* step1: deassert cpu core reset */
-    writel(0, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + CPUX_RESET_CTL(cpu));
-
-    /* step2: deassert DBGPWRDUP signal */
-    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
-    pwr_reg &= ~(1<<cpu);
-    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPUCFG_DBGCTL1);
-
-    /* step3: set up power-off signal */
-    pwr_reg = readl(IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPU1_PWROFF_REG);
-    pwr_reg |= 1;
-    writel(pwr_reg, IO_ADDRESS(SW_PA_CPUCFG_IO_BASE) + AW_CPU1_PWROFF_REG);
-   
-}
-
-
-

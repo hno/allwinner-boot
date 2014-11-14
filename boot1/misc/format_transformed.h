@@ -47,7 +47,7 @@ extern void int_to_string_dec( int input, char * str );
 
 //This function is to convert an 'int' data 'input' to a string in hex,
 //and the string converted is in 'str'.
-extern void int_to_string_hex( int input, char * str, int hex_flag );
+extern void int_to_string_hex( int input, char * str );
 
 
 // This function is to convert an 'unsigned int' data 'input' to a string in decimalism, and

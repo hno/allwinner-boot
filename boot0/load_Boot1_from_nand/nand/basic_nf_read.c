@@ -53,10 +53,15 @@ __s32 NF_open( void )
 	struct boot_flash_info info;
 
 	if( NFB_BASE_PhyInit( ) == FAIL )
+	{
+		msg("NFB_BASE_PhyInit FAIL\n");
+
 		return NF_ERROR;
+	}
 	if( NFB_BASE_GetFlashInfo( &info ) == FAIL )
 	{
 		msg("get flash info failed.\n");
+
 		goto error;
 	}
 
@@ -92,8 +97,15 @@ __s32 NF_open( void )
 			NF_BLK_SZ_WIDTH = 21;
 			blk_for_boot1   =  BLKS_FOR_BOOT1_IN_2M_BLK_NF;
 			break;
+		case SZ_4M :
+			NF_BLK_SZ_WIDTH = 22;
+			blk_for_boot1   =  BLKS_FOR_BOOT1_IN_4M_BLK_NF;
+			break;
 		default :
+		{
+			msg("GET NF_BLOCK_SIZE FAIL\n");
 			goto error;
+		}
 	}
 	BOOT1_LAST_BLK_NUM = BOOT1_START_BLK_NUM + blk_for_boot1 - 1;
 
@@ -112,14 +124,21 @@ __s32 NF_open( void )
 		case SZ_8K :
 			NF_PG_SZ_WIDTH = 13;
 			break;
+		case SZ_16K :
+			NF_PG_SZ_WIDTH = 14;
+			break;
 		default :
+		{
+			msg("GET NF_PAGE_SIZE FAIL\n");
 			goto error;
+		}
 	}
 
 	return NF_OK;
 
 error:
 	NFB_BASE_PhyExit( );
+
 	return NF_ERROR;
 }
 

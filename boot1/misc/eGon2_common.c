@@ -77,7 +77,6 @@ void wlibc_uprintf( const char * str, ...)
 {
 	char string[16], str_store[256];
 	char *p, *q = str_store;
-	__s32 hex_flag ;
 	va_list argp;
 
 	va_start( argp, str );
@@ -88,16 +87,14 @@ void wlibc_uprintf( const char * str, ...)
 		{
 			++str;
 			p = string;
-			hex_flag = HEX_X;
 			switch( *str )
 			{
 				case 'd': int_to_string_dec( va_arg( argp,  __s32 ), string );
                           q += mem_puts( p, q );
 						  ++str;
 						  break;
-				case 'x': hex_flag = HEX_x;	         // jump to " case 'X' "
-				case 'p':
-				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string, hex_flag );
+				case 'x':
+				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string );
 						  q += mem_puts( p, q );
                           ++str;
 						  break;
@@ -111,34 +108,6 @@ void wlibc_uprintf( const char * str, ...)
 				case 's': q += mem_puts( va_arg( argp, char * ), q );
 						  ++str;
 						  break;
-				case 'l':
-					{
-						__u32 high;
-						__u32 low;
-
-						if( str[1] == 'l' && ( str[2] == 'x' || str[2] == 'X' ) )
-						{
-							low = va_arg( argp, __u32 );
-							high = va_arg( argp, __u32 );
-							if( str[2] == 'x' )
-								hex_flag = 'x';
-							else
-								hex_flag = 'X';
-							int_to_string_hex( high, string, hex_flag );
-							q += mem_puts( p, q );
-							int_to_string_hex( low, string, hex_flag );
-							q += mem_puts( p+2, q );
-							str += 3;
-						  	break;
-						}
-						else
-						{
-							int_to_string_dec( va_arg( argp,  __s32 ), string );
-                          	q += mem_puts( p, q );
-						  	++str;
-						  	break;
-						}
-					}
 				default : *q++ = '%';                                    // if current character is not Conversion Specifiers 'dxpXucs',
 						  *q++ = *str++;                                 // output directly '%' and current character, and then
 						                                                 // let 'str' point to next character.
@@ -181,7 +150,6 @@ void wlibc_ntprintf( const char * str, ...)
 {
 	char string[16], str_store[256];
 	char *p, *q = str_store;
-	__s32 hex_flag ;
 	va_list argp;
 
 	va_start( argp, str );
@@ -192,16 +160,14 @@ void wlibc_ntprintf( const char * str, ...)
 		{
 			++str;
 			p = string;
-			hex_flag = HEX_X;
 			switch( *str )
 			{
 				case 'd': int_to_string_dec( va_arg( argp,  __s32 ), string );
                           q += mem_puts( p, q );
 						  ++str;
 						  break;
-				case 'x': hex_flag = HEX_x;	         // jump to " case 'X' "
-				case 'p':
-				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string, hex_flag );
+				case 'x':
+				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string );
 						  q += mem_puts( p, q );
                           ++str;
 						  break;
@@ -215,34 +181,6 @@ void wlibc_ntprintf( const char * str, ...)
 				case 's': q += mem_puts( va_arg( argp, char * ), q );
 						  ++str;
 						  break;
-				case 'l':
-					{
-						__u32 high;
-						__u32 low;
-
-						if( str[1] == 'l' && ( str[2] == 'x' || str[2] == 'X' ) )
-						{
-							low = va_arg( argp, __u32 );
-							high = va_arg( argp, __u32 );
-							if( str[2] == 'x' )
-								hex_flag = 'x';
-							else
-								hex_flag = 'X';
-							int_to_string_hex( high, string, hex_flag );
-							q += mem_puts( p, q );
-							int_to_string_hex( low, string, hex_flag );
-							q += mem_puts( p+2, q );
-							str += 3;
-						  	break;
-						}
-						else
-						{
-							int_to_string_dec( va_arg( argp,  __s32 ), string );
-                          	q += mem_puts( p, q );
-						  	++str;
-						  	break;
-						}
-					}
 				default : *q++ = '%';                                    // if current character is not Conversion Specifiers 'dxpXucs',
 						  *q++ = *str++;                                 // output directly '%' and current character, and then
 						                                                 // let 'str' point to next character.
@@ -285,7 +223,6 @@ void wlibc_sprintf( char *str_store, const char * str, ...)
 {
 	char string[16];
 	char *p, *q = str_store;
-	__s32 hex_flag;
 	va_list argp;
 
 	va_start( argp, str );
@@ -296,16 +233,14 @@ void wlibc_sprintf( char *str_store, const char * str, ...)
 		{
 			++str;
 			p = string;
-			hex_flag = HEX_X;
 			switch( *str )
 			{
 				case 'd': int_to_string_dec( va_arg( argp,  __s32 ), string );
                           q += mem_puts( p, q );
 						  ++str;
 						  break;
-				case 'x': hex_flag = HEX_x;	         // jump to " case 'X' "
-				case 'p':
-				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string, hex_flag );
+				case 'x':
+				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string );
 						  q += mem_puts( p, q );
                           ++str;
 						  break;
@@ -319,34 +254,6 @@ void wlibc_sprintf( char *str_store, const char * str, ...)
 				case 's': q += mem_puts( va_arg( argp, char * ), q );
 						  ++str;
 						  break;
-				case 'l':
-					{
-						__u32 high;
-						__u32 low;
-
-						if( str[1] == 'l' && ( str[2] == 'x' || str[2] == 'X' ) )
-						{
-							low = va_arg( argp, __u32 );
-							high = va_arg( argp, __u32 );
-							if( str[2] == 'x' )
-								hex_flag = 'x';
-							else
-								hex_flag = 'X';
-							int_to_string_hex( high, string, hex_flag );
-							q += mem_puts( p, q );
-							int_to_string_hex( low, string, hex_flag );
-							q += mem_puts( p+2, q );
-							str += 3;
-						  	break;
-						}
-						else
-						{
-							int_to_string_dec( va_arg( argp,  __s32 ), string );
-                          	q += mem_puts( p, q );
-						  	++str;
-						  	break;
-						}
-					}
 				default : *q++ = '%';                                    // if current character is not Conversion Specifiers 'dxpXucs',
 						  *q++ = *str++;                                 // output directly '%' and current character, and then
 						                                                 // let 'str' point to next character.

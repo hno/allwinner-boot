@@ -27,7 +27,7 @@
 #include  "string.h"
 
 #define  ENV_DATA_DRAM_ADDRESS         0x58000000
-#define  ENV_FLASH_DRAM_ADDRESS		   0x49000000
+#define  ENV_FLASH_DRAM_ADDRESS		   0x56000000
 #define  ENV_SIZE                      (128 * 1024)
 #define  PRIVATE_FLASH_DRAM_ADDRESS	   0x5E000000
 
@@ -61,6 +61,7 @@ int    private_exist = 0;
 *
 ************************************************************************************************************
 */
+/*
 int env_fetch_from_boot1(void)
 {
 	char *tmp_boot1 = NULL;
@@ -154,6 +155,7 @@ int env_fetch_from_boot1(void)
 
 	return ret;
 }
+*/
 /*
 ************************************************************************************************************
 *
@@ -172,35 +174,29 @@ int env_fetch_from_boot1(void)
 */
 int private_fetch_from_flash(void)
 {
-	char *mbr_buf;
+	char mbr_buf[MBR_SIZE];
 	MBR  *mbr_info;
 	int  crc, i;
 	int  size, start;
 	int  ret = -1;
-    int s_type = 0;
+
 	memset(mac_addr_store, 0, 32);
 	env_flash_dram_base = (char *)ENV_FLASH_DRAM_ADDRESS;
 	private_flash_dram_base = (char *)PRIVATE_FLASH_DRAM_ADDRESS;
 #if 1
-	if(sprite_flash_init(&s_type))
+	if(sprite_flash_init())
 	{
 		__inf("update flash env err: flash init\n");
 
 		return -1;
 	}
-    mbr_buf=wBoot_malloc(MBR_SIZE*MBR_COPY_NUM);
-    if(0 == mbr_buf)
-    {
-        __inf("update flash env err: malloc mbr buffer failed!\n");
-        goto update_flash_env_err;
-    }
-	if(sprite_flash_read(0, MBR_SIZE*MBR_COPY_NUM/512, mbr_buf))
+	if(sprite_flash_read(0, MBR_SIZE/512, mbr_buf))
 	{
 		__inf("update flash env err: read flash error\n");
 
 		goto update_flash_env_err;
 	}
-	for(i=0;i<MBR_COPY_NUM;i++)
+	for(i=0;i<4;i++)
 	{
 		mbr_info = (MBR *)(mbr_buf + i * MBR_SIZE);
 		crc = calc_crc32((void *)&mbr_info->version, sizeof(MBR) - 4);
@@ -213,7 +209,7 @@ int private_fetch_from_flash(void)
 	{
 		ret = 0;
 		__inf("update flash env err: cant find good flash mbr\n");
-        wBoot_free(mbr_buf);
+
 		goto update_flash_env_err;
 	}
 	for(i=0;i<mbr_info->PartCount;i++)
@@ -227,7 +223,7 @@ int private_fetch_from_flash(void)
 			if(sprite_flash_read(start, size, env_flash_dram_base))
 			{
 				__inf("update flash env err: read env data error\n");
-                wBoot_free(mbr_buf);
+
 				goto update_flash_env_err;
 			}
 			env_exist = 1;
@@ -241,7 +237,7 @@ int private_fetch_from_flash(void)
 			if(sprite_flash_read(start, size, private_flash_dram_base))
 			{
 				__inf("update flash private err: read private data error\n");
-                wBoot_free(mbr_buf);
+
 				goto update_flash_env_err;
 			}
 			private_flash_flash_size = size<<9;
@@ -250,9 +246,8 @@ int private_fetch_from_flash(void)
 	}
 	ret = 0;
 
-wBoot_free(mbr_buf);
 update_flash_env_err:
-	sprite_flash_exit(s_type);
+	sprite_flash_exit(0);
 #endif
 //	if(!env_exist)		//如果在旧的环境变量中没有找到动态数据，则去boot1中寻找
 //	{
@@ -540,6 +535,7 @@ static void env_restore(const char *env_name)
 	}
 	else
 	{
+		memset(mac_addr_store, 0, 32);
 		strcpy(mac_addr_store, env_src);
 		env_write(env_data_dram_base, env_src, env_name);
 	}
@@ -566,7 +562,7 @@ int env_exit(void)
 	int   env_count;
 	int   i, tmp;
 
-	__inf("env exit\n");
+	__inf("env exit = %d\n", env_exist);
 	if(env_exist == 1)
 	{
 		env_count = wBoot_script_parser_subkey_count("env_restore");
@@ -596,6 +592,7 @@ int env_exit(void)
 			while(i < env_count);
 		}
 	}
+/*
 	else if(env_exist == 2)
 	{
 		__inf("env_flash_dram_base = %s\n", env_flash_dram_base);
@@ -603,6 +600,7 @@ int env_exit(void)
 		__inf("mac_addr_store = %s\n", mac_addr_store);
 		env_write(env_data_dram_base, env_flash_dram_base, "mac");
 	}
+*/
 	sprite_flash_write(env_flash_flash_start, env_data_dram_size>>9, env_data_dram_base);
 
 	return 0;

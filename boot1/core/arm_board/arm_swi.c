@@ -79,9 +79,9 @@ void eGon2_swi_handler_entry(__u32 swi_number, struct swi_regs * swi_reg)
 		break;
 		case EGON2_SWI_JUMP_TO_LINUX:
 		{
-			eGon2_jump_to_android_linux(swi_reg->reg[0], swi_reg->reg[1], swi_reg->reg[2], swi_reg->reg[3]);
+		    eGon2_jump_to_android_linux(swi_reg->reg[0], swi_reg->reg[1], swi_reg->reg[2], swi_reg->reg[3]);
 		}
-
+        break;
  /* 中断服务 */
 		case EGON2_SWI_IRQ_REG:
 		{
@@ -172,13 +172,15 @@ void eGon2_swi_handler_entry(__u32 swi_number, struct swi_regs * swi_reg)
 /* 内置TWI操作 */
         case EGON2_SWI_TWI_READ:
         {
-            swi_reg->reg[0] = eGon2_twi_read((void *)swi_reg->reg[0]);
+//            swi_reg->reg[0] = eGon2_twi_read((void *)swi_reg->reg[0]);
+			swi_reg->reg[0] = -1;
         }
         break;
 
         case EGON2_SWI_TWI_WRITE:
         {
-            swi_reg->reg[0] = eGon2_twi_write((void *)swi_reg->reg[0]);
+//            swi_reg->reg[0] = eGon2_twi_write((void *)swi_reg->reg[0]);
+        	swi_reg->reg[0] = -1;
         }
         break;
 
@@ -202,13 +204,13 @@ void eGon2_swi_handler_entry(__u32 swi_number, struct swi_regs * swi_reg)
 /* 内置POWER操作 */
         case EGON2_SWI_POWER_GET_SOURCE:
         {
-            swi_reg->reg[0] = eGon2_power_get_dcin_battery_exist((__u32 *)swi_reg->reg[0], (__u32 *)swi_reg->reg[1]);
+            swi_reg->reg[0] = axp_power_get_dcin_battery_exist((int *)swi_reg->reg[0], (int *)swi_reg->reg[1]);
         }
         break;
 
         case EGON2_SWI_POWER_GET_BAT_VOL:
         {
-            swi_reg->reg[0] = eGon2_power_get_battery_vol((__u32 *)swi_reg->reg[0]);
+            swi_reg->reg[0] = axp_probe_battery_vol((__u32 *)swi_reg->reg[0]);
         }
         break;
 
@@ -220,55 +222,56 @@ void eGon2_swi_handler_entry(__u32 swi_number, struct swi_regs * swi_reg)
 
         case EGON2_SWI_POWER_GET_KEY:
         {
-            swi_reg->reg[0] = eGon2_power_get_key();
+            swi_reg->reg[0] = axp_probe_key();
         }
         break;
 
         case EGON2_SWI_POWER_CHECK_STARTUP:
         {
-            swi_reg->reg[0] = eGon2_power_check_startup();
+            swi_reg->reg[0] = axp_probe_startup_cause();
         }
         break;
 
         case EGON2_SWI_POWER_SET_SW1:
         {
-            swi_reg->reg[0] = eGon2_power_set_sw1(swi_reg->reg[0]);
+            //swi_reg->reg[0] = eGon2_power_set_sw1(swi_reg->reg[0]);
         }
         break;
 
         case EGON2_SWI_POWER_GET_LEVEL_STATUS:
         {
-        	swi_reg->reg[0] = eGon2_get_power_vol_level();
+        	swi_reg->reg[0] = axp_get_power_vol_level();
         }
         break;
 
         case EGON2_SWI_POWER_SET_OFF_VOL:
         {
-        	swi_reg->reg[0] = eGon2_set_power_off_vol();
+        	swi_reg->reg[0] = axp_set_hardware_poweroff_vol();
         }
         break;
 
         case EGON2_SWI_POWER_BATTERY_CAL:
         {
-        	swi_reg->reg[0] = eGon2_power_axp_rest_cal();
+        	swi_reg->reg[0] = axp_probe_rest_battery_capacity();
         }
         break;
 
-		case EGON2_SWI_POWER_CUR_LIMIT:
-		{
-			swi_reg->reg[0] = eGon2_power_vbus_cur_limit(swi_reg->reg[0]);
-		}
-		break;
-
-		case EGON2_SWI_POWER_VOL_LIMIT:
-		{
-			swi_reg->reg[0] = eGon2_power_vbus_vol_limit(swi_reg->reg[0]);
-		}
-		break;
+//		case EGON2_SWI_POWER_CUR_LIMIT:
+//		{
+//			swi_reg->reg[0] = axp_set_vbus_cur_limit(swi_reg->reg[0]);
+//		}
+//		break;
+//
+//		case EGON2_SWI_POWER_VOL_LIMIT:
+//		{
+//			swi_reg->reg[0] = axp_set_vbus_vol_limit(swi_reg->reg[0]);
+//		}
+//		break;
 
 		case EGON2_SWI_POWER_TYPE:
 		{
-			swi_reg->reg[0] = eGon2_power_type();
+			//swi_reg->reg[0] = eGon2_power_type();
+			swi_reg->reg[0] = 0;
 		}
 		break;
 		/* cache 操作 */
@@ -607,7 +610,8 @@ void eGon2_swi_handler_entry(__u32 swi_number, struct swi_regs * swi_reg)
 //key操作
         case EGON2_SWI_KEY_GET_STATUS:
         {
-            swi_reg->reg[0] = eGon2_key_get_status();
+            //swi_reg->reg[0] = eGon2_key_get_status();
+        	swi_reg->reg[0] = -1;
         }
         break;
 
@@ -703,6 +707,37 @@ void eGon2_swi_handler_entry(__u32 swi_number, struct swi_regs * swi_reg)
         	swi_reg->reg[0] = eGon2_GPIO_Read_One_PIN_Value((__hdle)swi_reg->reg[0], (const char *)swi_reg->reg[2]);
         }
         break;
+
+        case EGON2_SWI_PMU_INT_EN:
+        {
+        	swi_reg->reg[0] = axp_int_enable((__hdle)swi_reg->reg[0]);
+        }
+        break;
+
+        case EGON2_SWI_PMU_INT_DIS:
+        {
+        	swi_reg->reg[0] = axp_int_disable();
+        }
+        break;
+
+        case EGON2_SWI_PMU_INT_QUERY:
+        {
+        	swi_reg->reg[0] = axp_int_query((__hdle)swi_reg->reg[0]);
+        }
+        break;
+
+        case EGON2_SWI_PMU_LIMIT_PC:
+        {
+        	swi_reg->reg[0] = axp_set_vbus_limit_pc();
+        }
+        break;
+
+        case EGON2_SWI_PMU_LIMIT_DC:
+        {
+        	swi_reg->reg[0] = axp_set_vbus_limit_dc();
+        }
+        break;
+
 		default:
 		{
 			swi_reg->reg[0] = (__u32)(-1);

@@ -13,9 +13,9 @@
 #include "boot0_i.h"
 #include <string.h>
 
-#define MMC_SUN7I
+#define MMC_SUN6I
 #define MAX_MMC_NUM			4
-#define MMC_TRANS_BY_DMA
+//#define MMC_TRANS_BY_DMA
 //#define MMC_DEBUG
 
 #define MMC_REG_BASE		0x01c0f000
@@ -33,11 +33,11 @@
 #endif
 
 #ifdef MMC_DEBUG
-#define mmcinfo(fmt...)	OSAL_printf("[mmc]: "fmt)
-#define mmcdbg(fmt...)	OSAL_printf("[mmc]: "fmt)
-#define mmcmsg(fmt...)	OSAL_printf(fmt)
+#define mmcinfo(fmt...)	msg("[mmc]: "fmt)
+#define mmcdbg(fmt...)	msg("[mmc]: "fmt)
+#define mmcmsg(fmt...)	msg(fmt)
 #else
-#define mmcinfo(fmt...)
+#define mmcinfo(fmt...)	msg("[mmc]: "fmt)
 #define mmcdbg(fmt...)
 #define mmcmsg(fmt...)
 #endif
@@ -50,5 +50,10 @@
 #define writel(v, addr)	(*((volatile unsigned long  *)(addr)) = (unsigned long)(v))
 
 extern void OSAL_CacheRangeFlush(void*Address, __u32 Length, __u32 Flags);
+
+#define DMAC_DES_BASE_IN_SRAM		(0x20000 + 0xC000)
+#define DMAC_DES_BASE_IN_SDRAM	(0x42000000)
+#define DRAM_START_ADDR					(0x40000000)
+#define SRAM_END_ADDR						(32*1024)
 
 #endif /* _MMC_H_ */

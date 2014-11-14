@@ -93,7 +93,7 @@ static void gic_distributor_init(void)
 	{
 		GICD_SPI_PRIO((i-32)>>2) = 0xa0a0a0a0;
 	}
-	/* set processor target to only cpu0 */
+	/* set processor target */
 	for (i=32; i<GIC_IRQ_NUM; i+=4)
 	{
 		GICD_SPI_ITARG((i-32)>>2) = cpumask;
@@ -108,7 +108,6 @@ static void gic_distributor_init(void)
 	{
 		GICD_ICACTIVER(i>>5) = 0xffffffff;
 	}
-    //enable gic distributor
 	GICD_CTLR = 1;
 
 	return ;
@@ -133,7 +132,7 @@ static void gic_cpuif_init(void)
 {
 	__u32 i;
 
-	GICC_CTLR = 0;
+	GICC_CTRL = 0;
 	/*
 	 * Deal with the banked PPI and SGI interrupts - disable all
 	 * PPI interrupts, ensure all SGI interrupts are enabled.
@@ -151,8 +150,7 @@ static void gic_cpuif_init(void)
 	}
 
 	GICC_PMR  = 0xf0;
-    //enable the gic cpu interface
-	GICC_CTLR = 1;
+	GICC_CTRL = 1;
 
 	return ;
 }
@@ -192,8 +190,8 @@ void eGon2_Int_Init(void)
 	{
 		eGon2_IRQVectorTable[i].pIsr = esIRQHandler_default;
 	}
-	eGon2_IRQVectorTable[GIC_SRC_TIMER0].pIsr = timer0_int_func;
-	eGon2_IRQVectorTable[GIC_SRC_TIMER1].pIsr = timer1_int_func;
+	eGon2_IRQVectorTable[AW_IRQ_TIMER0].pIsr = timer0_int_func;
+	eGon2_IRQVectorTable[AW_IRQ_TIMER1].pIsr = timer1_int_func;
 
 	gic_distributor_init();
 	gic_cpuif_init();
@@ -295,6 +293,7 @@ __s32 eGon2_EnableInt(__u32 irq_no)
 		eGon2_printf("irq NO.(%d) > GIC_IRQ_NUM(%d) !!\n", irq_no, GIC_IRQ_NUM);
 		return -1;
 	}
+
 	offset   = irq_no >> 5; // ³ý32
 	reg_val  = GICD_ISENABLER(offset);
 	reg_val |= 1 << (irq_no & 0x1f);
@@ -404,5 +403,4 @@ void gic_irq_handler(void)
 
 	return ;
 }
-
 

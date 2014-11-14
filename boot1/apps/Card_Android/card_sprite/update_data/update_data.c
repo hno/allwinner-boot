@@ -40,13 +40,13 @@ int		 flash_memory_size;
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -56,28 +56,29 @@ __s32  update_boot0(void *buf0, char *buf, int sprite_type)
     boot0_file_head_t    *boot0  = (boot0_file_head_t *)buf0;
     boot1_file_head_t    *boot1  = (boot1_file_head_t *)BOOT1_BASE;
 	__u32                 length;
-
-	//Ğ£ÑéÊı¾İÊÇ·ñÕıÈ·
+	__s32				  ret;
+	//æ ¡éªŒæ•°æ®æ˜¯å¦æ­£ç¡®
     if(check_file( (__u32 *)buf0, boot0->boot_head.length, BOOT0_MAGIC ) != CHECK_IS_CORRECT)
     {
         sprite_wrn("The input Boot0 in the RAM %X is checked wrong!\n", buf0);
 
 		return -1;
 	}
-	//¶Á³ödram²ÎÊı
-	//Ìî³äFLASHĞÅÏ¢
+	//è¯»å‡ºdramå‚æ•°
+	//å¡«å……FLASHä¿¡æ¯
 	if(!sprite_type)
 	{
 		update_boot0_info(buf0, buf);
 	}
 	//memcpy(&boot0->prvt_head.nand_connect_info, &nand_info->nand_para, sizeof(boot_nand_para_t));
-	memcpy((void *)&boot0->prvt_head.dram_para, (void *)&boot1->prvt_head.dram_para, sizeof(boot_dram_para_t));
-	boot0->boot_head.platform[7] = 1;//0: try dram para.1: read dram para from head.
+	//memcpy((void *)&boot0->prvt_head.dram_para, (void *)&boot1->prvt_head.dram_para, sizeof(boot_dram_para_t));
+	boot0->boot_head.platform[7] = 1;
 	/* regenerate check sum */
 	gen_check_sum( (void *)boot0 );
 
-    length = boot0->boot_head.length;                         // »ñÈ¡Boot0ÎÄ¼şµÄ³ß´ç
-    /* Ğ£ÑéÄÚ´æÖĞµÄBoot0ÎÄ¼ş */
+	__inf("burn boot0\n");
+    length = boot0->boot_head.length;                         // è·å–Boot0æ–‡ä»¶çš„å°ºå¯¸
+    /* æ ¡éªŒå†…å­˜ä¸­çš„Boot0æ–‡ä»¶ */
     if( check_file( (__u32 *)boot0, length, BOOT0_MAGIC ) != CHECK_IS_CORRECT )
     {
         sprite_wrn("The Boot0 in the RAM %X is checked wrong!\n", boot0);
@@ -90,7 +91,59 @@ __s32  update_boot0(void *buf0, char *buf, int sprite_type)
 	}
 	else
 	{
-		return SDMMC_PhyWrite(BOOT0_SDMMC_START_ADDR, length/512, (void *)boot0, 2);
+		int  line_sel;
+		int  speed_mode;
+		int  card_offset;
+		char tmp_buffer[512];
+		boot0_file_head_t    *tmp_boot0;
+
+		__inf("card2 init\n");
+		ret = wBoot_script_parser_fetch("card2_boot_para", "card_line", &line_sel, 1);
+		if(ret)
+		{
+			line_sel = 4;
+		}
+		ret = wBoot_script_parser_fetch("card2_boot_para", "card_high_speed", &speed_mode, 1);
+		if(ret)
+		{
+			speed_mode = 1;
+		}
+		ret = wBoot_script_parser_fetch("card_boot", "logical_start", &card_offset, 1);
+		if(ret)
+		{
+			card_offset = 40960;
+		}
+		if(SDMMC_PhyInit(2, line_sel) < 0)
+		{
+			__inf("SDMMC_PhyInit fail\n");
+
+			return -1;
+		}
+		SDMMC_PhyRead(16, 1, tmp_buffer, 2);
+		if(check_file( (__u32 *)tmp_buffer, tmp_boot0->boot_head.length, BOOT0_MAGIC ) == CHECK_IS_CORRECT)
+	    {
+	    	memset(tmp_buffer, 0, 512);
+	        SDMMC_PhyWrite(16, 1, tmp_buffer, 2);
+		}
+		SDMMC_PhyExit(2);
+
+		if(SDMMC_LogicalInit(2, card_offset, line_sel) < 0)
+		{
+			__inf("SDMMC_LogicalInit fail\n");
+
+			return -1;
+		}
+
+		ret = SDMMC_LogicalWrite1(BOOT0_SDMMC_START_ADDR, length/512, (void *)boot0, 2);
+
+		if(SDMMC_PhyExit(2))
+		{
+			__inf("SDMMC_PhyExit fail\n");
+
+			return -1;
+		}
+
+		return (ret>0)?0:(-1);
 	}
 }
 /*
@@ -98,13 +151,13 @@ __s32  update_boot0(void *buf0, char *buf, int sprite_type)
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -129,13 +182,13 @@ static int dyanmic_data_check(char *buf)
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -144,18 +197,19 @@ __s32 update_boot1(void *buf1, char *buf, int sprite_type)
 {
     boot1_file_head_t  *boot1 = (boot1_file_head_t *)buf1;
     __u32   length;
-//    __s32   ret = 0;
+    __s32   ret = 0;
 	if(check_file( (__u32 *)buf1, boot1->boot_head.length, BOOT1_MAGIC ) != CHECK_IS_CORRECT)
     {
         sprite_wrn("Error!The input Boot1 in the RAM %X is checked wrong!\n", buf1);
 		return -1;
 	}
-	//Ìî³äNANDĞÅÏ¢
+	//å¡«å……NANDä¿¡æ¯
 	boot1->prvt_head.work_mode = 0x20;
 	if(!sprite_type)
 	{
 		update_boot1_info(buf1, buf);
 	}
+#if 0
 	if(env_exist)
 	{
 		char 			   *base = (char *)boot1->prvt_head.script_buf;
@@ -179,7 +233,8 @@ __s32 update_boot1(void *buf1, char *buf, int sprite_type)
 		base += sizeof(dynamic_data_form);
 		memcpy(base, mac_addr_store, dform->datasize);
 	}
-//	else	//¶Á³öÔ­ÓĞµÄboot1Êı¾İ£¬²é¿´ÊÇ·ñÓĞ¶¯Ì¬µØÖ·
+#endif
+//	else	//è¯»å‡ºåŸæœ‰çš„boot1æ•°æ®ï¼ŒæŸ¥çœ‹æ˜¯å¦æœ‰åŠ¨æ€åœ°å€
 //	{
 //		char *tmp_boot1 = NULL;
 //
@@ -212,10 +267,9 @@ __s32 update_boot1(void *buf1, char *buf, int sprite_type)
 //		return -1;
 //	}
 	/* regenerate check sum */
-    boot1->boot_head.platform[7]=0xff;                          //boot mode
 	gen_check_sum( (void *)boot1 );
-	length = boot1->boot_head.length;                         // »ñÈ¡Boot1ÎÄ¼şµÄ³ß´ç
-    /* Ğ£ÑéÄÚ´æÖĞµÄBoot1ÎÄ¼ş */
+	length = boot1->boot_head.length;                         // è·å–Boot1æ–‡ä»¶çš„å°ºå¯¸
+    /* æ ¡éªŒå†…å­˜ä¸­çš„Boot1æ–‡ä»¶ */
     if( check_file( (__u32 *)boot1, length, BOOT1_MAGIC ) != CHECK_IS_CORRECT )
     {
         sprite_wrn("The changed Boot1 in the RAM %X is checked wrong!\n", boot1);
@@ -229,7 +283,44 @@ __s32 update_boot1(void *buf1, char *buf, int sprite_type)
 	}
 	else if(sprite_type == 1)
 	{
-		return SDMMC_PhyWrite(BOOT1_SDMMC_START_ADDR, length/512, (void *)boot1, 2);
+		{
+			int  line_sel;
+			int  speed_mode;
+			int  card_offset;
+
+			__inf("card2 init\n");
+			ret = wBoot_script_parser_fetch("card2_boot_para", "card_line", &line_sel, 1);
+			if(ret)
+			{
+				line_sel = 4;
+			}
+			ret = wBoot_script_parser_fetch("card2_boot_para", "card_high_speed", &speed_mode, 1);
+			if(ret)
+			{
+				speed_mode = 1;
+			}
+			ret = wBoot_script_parser_fetch("card_boot", "logical_start", &card_offset, 1);
+			if(ret)
+			{
+				card_offset = 40960;
+			}
+			if(SDMMC_LogicalInit(2, card_offset, line_sel) < 0)
+			{
+				__inf("SDMMC_LogicalInit fail\n");
+
+				return -1;
+			}
+			ret = SDMMC_LogicalWrite1(BOOT1_SDMMC_START_ADDR, length/512, (void *)boot1, 2);
+
+			if(SDMMC_LogicalExit(2))
+			{
+				__inf("SDMMC_LogicalExit fail\n");
+
+				return -1;
+			}
+
+			return (ret>0)?0:(-1);
+		}
 	}
 
 	return -1;
@@ -239,33 +330,33 @@ __s32 update_boot1(void *buf1, char *buf, int sprite_type)
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
 */
-__s32 update_flash_init(int *type)
+__s32 update_flash_init(void)
 {
-	return sprite_flash_init(type);
+	return sprite_flash_init();
 }
 /*
 ************************************************************************************************************
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -279,13 +370,13 @@ __s32 update_flash_exit(int type)
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -307,13 +398,13 @@ __s32 update_flash_open(__u32 sector_lo, __u32 sector_hi)
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -362,7 +453,7 @@ __s32 update_flash_write_ext(void *pbuf, __u32 len)
 	{
 		return -1;
 	}
-    if(len & 0x1ff)   //Èç¹û²»ÊÇ512×Ö½Ú(ÉÈÇø)¶ÔÆë£¬ÔòÔö¼Ó1ÉÈÇø
+    if(len & 0x1ff)   //å¦‚æœä¸æ˜¯512å­—èŠ‚(æ‰‡åŒº)å¯¹é½ï¼Œåˆ™å¢åŠ 1æ‰‡åŒº
     {
         sector_count ++;
     }
@@ -386,7 +477,7 @@ __s32 update_flash_read_ext(void *pbuf, __u32 len)
 	{
 		return -1;
 	}
-    if(len & 0x1ff)   //Èç¹û²»ÊÇ512×Ö½Ú(ÉÈÇø)¶ÔÆë£¬ÔòÔö¼Ó1ÉÈÇø
+    if(len & 0x1ff)   //å¦‚æœä¸æ˜¯512å­—èŠ‚(æ‰‡åŒº)å¯¹é½ï¼Œåˆ™å¢åŠ 1æ‰‡åŒº
     {
         sector_count ++;
     }
@@ -411,6 +502,7 @@ __s32 update_force_to_flash(void)
 	else if(private_type == 1)
 	{
 		//set mac to new env
+		__inf("env exit\n");
 		env_exit();
 	}
 
@@ -421,13 +513,13 @@ __s32 update_force_to_flash(void)
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -444,19 +536,19 @@ __s32 update_flash_close(void)
 *
 *                                             function
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
 */
-int update_flash_hardware_scan(void* mbr_i,void *flash_info, int erase_flash)
+int update_flash_hardware_scan(void *flash_info, int erase_flash)
 {
-	return sprite_flash_hardware_scan(mbr_i,flash_info, erase_flash);
+	return sprite_flash_hardware_scan(flash_info, erase_flash);
 }
 

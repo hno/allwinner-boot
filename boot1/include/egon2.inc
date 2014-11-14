@@ -23,8 +23,8 @@
     IF :LNOT::DEF:__EGON2_INC_
 	GBLA  __EGON2_INC_
 
-    include cfgs\arm_a8.inc
-    include arch\ebios.inc
+    include cfgs/arm_a8.inc
+    include arch/ebios.inc
 
 
 

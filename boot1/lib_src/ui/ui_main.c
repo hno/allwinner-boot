@@ -49,6 +49,7 @@ static  int boot_ui_showLayer(void);
 */
 __s32 boot_ui_init(__s32 display_source, __s32 display_mode)
 {
+#if 1
     __s32 ret = 0;
     __s32 source, tv_mode;
 
@@ -121,7 +122,23 @@ __s32 boot_ui_init(__s32 display_source, __s32 display_mode)
 		boot_ui_showLayer();
 	}
 	ui_source.color = UI_BOOT_GUI_GREEN;
+#else
+	ui_source.disp_hd = 0x40000000;
+	ui_source.layer_hdl = 0x64;
 
+	//获取屏幕参数，描绘背景
+	if(boot_ui_fetchscn_info())
+	{
+		return BOOT_UI_SCREEN_INFO_FAIL;
+	}
+	//现在除了屏幕还没有打开，其它都已经准备好
+	//发现如果是LCD，则不打开屏幕，否则都打开屏幕
+	//if(source != DISP_OUTPUT_TYPE_LCD)
+	{
+		boot_ui_showLayer();
+	}
+	ui_source.color = UI_BOOT_GUI_GREEN;
+#endif
     return BOOT_UI_INIT_SUCCESSED;
 }
 

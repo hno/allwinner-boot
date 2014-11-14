@@ -738,7 +738,7 @@
 
  __u32 usb_get_iddig(pusb_struct pusb)
 {
-	#ifdef CONFIG_AW_FPGA_PLATFORM
+	#ifdef FPGA_PLATFORM
 	return ((get_bvalue(pusb->reg_base + USB_bDEVCTL_OFF)>>0x7)&0x1);
 	#else
 	return (get_wvalue(pusb->reg_base + USB_wISCR_OFF)>>24)&0x1;
@@ -777,11 +777,15 @@
 
  void usb_force_id(pusb_struct pusb, __u32 id)
 {
-
+	#ifdef FPGA_PLATFORM
+	if(id) 	set_wbit(PIOB_DATA_REG, 0x1<<0);
+	else   	clr_wbit(PIOB_DATA_REG, 0x1<<0);
+	set_wbit(PIOB_DATA_REG, 0x1<<1);
+	#else
 	if(id) 	set_wbit(pusb->reg_base + USB_wISCR_OFF, 0x1<<14);
 	else   	clr_wbit(pusb->reg_base + USB_wISCR_OFF, 0x1<<14);
 	set_wbit(pusb->reg_base + USB_wISCR_OFF, 0x1<<15);
-
+	#endif
 }
 
  void usb_vbus_src(pusb_struct pusb, __u32 src)
@@ -805,27 +809,26 @@
  void usb_drive_vbus(pusb_struct pusb, __u32 vbus, __u32 index)
 {
 	__u32 temp;
-	//Set PB9 Output,USB0-DRV SET 
+	//Set PIOH14/15/16 to Output
 	if(index == 0)
 	{
-	  temp = get_wvalue(0x01c20800+0x28);
-	  temp &= ~(0x7<<4);
-	  temp |= (0x1<<1);
-	  put_wvalue(0x01c20800+0x28, temp);
+	  temp = get_wvalue(0x01c20800+0x100);
+	  temp &= ~(0x7<<24);
+	  temp |= (0x1<<24);
+	  put_wvalue(0x01c20800+0x100, temp);
 	  if(vbus)
 	  {
-	  	temp = get_wvalue(0x01c20800+0x34);
-	  	temp |= (0x1<<9);
-	  	put_wvalue(0x01c20800+0x34,temp);
+	  	temp = get_wvalue(0x01c20800+0x10c);
+	  	temp |= (0x1<<14);
+	  	put_wvalue(0x01c20800+0x10c,temp);
 	  }
 	  else
 	  {
-	    temp = get_wvalue(0x01c20800+0x34);
-	  	temp &= ~(0x1<<9);
-	  	put_wvalue(0x01c20800+0x34,temp);
+	    temp = get_wvalue(0x01c20800+0x10c);
+	  	temp &= ~(0x1<<14);
+	  	put_wvalue(0x01c20800+0x10c,temp);
 	  }
 	}
-
 }
 
  __u32 usb_get_ep_fifo_addr(pusb_struct pusb, __u32 ep_no)

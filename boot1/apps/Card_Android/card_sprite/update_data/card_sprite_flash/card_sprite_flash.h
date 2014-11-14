@@ -25,7 +25,7 @@
 extern    int   update_boot0_info (void *buf0, char *buf);
 extern    int   update_boot1_info (void *buf0, char *buf);
 
-extern    int   sprite_flash_init (int *type);
+extern    int   sprite_flash_init (void);
 extern    int   sprite_flash_exit (int type);
 
 extern    int   sprite_flash_open (void);
@@ -34,7 +34,7 @@ extern    int   sprite_flash_read (__u32 nSectNum,  __u32 nSectorCnt, void * pBu
 extern    int   sprite_flash_write(__u32 nSectNum,  __u32 nSectorCnt, void * pBuf);
 
 
-extern    int 	sprite_flash_hardware_scan(void *mbr_i,void *flash_info, int erase_flash);
+extern    int 	sprite_flash_hardware_scan(void *flash_info, int erase_flash);
 
 extern    int   create_stdmbr(void *mbr_i);
 

@@ -128,6 +128,7 @@
  * EXT_CSD fields
  */
 
+#define EXT_CSD_BOOT_BUS_COND	177	/* R/W */
 #define EXT_CSD_PART_CONF	179	/* R/W */
 #define EXT_CSD_BUS_WIDTH	183	/* R/W */
 #define EXT_CSD_HS_TIMING	185	/* R/W */
@@ -149,6 +150,40 @@
 #define EXT_CSD_BUS_WIDTH_1	0	/* Card is in 1 bit mode */
 #define EXT_CSD_BUS_WIDTH_4	1	/* Card is in 4 bit mode */
 #define EXT_CSD_BUS_WIDTH_8	2	/* Card is in 8 bit mode */
+
+
+
+
+/* MMC_SWITCH boot modes */
+#define MMC_SWITCH_MMCPART_NOAVAILABLE	(0xff)
+#define MMC_SWITCH_PART_ACCESS_MASK		(0x7)
+#define MMC_SWITCH_PART_SUPPORT			(0x1)
+#define MMC_SWITCH_PART_BOOT_PART_MASK	(0x7 << 3)
+#define MMC_SWITCH_PART_BOOT_PART_NONE	(0x0)
+#define MMC_SWITCH_PART_BOOT_PART_1		(0x1)
+#define MMC_SWITCH_PART_BOOT_PART_2		(0x2)
+#define MMC_SWITCH_PART_BOOT_USER		(0x7)
+#define MMC_SWITCH_PART_BOOT_ACK_MASK	(0x1 << 6)
+#define MMC_SWITCH_PART_BOOT_ACK_ENB	(0x1)
+
+/* MMC_SWITCH boot condition */
+#define MMC_SWITCH_MMCBOOT_BUS_NOAVAILABLE	(0xff)
+#define MMC_SWITCH_BOOT_MODE_MASK			(0x3 << 3)
+#define MMC_SWITCH_BOOT_SDR_NORMAL			(0x0)
+#define MMC_SWITCH_BOOT_SDR_HS				(0x1)
+#define MMC_SWITCH_BOOT_DDR					(0x2)
+#define MMC_SWITCH_BOOT_RST_BUS_COND_MASK	(0x1 << 2)
+#define MMC_SWITCH_BOOT_RST_BUS_COND		(0x0)
+#define MMC_SWITCH_BOOT_RETAIN_BUS_COND		(0x1)
+#define MMC_SWITCH_BOOT_BUS_WIDTH_MASK		(0x3 << 0)
+#define MMC_SWITCH_BOOT_BUS_SDRx1_DDRx4		(0x0)
+#define MMC_SWITCH_BOOT_BUS_SDRx4_DDRx4		(0x1)
+#define MMC_SWITCH_BOOT_BUS_SDRx8_DDRx8		(0x2)
+
+
+
+
+
 
 #define R1_ILLEGAL_COMMAND		(1 << 22)
 #define R1_APP_CMD			(1 << 5)
@@ -173,6 +208,13 @@
 #define MMCPART_NOAVAILABLE	(0xff)
 #define PART_ACCESS_MASK	(0x7)
 #define PART_SUPPORT		(0x1)
+
+
+#define USER_PART		0
+#define BOOT0_PART	1
+#define BOOT1_PART	2
+
+
 
 struct mmc_cid {
 	unsigned long psn;
@@ -258,7 +300,7 @@ struct mmc {
 	void *priv;
 	unsigned voltages;
 	unsigned version;
-	unsigned has_init;
+	volatile unsigned has_init;
 	unsigned f_min;
 	unsigned f_max;
 	int high_capacity;
@@ -273,6 +315,7 @@ struct mmc {
 	unsigned short rca;
 	char part_config;
 	char part_num;
+	char part_support;
 	unsigned tran_speed;
 	unsigned read_bl_len;
 	unsigned write_bl_len;
@@ -284,7 +327,11 @@ struct mmc {
 	int (*init)(struct mmc *mmc);
 	unsigned b_max;
     unsigned lba;        /* number of blocks */
+    unsigned user_lba;
+    unsigned boot0_lba;
+    unsigned boot1_lba;
     unsigned blksz;      /* block size */
+	unsigned char boot_bus_cond;
 };
 
 #define mmc_host_is_spi(mmc)	((mmc)->host_caps & MMC_MODE_SPI)
@@ -295,5 +342,9 @@ struct mmc *find_mmc_device(int dev_num);
 int mmc_berase(int dev_num, unsigned long start, unsigned blkcnt);
 unsigned long mmc_bwrite(int dev_num, unsigned long start, unsigned blkcnt, const void*src);
 unsigned long mmc_bread(int dev_num, unsigned long start, unsigned blkcnt, void *dst);
+
+int mmc_switch_boot_bus_cond(int dev_num, u32 boot_mode, u32 rst_bus_cond, u32 bus_width);
+int mmc_switch_boot_part(int dev_num, u32 boot_ack, u32 boot_part);
+int mmc_switch_part(int dev_num, unsigned int part_num);
 
 #endif /* _MMC_H_ */

@@ -25,11 +25,13 @@
 */
 int sw_uart_init (sw_uart_t com_port, int uart_port, void  *uart_ctrl, int baud_divisor)
 {
-	CCMU_REG_APB_MOD1 &= ~(1 << (16 + uart_port));
+	CCMU_REG_APB2_GATING &= ~(1 << (16 + uart_port));
     eGon2_timer_delay(5);
-    CCMU_REG_APB_MOD1 |=  (1 << (16 + uart_port));
+    CCMU_REG_APB2_GATING |=  (1 << (16 + uart_port));
 
-	eGon2_GPIO_Set_cfg((normal_gpio_cfg *)uart_ctrl, 2, 1);
+	(*(volatile unsigned int *)0x01c202D8) |= (1 << (16 + uart_port));
+
+	//eGon2_GPIO_Set_cfg((normal_gpio_cfg *)uart_ctrl, 2, 1);
 
 	com_port->ier = 0x00;
 	com_port->lcr = LCR_BKSE | LCRVAL;
@@ -59,7 +61,7 @@ int sw_uart_init (sw_uart_t com_port, int uart_port, void  *uart_ctrl, int baud_
 */
 int sw_uart_exit(int uart_port)
 {
-	CCMU_REG_APB_MOD1 &= ~(1 << (16 + uart_port));
+	CCMU_REG_APB2_GATING &= ~(1 << (16 + uart_port));
 
 	return 0;
 }

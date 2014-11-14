@@ -29,8 +29,10 @@
 
 #define CFG_SW_TIMER_INT_CTRL   (*(volatile unsigned int *)(TMRC_REGS_BASE + 0x0000))         /* timer int status */
 #define CFG_SW_TIMER_INT_STATS  (*(volatile unsigned int *)(TMRC_REGS_BASE + 0x0004))         /* timer int status */
-#define CFG_SW_WATCHDOG_CTRL    (*(volatile unsigned int *)(TMRC_REGS_BASE + 0x0030))         /* watchdog control */
-#define CFG_SW_WATCHDOG_INTERVAL   (*(volatile unsigned int *)(TMRC_REGS_BASE + 0x0034))      /* watchdog interval */
+
+#define CFG_SW_WATCHDOG_CTRL    (*(volatile unsigned int *)(TMRC_REGS_BASE + 0x00B8))         /* watchdog control */
+#define CFG_SW_WATCHDOG_CFG     (*(volatile unsigned int *)(TMRC_REGS_BASE + 0x00B4))      /* watchdog interval */
+#define CFG_SW_WATCHDOG_IRQ_EN	(*(volatile unsigned int *)(TMRC_REGS_BASE + 0x00A0))
 
 struct sw_timer
 {

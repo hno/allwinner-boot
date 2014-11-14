@@ -170,7 +170,6 @@ extern  int 		 eGon2_GPIO_Set_cfg                 (void  *gpio_list,       unsig
 /* 系统提供的按键服务 */
 extern  int          eGon2_key_init                     (void);
 extern  int          eGon2_key_exit                     (void);
-extern  int          eGon2_key_get_status               (void);
 extern  int 		 eGon2_key_get_value				(void);
 /* 系统提供的异常检查 */
 extern  unsigned int eGon2_boot_detect                  (void);

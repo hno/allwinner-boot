@@ -56,9 +56,12 @@ void *OSAL_PAtoVA(void * pa)
 	return (void *)pa;
 }
 
-void *OSAL_VAtoPA(void * pa)
+void *OSAL_VAtoPA(void * va)
 {
-	return (void *)pa;
+	if((unsigned int)(va) > 0x40000000)
+        return (void*)((unsigned int)(va) - 0x40000000);
+
+    return (void *)(va);
 }
 
 void * OSAL_malloc(__u32 Size)
@@ -70,6 +73,18 @@ void OSAL_free(void * pAddr)
 {
 	wBoot_free(pAddr);
 }
+
+
+void * OSAL_PhyAlloc(__u32 Size)
+{
+	return wBoot_malloc(Size);
+}
+
+void OSAL_PhyFree(void *pAddr, __u32 Size)
+{
+    wBoot_free(pAddr);
+}
+
 
 /*
 *******************************************************************************

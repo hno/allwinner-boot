@@ -20,12 +20,23 @@
 */
 #include "egon2.h"
 #include "types.h"
+#include "osal_axp.h"
 
 __hdle OSAL_GPIO_Request(user_gpio_set_t *gpio_list, __u32 group_count_max)
 {
     //__inf("OSAL_GPIO_Request, port:%d, port_num:%d, data:%d\n", gpio_list->port, gpio_list->port_num, gpio_list->data);
 
-    return wBoot_GPIO_Request(gpio_list, group_count_max);
+    if(gpio_list->port == 0xffff)
+  	{
+  		__u32 on_off;
+  		on_off = gpio_list->data;
+  		axp221_set_dc1sw(on_off);
+  		return 0xffff;
+  	}
+  	else
+		{
+			return wBoot_GPIO_Request(gpio_list, group_count_max);
+		}
 }
 
 __hdle OSAL_GPIO_Request_Ex(char *main_name, const char *sub_name)
@@ -48,7 +59,7 @@ __hdle OSAL_GPIO_Request_Ex(char *main_name, const char *sub_name)
 			return gpio_hd;
 		}
 	}
-	
+
     return 0;
 }
 
@@ -58,7 +69,10 @@ __hdle OSAL_GPIO_Request_Ex(char *main_name, const char *sub_name)
 __s32 OSAL_GPIO_Release(__hdle p_handler, __s32 if_release_to_default_status)
 {
     //__inf("OSAL_GPIO_Release\n");
-    wBoot_GPIO_Release(p_handler, if_release_to_default_status);
+    if(p_handler != 0xffff)
+  	{
+  		wBoot_GPIO_Release(p_handler, if_release_to_default_status);
+  	}
 
     return 0;
 }

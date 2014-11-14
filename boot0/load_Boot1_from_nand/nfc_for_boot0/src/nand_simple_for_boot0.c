@@ -335,7 +335,7 @@ __s32 PHY_GetDefaultParam(__u32 bank)
             nand_op.mainbuf = PHY_TMP_PAGE_CACHE;
             nand_op.oobbuf = oob_buf;
             
-            ret = PHY_SimpleRead_1K(&nand_op);
+            ret = PHY_SimpleRead(&nand_op);
             
             if((ret>=0)&&(oob[0] == 0x00)&&(oob[1] == 0x4F)&&(oob[2] == 0x4F)&&(oob[3] == 0x42))
             {

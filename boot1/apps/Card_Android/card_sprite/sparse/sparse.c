@@ -177,7 +177,7 @@ int  unsparse_direct_write(void *pbuf, int length)
 	chunk_header_t   *chunk;
 
     //首先计算传进的数据的校验和
-	android_format_checksum += add_sum(pbuf, length);
+	android_format_checksum += verify_sum1(pbuf, length);
 
     this_rest_size = last_rest_size + length;
     tmp_buf = (char *)pbuf - last_rest_size;
@@ -214,7 +214,7 @@ int  unsparse_direct_write(void *pbuf, int length)
 				tmp_buf += sizeof(chunk_header_t);        //此时tmp_buf已经指向下一个chunk或者data起始地址
 				this_rest_size -= sizeof(chunk_header_t); //剩余的数据长度
 				chunk_length = chunk->chunk_sz * globl_header.blk_sz;   //当前数据块需要写入的数据长度
-				__inf("chunk index = %d\n", chunk_count ++);
+				//__inf("chunk index = %d\n", chunk_count ++);
 
 				switch (chunk->chunk_type)
 				{

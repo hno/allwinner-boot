@@ -251,7 +251,6 @@ void eGon2_printf( const char * str, ...)
 {
 	char string[16];
 	char *p;
-	__s32 hex_flag ;
 	__u32 time, time_rest, time_sec;
 	va_list argp;
 
@@ -267,16 +266,14 @@ void eGon2_printf( const char * str, ...)
 		{
 			++str;
 			p = string;
-			hex_flag = HEX_X;
 			switch( *str )
 			{
 				case 'd': int_to_string_dec( va_arg( argp,  __s32 ), string );
                           serial_puts( p );
 						  ++str;
 						  break;
-				case 'x': hex_flag = HEX_x;	         // jump to " case 'X' "
-				case 'p':
-				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string, hex_flag );
+				case 'x':
+				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string );
 						  serial_puts( p );
                           ++str;
 						  break;
@@ -290,34 +287,6 @@ void eGon2_printf( const char * str, ...)
 				case 's': serial_puts( va_arg( argp, char * ) );
 						  ++str;
 						  break;
-				case 'l':
-					{
-						__u32 high;
-						__u32 low;
-
-						if( str[1] == 'l' && ( str[2] == 'x' || str[2] == 'X' ) )
-						{
-							low = va_arg( argp, __u32 );
-							high = va_arg( argp, __u32 );
-							if( str[2] == 'x' )
-								hex_flag = 'x';
-							else
-								hex_flag = 'X';
-							int_to_string_hex( high, string, hex_flag );
-							serial_puts( p );
-							int_to_string_hex( low, string, hex_flag );
-							serial_puts( p+2 );
-							str += 3;
-						  	break;
-						}
-						else
-						{
-							int_to_string_dec( va_arg( argp,  __s32 ), string );
-                          	serial_puts( p );
-						  	++str;
-						  	break;
-						}
-					}
 				default : sw_uart_putc( SERIAL_PORT, '%' );       // if current character is not Conversion Specifiers 'dxpXucs',
 						  sw_uart_putc( SERIAL_PORT, *str );      // output directly '%' and current character, and then
 						  ++str;                                         // let 'str' point to next character.
@@ -356,7 +325,6 @@ void eFG_printf( const char * str, ...)
 {
 	char string[16];
 	char *p;
-	__s32 hex_flag ;
 	va_list argp;
 
 	va_start( argp, str );
@@ -367,16 +335,14 @@ void eFG_printf( const char * str, ...)
 		{
 			++str;
 			p = string;
-			hex_flag = HEX_X;
 			switch( *str )
 			{
 				case 'd': int_to_string_dec( va_arg( argp,  __s32 ), string );
                           serial_puts( p );
 						  ++str;
 						  break;
-				case 'x': hex_flag = HEX_x;	         // jump to " case 'X' "
-				case 'p':
-				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string, hex_flag );
+				case 'x':
+				case 'X': int_to_string_hex( va_arg( argp,  __s32 ), string );
 						  serial_puts( p );
                           ++str;
 						  break;
@@ -416,34 +382,6 @@ void eFG_printf( const char * str, ...)
 						str += 2;
 					}
 					break;
-				case 'l':
-					{
-						__u32 high;
-						__u32 low;
-
-						if( str[1] == 'l' && ( str[2] == 'x' || str[2] == 'X' ) )
-						{
-							low = va_arg( argp, __u32 );
-							high = va_arg( argp, __u32 );
-							if( str[2] == 'x' )
-								hex_flag = 'x';
-							else
-								hex_flag = 'X';
-							int_to_string_hex( high, string, hex_flag );
-							serial_puts( p );
-							int_to_string_hex( low, string, hex_flag );
-							serial_puts( p+2 );
-							str += 3;
-						  	break;
-						}
-						else
-						{
-							int_to_string_dec( va_arg( argp,  __s32 ), string );
-                          	serial_puts( p );
-						  	++str;
-						  	break;
-						}
-					}
 				default : sw_uart_putc( SERIAL_PORT, '%' );       // if current character is not Conversion Specifiers 'dxpXucs',
 						  sw_uart_putc( SERIAL_PORT, *str );      // output directly '%' and current character, and then
 						  ++str;                                         // let 'str' point to next character.

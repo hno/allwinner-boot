@@ -41,7 +41,7 @@ extern __s32 check_sum  ( __u32 *mem_base, __u32 size );
 extern __s32 check_file ( __u32 *mem_base, __u32 size, const char *magic );
 extern __u32 calc_crc32 (void * buffer,    __u32 length);
 
-extern __s32 verify_sum( void *mem_base, __u32 size );
+extern __s32 verify_sum1( void *mem_base, __u32 size );
 
 extern __s32 gen_check_sum( void *boot_buf );
 

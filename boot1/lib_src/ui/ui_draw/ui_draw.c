@@ -45,10 +45,10 @@ __s32 boot_ui_draw_hollowrectangle(__s32 x1, __s32 y1, __s32 x2, __s32 y2)
 	int   x, y, tmp;
 	int   line_offset;
 
-	end_x   = x1 * 800/ui_source.screen_width;
-	end_y   = y1 * 480/ui_source.screen_height;
-	start_x = x2 * 800/ui_source.screen_width;
-	start_y = y2 * 480/ui_source.screen_height;
+	end_x   = x1;// * 800/ui_source.screen_width;
+	end_y   = y1;// * 480/ui_source.screen_height;
+	start_x = x2;// * 800/ui_source.screen_width;
+	start_y = y2;// * 480/ui_source.screen_height;
 
 	//确保起点比较小，方便计算
 	if(start_y > end_y)
@@ -110,10 +110,10 @@ __s32 boot_ui_draw_solidrectangle(__s32 x1, __s32 y1, __s32 x2, __s32 y2)
 	char *base1_1, *base2_1;
 	int   x, y, tmp;
 
-	end_x   = x1 * 800/ui_source.screen_width;
-	end_y   = y1 * 480/ui_source.screen_height;
-	start_x = x2 * 800/ui_source.screen_width;
-	start_y = y2 * 480/ui_source.screen_height;
+	end_x   = x1;// * 800/ui_source.screen_width;
+	end_y   = y1;// * 480/ui_source.screen_height;
+	start_x = x2;// * 800/ui_source.screen_width;
+	start_y = y2;// * 480/ui_source.screen_height;
 
 	//确保起点比较小，方便计算
 	if(start_y > end_y)
@@ -189,10 +189,10 @@ __s32 boot_ui_draw_line(__s32 x1, __s32 y1, __s32 x2, __s32 y2)
 	int   x_offset, y_offset;
 	float a, b;
 
-	start_x = x1 * 800/ui_source.screen_width;
-	start_y = y1 * 480/ui_source.screen_height;
-	end_x 	= x2 * 800/ui_source.screen_width;
-	end_y 	= y2 * 480/ui_source.screen_height;
+	start_x = x1;// * 800/ui_source.screen_width;
+	start_y = y1;// * 480/ui_source.screen_height;
+	end_x 	= x2;// * 800/ui_source.screen_width;
+	end_y 	= y2;// * 480/ui_source.screen_height;
 
 	base   = ui_source.screen_buf;
 	//开始绘制线条
@@ -328,8 +328,8 @@ __s32 boot_ui_draw_lineto(__s32 px, __s32 py)
 {
 	int   end_x, end_y;
 
-	end_x   = px * 800/ui_source.screen_width;
-	end_y   = py * 480/ui_source.screen_height;
+	end_x   = px;// * 800/ui_source.screen_width;
+	end_y   = py;// * 480/ui_source.screen_height;
 	boot_ui_draw_line(ui_source.this_x, ui_source.this_y, end_x, end_y);
 	ui_source.this_x = end_x;
 	ui_source.this_y = end_y;
@@ -357,8 +357,8 @@ __s32 boot_ui_draw_point(__s32 x, __s32 y)
 	int   scr_x, scr_y;
 	char *base;
 
-	scr_x  = x * 800/ui_source.screen_width;
-	scr_y  = y * 480/ui_source.screen_height;
+	scr_x  = x;// * 800/ui_source.screen_width;
+	scr_y  = y;// * 480/ui_source.screen_height;
 
 	base  = ui_source.screen_buf + (ui_source.screen_width * scr_y + scr_x)* 4;
 	*((int *)base) = ui_source.color;
@@ -430,8 +430,8 @@ __s32 boot_ui_moveto(int x, int y)
 {
 	int   scr_x, scr_y;
 
-	scr_x  = x * 800/ui_source.screen_width;
-	scr_y  = y * 480/ui_source.screen_height;
+	scr_x  = x;// * 800/ui_source.screen_width;
+	scr_y  = y;// * 480/ui_source.screen_height;
 
 	ui_source.this_x = scr_x;
 	ui_source.this_y = scr_y;

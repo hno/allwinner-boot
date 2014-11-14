@@ -40,7 +40,7 @@
 	.globl eGon2_store_sp
 eGon2_store_sp:
 	STMFD   sp!, {r0-r3}
-	mov  r1, #0x200
+	mov  r1, #0x19C
 	str  sp, [r1]
 
 	mov  pc, lr
@@ -62,7 +62,7 @@ eGon2_store_sp:
 */
 	.globl eGon2_restore_sp
 eGon2_restore_sp:
-	mov  r1, #0x200
+	mov  r1, #0x19C
 	ldr  sp, [r1]
 	LDMFD   sp!, {r0-r3}
 

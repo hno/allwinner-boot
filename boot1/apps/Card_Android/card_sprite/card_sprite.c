@@ -29,7 +29,8 @@
 */
 #include  "card_sprite_i.h"
 
-#define   TEST_BLK_BYTES      (512 * 1024)
+#define   TEST_BLK_BYTES      (16*1024 * 1024)
+#define   TEST_BLK_SECTORS    (TEST_BLK_BYTES/512)
 
 #define   CARD_SPRITE_START    		0
 #define   CARD_SPRITE_FLASH_INFO    3
@@ -48,6 +49,11 @@ __hdle    progressbar_hd;
 
 extern    int		android_format;
 
+__u32 sprite_read_time;
+__u32 sprite_write_time;
+__u32 card_read_time;
+__u32 check_time;
+
 static  void  sprite_show(int ratio)
 {
 	boot_ui_progressbar_upgrate(progressbar_hd, ratio);
@@ -57,13 +63,13 @@ static  void  sprite_show(int ratio)
 *
 *                                             card_sprite
 *
-*    º¯ÊıÃû³Æ£º
+*    å‡½æ•°åç§°ï¼š
 *
-*    ²ÎÊıÁĞ±í£º
+*    å‚æ•°åˆ—è¡¨ï¼š
 *
-*    ·µ»ØÖµ  £º
+*    è¿”å›å€¼  ï¼š
 *
-*    ËµÃ÷    £º
+*    è¯´æ˜    ï¼š
 *
 *
 ************************************************************************************************************
@@ -71,37 +77,43 @@ static  void  sprite_show(int ratio)
 __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 {
     HIMAGEITEM  imghd = 0, imgitemhd = 0;
-    __u64      item_original_size = 0;
-    __u64       item_rest_size = 0;
-    __u64		item_verify_size = 0;
+    long long   item_original_size = 0;
+    __u32       item_rest_bytes = 0;
+    __u32       item_origin_sectors;
+    __u32       item_rest_sectors;
+    __u32		item_verify_size = 0;
     __u32       part_sector, file_sector, flash_sector;
     int         crc, mbr_count, mbr_buf_size;
     __u32		img_start;
-    MBR         *tmp_mbr_cfg, *mbr_info;
+    __u32       partdata_start, tmp_partdata_start;
+    MBR         *mbr_info;
+    char        mbr_buffer[MBR_SIZE * MBR_COPY_NUM];
+    MBR         *item_mbr;
     download_info  *dl_info  = NULL;
-    char        *tmp_mbr_buf = NULL;
+//    char        *tmp_mbr_buf = NULL;
     char        *src_buf = NULL, *dest_buf = NULL;
     __u32       actual_buf_addr;
+    __u32       calc_sum, once_sum;
     int         ret = -1;
-    int         aver_rage, sprite_ratio, pre_ratio, this_ratio;          //½ø¶È±êÖ¾
+    int         aver_rage, sprite_ratio, pre_ratio, this_ratio;          //è¿›åº¦æ ‡å¿—
     unsigned    i, sprite_type;
-    int         s_type;
     char		flash_info[512];
+    __u32       t2, t1;
 
-    /*´´½¨Ò»¸ö1MµÄ¿Õ¼ä£¬ÓÃÓÚ±£´æÁÙÊ±Êı¾İ*/
-    /*tmp_bufºÍtmp_dest½«¹²Ïí1MÊı¾İ¿Õ¼ä£¬¸÷Õ¼512K£¬Ä¿Ç°µÄÈÎºÎÒ»¸öÊı¾İ¿é¶¼²»»á³¬¹ı512K*/
+    /*åˆ›å»ºä¸€ä¸ª1Mçš„ç©ºé—´ï¼Œç”¨äºä¿å­˜ä¸´æ—¶æ•°æ®*/
+    /*tmp_bufå’Œtmp_destå°†å…±äº«1Mæ•°æ®ç©ºé—´ï¼Œå„å 512Kï¼Œç›®å‰çš„ä»»ä½•ä¸€ä¸ªæ•°æ®å—éƒ½ä¸ä¼šè¶…è¿‡512K*/
     if(!disp_type)
     {
 		progressbar_hd = boot_ui_progressbar_create(100, 200, 700, 280);
 		boot_ui_progressbar_config(progressbar_hd, UI_BOOT_GUI_RED, UI_BOOT_GUI_GREEN, 2);
 		boot_ui_progressbar_active(progressbar_hd);
 	}
-	//¶ÁÈ¡Ô­ÓĞµÄuboot»·¾³±äÁ¿
-	private_fetch_from_flash();
-	//NANDÉè±¸³õÊ¼»¯
+	//è¯»å–åŸæœ‰çš„ubootç¯å¢ƒå˜é‡
+	//private_fetch_from_flash();
+	//NANDè®¾å¤‡åˆå§‹åŒ–
     memset(flash_info, 0, 512);
     __inf("erase flag=%d\n", flash_erase);
-    ret = update_flash_hardware_scan(mbr_i,flash_info, flash_erase);
+    ret = update_flash_hardware_scan(flash_info, flash_erase);
     if(ret == 0)
     {
     	__inf("burn nand\n");
@@ -119,16 +131,17 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
     	goto _update_error_;
     }
-    //×¼±¸nandÊı¾İĞÅÏ¢
-	sprite_show(CARD_SPRITE_FLASH_INFO);
-	src_buf = (char *)sprite_malloc(1024 * 1024);
-    if(!src_buf)
+    ret = -1;
+    if(sprite_detect_flash_ch())
     {
-        sprite_wrn("sprite update error: fail to get memory for tmpdata\n");
+    	sprite_wrn("sprite update error: dram ch is not equal to nand ch\n");
 
-        goto _update_error_;
+    	goto _update_error_;
     }
-    //×¼±¸nandÊı¾İĞÅÏ¢
+    //ï¿½ï¿½È¡Ô­ï¿½Ğµï¿½ubootï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    private_fetch_from_flash();
+    sprite_flash_erase(flash_info, flash_erase);
+   //å‡†å¤‡nandæ•°æ®ä¿¡æ¯
 	sprite_show(CARD_SPRITE_FLASH_INFO);
 	//src_buf = (char *)sprite_malloc(1024 * 1024);
     //if(!src_buf)
@@ -138,7 +151,7 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
     //   goto _update_error_;
     //}
     //dest_buf = src_buf + 512 * 1024;
-	/* dl info »ñÈ¡ÄÚ´æ¿Õ¼ä */
+	/* dl info è·å–å†…å­˜ç©ºé—´ */
     src_buf =  (char *)(0x48000000);
     dest_buf = (char *)(0x4C000000);
     dl_info = (download_info *)sprite_malloc(sizeof(download_info));
@@ -150,11 +163,11 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
     }
     memset(dl_info, 0, sizeof(download_info));
     sprite_show(CARD_SPRITE_GET_MEM);
-    //»ñÈ¡¿¨ÉÏMBRµÄĞÅÏ¢
+    //è·å–å¡ä¸ŠMBRçš„ä¿¡æ¯
     mbr_info = (MBR *)mbr_i;
     {
     	for(i=0;i<mbr_info->PartCount;i++)
-    	{   
+    	{
 			if((!strcmp((const char *)mbr_info->array[i].classname, "DISK")) || (!strcmp((const char *)mbr_info->array[i].classname, "disk")))
         	{
             	break;
@@ -167,20 +180,20 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
         goto _update_error_;
     }
-	/*¿ªÊ¼¶ÔÑ¹Ëõ°ü½øĞĞ²Ù×÷*/
+	/*å¼€å§‹å¯¹å‹ç¼©åŒ…è¿›è¡Œæ“ä½œ*/
 //*************************************************************************************
 //*************************************************************************************
 	img_start = mbr_info->array[1 + i].addrlo;
 	__inf("part start = %d\n", img_start);
-    imghd = Img_Open(img_start, TEST_BLK_BYTES);
-    if(!imghd)       //³õÊ¼»¯
+    imghd = Img_Open(img_start);
+    if(!imghd)       //åˆå§‹åŒ–
     {
         sprite_wrn("sprite update error: fail to open img\n");
 
         goto _update_error_;
     }
     sprite_show(CARD_SPRITE_OPEN_IMG);
-//    //¼ì²éÊÇ·ñ´æÔÚ¶¯Ì¬Êı¾İ
+//    //æ£€æŸ¥æ˜¯å¦å­˜åœ¨åŠ¨æ€æ•°æ®
 //    dynamic_data = 0;
 //	__inf("default dynamic data not exist\n");
 //	imgitemhd = Img_OpenItem(imghd, "COMMON  ", "DYNAMIC_TMP00000");
@@ -196,30 +209,29 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 //	imgitemhd = NULL;
 //*************************************************************************************
 //*************************************************************************************
-	//»ñÈ¡MBR
+	//è·å–MBR
 	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890___MBR");
 	if(!imgitemhd)
 	{
 		sprite_wrn("sprite update error: fail to open item for mbr\n");
         goto _update_error_;
 	}
-	//MBR³¤¶È
+	//MBRé•¿åº¦
 	item_original_size = Img_GetItemSize(imghd, imgitemhd);
-	//»ñÈ¡¿Õ¼äÓÃÓÚ´æ·ÅMBR
+	//è·å–ç©ºé—´ç”¨äºå­˜æ”¾MBR
 	if(!item_original_size)
     {
-        sprite_wrn("sprite update error: get mbr size fail\n");
+        sprite_wrn("sprite update error: get mbr size zero\n");
         goto _update_error_;
     }
-    mbr_buf_size = (int)item_original_size;
-	tmp_mbr_buf = (char *)sprite_malloc((__u32)item_original_size);
-	if(!tmp_mbr_buf)
+    if(item_original_size != (sizeof(MBR) * MBR_COPY_NUM))
     {
-        sprite_wrn("sprite update error: fail to get memory for mbr\n");
-
+    	sprite_wrn("sprite update error: get mbr size invalid\n");
         goto _update_error_;
     }
-	if(!Img_ReadItemData(imghd, imgitemhd, (void *)tmp_mbr_buf, item_original_size))   //¶Á³öMBRÊı¾İ
+    mbr_buf_size = item_original_size;
+    //if(!Img_ReadItemData(imghd, imgitemhd, (void *)tmp_mbr_buf, item_original_size))   //è¯»å‡ºMBRæ•°æ®
+    if(!Img_ReadItem(imghd, imgitemhd, (void *)mbr_buffer, (__u32)item_original_size))   //è¯»å‡ºMBRæ•°æ®
     {
         sprite_wrn("sprite update error: fail to read data for mbr\n");
 
@@ -227,25 +239,29 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
     }
     Img_CloseItem(imghd, imgitemhd);
     imgitemhd = NULL;
-    //¼ì²éMBRµÄºÏ·¨ĞÔ
-    mbr_count = ((MBR *)tmp_mbr_buf)->copy;
+    //æ£€æŸ¥MBRçš„åˆæ³•æ€§
+    item_mbr = (MBR *)mbr_buffer;
+    mbr_count = item_mbr->copy;
+    __inf("mbr_count = %d\n", mbr_count);
     for(i=0;i<mbr_count;i++)
     {
-    	tmp_mbr_cfg = (MBR *)(tmp_mbr_buf + i * sizeof(MBR));
-		crc = calc_crc32((void *)&tmp_mbr_cfg->version, sizeof(MBR) - 4);
-		if(crc != tmp_mbr_cfg->crc32)
+    	item_mbr = (MBR *)(mbr_buffer + sizeof(MBR) * i);
+    	crc = calc1_crc32((void *)&item_mbr->version, sizeof(MBR) - 4);
+		__inf("count crc=%x, source crc=%x\n", crc, item_mbr->crc32);
+		if(crc != item_mbr->crc32)
 		{
-			sprite_wrn("sprite update warning: check mbr %d part correct fail\n", i);
-			sprite_wrn("now fix it automatically\n");
-			//×Ô¶¯ĞŞÕıCRC
-			tmp_mbr_cfg->crc32 = crc;
+			__wrn("sprite update warning: check mbr %d part correct fail\n", i);
+			__wrn("now fix it automatically\n");
+			//è‡ªåŠ¨ä¿®æ­£CRC
+			item_mbr->crc32 = crc;
 		}
 	}
-	//¸ù¾İÈİÁ¿ĞŞÕıMBRµÄUDISK·ÖÇø´óĞ¡
+	item_mbr = (MBR *)mbr_buffer;
+	//æ ¹æ®å®¹é‡ä¿®æ­£MBRçš„UDISKåˆ†åŒºå¤§å°
 	sprite_show(CARD_SPRITE_GET_MBR);
 //*************************************************************************************
 //*************************************************************************************
-	//»ñÈ¡ DOWNLOAD MAP
+	//è·å– DOWNLOAD MAP
 	imgitemhd = Img_OpenItem(imghd, "12345678", "1234567890DLINFO");
 	if(!imgitemhd)
 	{
@@ -253,14 +269,15 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
         goto _update_error_;
 	}
-	//DOWNLOAD MAP ³¤¶È
+	//DOWNLOAD MAP é•¿åº¦
 	item_original_size = Img_GetItemSize(imghd, imgitemhd);
 	if(!item_original_size)
     {
         sprite_wrn("sprite update error: get download map size fail\n");
         goto _update_error_;
     }
-	if(!Img_ReadItemData(imghd, imgitemhd, (void *)dl_info, item_original_size))   //¶Á³ö DOWNLOAD MAP Êı¾İ
+	//if(!Img_ReadItemData(imghd, imgitemhd, (void *)dl_info, item_original_size))   //è¯»å‡º DOWNLOAD MAP æ•°æ®
+    if(!Img_ReadItem(imghd, imgitemhd, (void *)dl_info, (__u32)item_original_size))   //è¯»å‡º DOWNLOAD MAP æ•°æ®
     {
         sprite_wrn("sprite update error: fail to read data for download map\n");
 
@@ -268,8 +285,8 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
     }
     Img_CloseItem(imghd, imgitemhd);
     imgitemhd = NULL;
-    //¼ì²é DOWNLOAD MAPµÄºÏ·¨ĞÔ
-	crc = calc_crc32(&dl_info->version, sizeof(download_info) - 4);
+    //æ£€æŸ¥ DOWNLOAD MAPçš„åˆæ³•æ€§
+	crc = calc1_crc32(&dl_info->version, sizeof(download_info) - 4);
 	if(crc != dl_info->crc32)
 	{
 		sprite_wrn("sprite update error: download map file is not correct\n");
@@ -279,24 +296,11 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	sprite_show(CARD_SPRITE_GET_MAP);
 /*****************************************************************************
 *
-*   ¸ù¾İÉÕĞ´µÄmap±í£¬ÕÒµ½Ã¿¸ö·ÖÇøÓ¦¸ÃĞ´µÄÎ»ÖÃ
+*   æ ¹æ®çƒ§å†™çš„mapè¡¨ï¼Œæ‰¾åˆ°æ¯ä¸ªåˆ†åŒºåº”è¯¥å†™çš„ä½ç½®
 *
 *****************************************************************************/
-	if(update_flash_init(&s_type))
-	{
-        __inf("update_flash_init error!\n");
-        goto _update_error_;
-    }
-    if(!s_type)
-    {
-        flash_sector = NAND_GetDiskSize(); 
-        __inf("nand flash disk size is: %d MB\n",(flash_sector>>11));
-    }else
-    {
-        flash_sector = SDMMC_LogicalDiskSize(2);
-        __inf("SDMMC disk size is: %d MB\n",(flash_sector>>11));
-    }
-    
+	update_flash_init();
+	flash_sector = NAND_GetDiskSize();
 	if(dl_info->download_count > 0)
 	{
 		aver_rage = ((CARD_SPRITE_DOWN_PART - CARD_SPRITE_GET_MAP)/dl_info->download_count);
@@ -315,12 +319,18 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    }
 	    private_type = 0;
 	    item_original_size = Img_GetItemSize(imghd, imgitemhd);
-   
-	    __inf("item_original_size high =%d\n", (__u32)((item_original_size>>32)&0xffffffff));
-        __inf("item_original_size low =%d\n", (__u32)(item_original_size));
+	    __inf("item_original_size high =%d\n", (__u32)((item_original_size >> 32) & 0xffffffff));
+	    __inf("item_original_size low  =%d\n", (__u32)item_original_size);
 	    if(!item_original_size)
 	    {
 	        sprite_wrn("sprite update error: get part file %s size failed\n", dl_info->one_part_info[i].dl_filename);
+
+	        goto _update_error_;
+	    }
+	    partdata_start = Img_GetItemStart(imghd, imgitemhd);
+	    if(!partdata_start)
+	    {
+	    	sprite_wrn("sprite update error: get part file %s start sectors failed\n", dl_info->one_part_info[i].dl_filename);
 
 	        goto _update_error_;
 	    }
@@ -341,9 +351,17 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    	}
 	    }
 	    //sprite_wrn("get part file %s size = %d\n", dl_info->one_part_info[i].dl_filename, item_original_size);
-	    item_rest_size = item_original_size;
-	    //¼ì²éÎÄ¼ş´óĞ¡ÊÇ·ñĞ¡ÓÚµÈÓÚ·ÖÇø´óĞ¡
-		file_sector = (__u32)(item_original_size>>9);
+	    //item_rest_size = item_original_size;
+	    item_origin_sectors = (__u32)(item_original_size/512);
+	    item_rest_bytes = item_original_size & 0x1ff;
+	    if(item_rest_bytes)
+	    {
+	    	item_origin_sectors ++;
+	    }
+	    item_rest_sectors = item_origin_sectors;
+	    //__inf("item sectors %d\n", item_origin_sectors);
+	    //æ£€æŸ¥æ–‡ä»¶å¤§å°æ˜¯å¦å°äºç­‰äºåˆ†åŒºå¤§å°
+		file_sector = item_original_size / 512;
 		part_sector = dl_info->one_part_info[i].lenlo;
 		if(file_sector > part_sector)
 		{
@@ -352,25 +370,53 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 			goto _update_error_;
 		}
 	    update_flash_open(dl_info->one_part_info[i].addrlo, dl_info->one_part_info[i].addrhi);
-	    //³õÊ¼»¯½âÃÜº¯Êı
+	    __inf("download part start = %x\n", dl_info->one_part_info[i].addrlo);
+	    //åˆå§‹åŒ–è§£å¯†å‡½æ•°
 	    init_code(dl_info->one_part_info[i].encrypt);
-	    while(item_rest_size >= TEST_BLK_BYTES)      //µ±³¬¹ı32kµÄÊ±ºò
+	    __inf("download part encrypt = %d\n", dl_info->one_part_info[i].encrypt);
+	    tmp_partdata_start = partdata_start;
+	    __inf("part start = %d\n", partdata_start);
+	    calc_sum = 0;
+	    sprite_read_time  = 0;
+	    sprite_write_time = 0;
+	    card_read_time  = 0;
+	    check_time      = 0;
+	    while(item_rest_sectors > TEST_BLK_SECTORS)      //å½“è¶…è¿‡32kçš„æ—¶å€™
 	    {
-	    	if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, TEST_BLK_BYTES))   //¶Á³ö32kÊı¾İ
-	        {
-	            sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
+//	    	if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, TEST_BLK_BYTES))   //è¯»å‡º32kæ•°æ®
+//	        {
+//	            sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
+//
+//	            goto _update_error_;
+//	        }
+			//__inf("image part start = %x\n", tmp_partdata_start);
+			t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+			if(wBoot_block_read(tmp_partdata_start, TEST_BLK_SECTORS, (void *)src_buf))
+			{
+				sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
 
 	            goto _update_error_;
-	        }
-	        item_rest_size -= TEST_BLK_BYTES;
+			}
+			t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+			card_read_time += t2 - t1;
+			tmp_partdata_start += TEST_BLK_SECTORS;
+	        item_rest_sectors -= TEST_BLK_SECTORS;
 	        decode((__u32)src_buf, (__u32)dest_buf, TEST_BLK_BYTES, &actual_buf_addr);
+
+//			once_sum = verify_sum((void *)actual_buf_addr, TEST_BLK_BYTES);
+//	        __inf("verify sum = %x\n", once_sum);
+//	        calc_sum += once_sum;
+			t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
 	        if(update_flash_write((void *)actual_buf_addr, TEST_BLK_BYTES))
 	        {
 	        	sprite_wrn("sprite update error: fail to write data in %s\n", dl_info->one_part_info[i].dl_filename);
 
 	            goto _update_error_;
 	        }
-	        this_ratio = (int)(((item_original_size>>9) - (item_rest_size>>9))*aver_rage)/((__u32)(item_original_size>>9));
+	        t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        sprite_write_time += t2 - t1;
+	        //this_ratio = (((item_original_size>>9) - item_rest_sectors)*aver_rage)/((__u32)(item_original_size>>9));
+	        this_ratio = ((item_origin_sectors - item_rest_sectors)*aver_rage)/item_origin_sectors;
 	        if(this_ratio)
 	        {
 	        	if(pre_ratio != this_ratio)
@@ -380,22 +426,59 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    			__inf("this ratio = %d\n", this_ratio);
 	    		}
 	    	}
+	    	//__inf("\n");
 	    }
-	    if(item_rest_size)
+	    if(item_rest_sectors)
 	    {
-	        if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_rest_size))   //¶Á³ö32kÊı¾İ
-	        {
-	            sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
+	    	__u32 last_bytes;
+//	        if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_rest_size))   //è¯»å‡º32kæ•°æ®
+//	        {
+//	            sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
+//
+//	            goto _update_error_;
+//	        }
+			//__inf("image part start = %x\n", tmp_partdata_start);
+			//__inf("item rest sectors = %x\n", item_rest_sectors);
+			t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        if(wBoot_block_read(tmp_partdata_start, item_rest_sectors, (void *)src_buf))
+			{
+				sprite_wrn("sprite update error: fail to read data from %s\n", dl_info->one_part_info[i].dl_filename);
 
 	            goto _update_error_;
-	        }
-	        decode((__u32)src_buf, (__u32)dest_buf, (__u32)item_rest_size, &actual_buf_addr);
-	        if(update_flash_write((void *)actual_buf_addr, (__u32)item_rest_size))
+			}
+			t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+			//__inf("%x %x %x %x\n", *((__u32 *)src_buf + 0), *((__u32 *)src_buf + 1), *((__u32 *)src_buf + 2), *((__u32 *)src_buf + 3));
+	        card_read_time += t2 - t1;
+	        if(!item_rest_bytes)
+			{
+				last_bytes = item_rest_sectors<<9;
+			}
+			else
+			{
+				last_bytes = ((item_rest_sectors - 1)<<9) + item_rest_bytes;
+			}
+	        decode((__u32)src_buf, (__u32)dest_buf, last_bytes, &actual_buf_addr);
+			//__inf("item rest item_rest_bytes = %x\n", item_rest_bytes);
+//			if(!item_rest_bytes)
+//			{
+//				once_sum = verify_sum1((void *)actual_buf_addr, item_rest_sectors<<9);
+//			}
+//			else
+//			{
+//				once_sum = verify_sum((void *)actual_buf_addr, ((item_rest_sectors - 1)<<9) + item_rest_bytes);
+//			}
+	        //__inf("verify sum = %x\n", once_sum);
+	        //calc_sum += once_sum;
+			//__inf("total sum = %x\n", calc_sum);
+			t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+			if(update_flash_write((void *)actual_buf_addr, last_bytes))
 	        {
 	        	sprite_wrn("sprite update error: fail to write last data in %s\n", dl_info->one_part_info[i].dl_filename);
 
 	            goto _update_error_;
 	        }
+	        t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        sprite_write_time += t2 - t1;
 	    }
 	    exit_code();
 	    __inf("data deal finish\n");
@@ -403,12 +486,12 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    sprite_ratio += aver_rage;
 	    __msg("sprite_ratio = %d\n", sprite_ratio);
 	    sprite_show(sprite_ratio);
-	    //´ËÊ±¿ªÊ¼×öĞ£Ñé
+	    //æ­¤æ—¶å¼€å§‹åšæ ¡éªŒ
 	    if(private_type)
 	    {
 	    	continue;
 	    }
-	    if(dl_info->one_part_info[i].verify)
+	    if(dl_info->one_part_info[i].vf_filename[0])
 	    {
 	    	imgitemhd = Img_OpenItem(imghd, "RFSFAT16", (char *)dl_info->one_part_info[i].vf_filename);
 	    	if(!imgitemhd)
@@ -425,7 +508,11 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 				else
 				{
 					init_code(0);
-					if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_verify_size))   //¶Á³öÊı¾İ
+//					if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_verify_size))   //è¯»å‡ºæ•°æ®
+//			        {
+//			            __inf("sprite update warning: fail to read data from %s\n", dl_info->one_part_info[i].vf_filename);
+//			        }
+					if(!Img_ReadItem(imghd, imgitemhd, (void *)src_buf, 1024))   //è¯»å‡ºæ•°æ®
 			        {
 			            __inf("sprite update warning: fail to read data from %s\n", dl_info->one_part_info[i].vf_filename);
 			        }
@@ -436,38 +523,65 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 
 						if(android_format == -1)
 						{
-				        	//¶Á³öflashÉÏµÄÊı¾İ
+				        	//è¯»å‡ºflashä¸Šçš„æ•°æ®
 				        	__inf("normal type verify\n");
-				        	item_rest_size = item_original_size;
+				        	item_rest_sectors = item_origin_sectors;
 				        	update_flash_open(dl_info->one_part_info[i].addrlo, dl_info->one_part_info[i].addrhi);
-				        	while(item_rest_size >= 512 * 1024)
+				        	//__inf("verify part start = %x\n", dl_info->one_part_info[i].addrlo);
+				        	while(item_rest_sectors > TEST_BLK_SECTORS)
 				        	{
-				        		if(update_flash_read_ext(dest_buf, 512 * 1024))
+				        		t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+				        		if(update_flash_read_ext(dest_buf, TEST_BLK_BYTES))
 				        		{
 				        			__inf("sprite update warning: fail to read data in %s\n", dl_info->one_part_info[i].vf_filename);
 
 				        			goto __download_part_data__;
 				        		}
-								sum += verify_sum(dest_buf, 512 * 1024);
-								item_rest_size -= 512 * 1024;
+				        		t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        					sprite_read_time += t2 - t1;
+				        		t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+				        		once_sum = verify_sum1(dest_buf, TEST_BLK_BYTES);
+				        		t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        					check_time += t2 - t1;
+				        		//__inf("verify sum = %x\n", once_sum);
+								sum += once_sum;
+								//__inf("sum = %x\n", sum);
+								item_rest_sectors -= TEST_BLK_SECTORS;
 				        	}
-				        	if(item_rest_size)
+				        	if(item_rest_sectors)
 				        	{
-				        		if(update_flash_read_ext(dest_buf, item_rest_size))
+				        		t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+				        		if(update_flash_read_ext(dest_buf, item_rest_sectors<<9))
 				        		{
 				        			__inf("sprite update warning: fail to read data in %s\n", dl_info->one_part_info[i].vf_filename);
 
 				        			goto __download_part_data__;
 				        		}
-				        		sum += verify_sum(dest_buf, (__u32)item_rest_size);
-				        	}
+				        		t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        					sprite_read_time += t2 - t1;
+								t1 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+								if(!item_rest_bytes)
+								{
+									once_sum = verify_sum1(dest_buf, item_rest_sectors<<9);
+								}
+								else
+								{
+									once_sum = verify_sum1(dest_buf, ((item_rest_sectors - 1)<<9) + item_rest_bytes);
+								}
+								t2 = *(volatile unsigned int *)(0x01c20C00 + 0x84);
+	        					check_time += t2 - t1;
+								//once_sum = verify_sum(dest_buf, item_rest_sectors<<9);
+				        		//__inf("verify sum = %x\n", once_sum);
+								sum += once_sum;
+								//__inf("sum = %x\n", sum);
+							}
 				        }
 				        else
 				        {
 				        	__inf("sparse type verify\n");
 				        	sum = unsparse_checksum();
 				        }
-				        __inf("pc check sum=%x, local check sum=%x\n", check_sum, sum);
+				        __inf("pc sum=%x, check sum=%x\n", sum, check_sum);
 				        if(sum != check_sum)
 			        	{
 			        		sprite_wrn("sprite update error: checksum is error %s\n", dl_info->one_part_info[i].dl_filename);
@@ -483,26 +597,29 @@ __s32 card_sprite(void *mbr_i, int flash_erase, int disp_type)
 	    	__inf("part %s not need verify\n", dl_info->one_part_info[i].dl_filename);
 	    }
 __download_part_data__:
-		;
+		__inf("part write time %d\n", sprite_write_time);
+		__inf("part read time %d\n",  sprite_read_time);
+		__inf("card read time %d\n",  card_read_time);
+		__inf("check     time %d\n",  check_time);
 	}
 	sprite_show(CARD_SPRITE_DOWN_PART);
 /*****************************************************************************
 *
-*   »¹Ô­±£ÁôµÄÊı¾İ
+*   è¿˜åŸä¿ç•™çš„æ•°æ®
 *
-*   private·ÖÇøÊı¾İ
+*   privateåˆ†åŒºæ•°æ®
 *
 *
 *****************************************************************************/
 	__inf("try to deal private part\n");
-	for(i=0;i<mbr_info->PartCount;i++)
+	for(i=0;i<item_mbr->PartCount;i++)
 	{
-		if(!strcmp((const char *)mbr_info->array[i].name, "private"))
+		if(!strcmp((const char *)item_mbr->array[i].name, "private"))
 		{
 			__u32 private_start, private_size;
 
-			private_start = mbr_info->array[i].addrlo;
-			private_size  = mbr_info->array[i].lenlo;
+			private_start = item_mbr->array[i].addrlo;
+			private_size  = item_mbr->array[i].lenlo;
 
 			update_flash_open(private_start, 0);
 			if(private_date_restore(private_size<<9))
@@ -517,16 +634,17 @@ __download_part_data__:
 	__inf("dela private part finish\n");
 /*****************************************************************************
 *
-*   ¿ªÊ¼¶Ômbr½øĞĞ²Ù×÷
+*   å¼€å§‹å¯¹mbrè¿›è¡Œæ“ä½œ
 *
-*   mbrÖ±½ÓĞ´µ½Âß¼­ÉÈÇø0ºÅ¿ªÊ¼¼´¿É
+*   mbrç›´æ¥å†™åˆ°é€»è¾‘æ‰‡åŒº0å·å¼€å§‹å³å¯
 *
 *
 *****************************************************************************/
 	update_flash_open(0, 0);
 	private_type = 0;
 	__msg("write mbr, size = %d\n", mbr_buf_size);
-	if(update_flash_write((void *)tmp_mbr_buf, mbr_buf_size))
+	//if(sprite_flash_write((void *)mbr_buffer, mbr_buf_size/512))
+	if(sprite_flash_write(0, mbr_buf_size/512, mbr_buffer))
 	{
     	sprite_wrn("sprite update error: fail to write mbr\n");
 
@@ -536,27 +654,29 @@ __download_part_data__:
     if(sprite_type)
     {
     	__inf("write standard mbr\n");
-    	if(create_stdmbr((void *)tmp_mbr_buf))
+    	if(create_stdmbr((void *)mbr_buffer))
     	{
     		__msg("write standard mbr failed\n");
     	}
     }
     update_flash_close();
+	__inf("sprite_type=%d\n", sprite_type);
     if(!sprite_type)
     {
     	update_flash_exit(0);
 	}
 	sprite_show(CARD_SPRITE_DOWN_PART);
+	__inf("sprite mbr download ok\n");
 /*****************************************************************************
 *
-*   ¿ªÊ¼¶Ôboot1½øĞĞ²Ù×÷£¬°üÀ¨»ñÈ¡¾ä±ú£¬»ñÈ¡Êı¾İ
+*   å¼€å§‹å¯¹boot1è¿›è¡Œæ“ä½œï¼ŒåŒ…æ‹¬è·å–å¥æŸ„ï¼Œè·å–æ•°æ®
 *
-*   boot1ÊÇÑ¹Ëõ¹ıµÄÊı¾İ°ü£¬ĞèÒª½øĞĞ½âÑ¹
+*   boot1æ˜¯å‹ç¼©è¿‡çš„æ•°æ®åŒ…ï¼Œéœ€è¦è¿›è¡Œè§£å‹
 *
-*   boot1¿ÉÒÔ±£´æÔÚdramÖĞ
+*   boot1å¯ä»¥ä¿å­˜åœ¨dramä¸­
 *
 *****************************************************************************/
-    //È¡³öboot1
+    //å–å‡ºboot1
     if(!sprite_type)
     {
     	imgitemhd = Img_OpenItem(imghd, "12345678", "UBOOT_0000000000");
@@ -570,31 +690,32 @@ __download_part_data__:
         sprite_wrn("sprite update error: fail to open boot1 item\n");
         goto _update_error_;
     }
-    //boot1³¤¶È
+    //boot1é•¿åº¦
     item_original_size = Img_GetItemSize(imghd, imgitemhd);
     if(!item_original_size)
     {
         sprite_wrn("sprite update error: fail to get boot1 item size\n");
         goto _update_error_;
     }
-    /*»ñÈ¡boot1µÄÊı¾İ(Ñ¹Ëõ¹ıµÄ)*/
-    if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_original_size))
+    /*è·å–boot1çš„æ•°æ®(å‹ç¼©è¿‡çš„)*/
+    //if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_original_size))
+    if(!Img_ReadItem(imghd, imgitemhd, (void *)src_buf, item_original_size))
     {
         sprite_wrn("update error: fail to read data from for boot1\n");
         goto _update_error_;
     }
     Img_CloseItem(imghd, imgitemhd);
     imgitemhd = NULL;
-    if(!sprite_type)
-    {
-    	init_code(0); /*ÏÖÔÚboot1_nand.bin²»¼ÓÃÜ*/
-    }
-    else
-    {
-    	init_code(0);
-    }
-    decode((__u32)src_buf, (__u32)dest_buf, (__u32)item_original_size, &actual_buf_addr);
-    exit_code();
+//    if(!sprite_type)
+//    {
+//    	init_code(1);
+//    }
+//    else
+//    {
+//    	init_code(0);
+//    }
+//    decode((__u32)src_buf, (__u32)dest_buf, item_original_size, &actual_buf_addr);
+//    exit_code();
 
     if(update_boot1((void *)actual_buf_addr, flash_info, sprite_type))
     {
@@ -604,11 +725,11 @@ __download_part_data__:
 	sprite_show(CARD_SPRITE_DOWN_BOOT1);
 /*****************************************************************************
 *
-*   ¿ªÊ¼¶Ôboot0½øĞĞ²Ù×÷£¬°üÀ¨»ñÈ¡¾ä±ú£¬»ñÈ¡Êı¾İ
+*   å¼€å§‹å¯¹boot0è¿›è¡Œæ“ä½œï¼ŒåŒ…æ‹¬è·å–å¥æŸ„ï¼Œè·å–æ•°æ®
 *
-*   boot0ÊÇÑ¹Ëõ¹ıµÄÊı¾İ°ü£¬ĞèÒª½øĞĞ½âÑ¹
+*   boot0æ˜¯å‹ç¼©è¿‡çš„æ•°æ®åŒ…ï¼Œéœ€è¦è¿›è¡Œè§£å‹
 *
-*   boot0¿ÉÒÔ±£´æÔÚdramÖĞ
+*   boot0å¯ä»¥ä¿å­˜åœ¨dramä¸­
 *
 *****************************************************************************/
     if(!sprite_type)
@@ -630,7 +751,8 @@ __download_part_data__:
         sprite_wrn("sprite update error: fail to get boot0 size\n");
         goto _update_error_;
     }
-    if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_original_size))
+    //if(!Img_ReadItemData(imghd, imgitemhd, (void *)src_buf, item_original_size))
+    if(!Img_ReadItem(imghd, imgitemhd, (void *)src_buf, item_original_size))
     {
         sprite_wrn("sprite update error: fail to get boot0 item size\n");
         goto _update_error_;
@@ -645,7 +767,7 @@ __download_part_data__:
     {
     	init_code(0);
     }
-    decode((__u32)src_buf, (__u32)dest_buf, (__u32)item_original_size, &actual_buf_addr);
+    decode((__u32)src_buf, (__u32)dest_buf, item_original_size, &actual_buf_addr);
     exit_code();
 
     if(update_boot0((void *)actual_buf_addr, flash_info, sprite_type))
@@ -656,7 +778,7 @@ __download_part_data__:
 	sprite_show(CARD_SPRITE_DOWN_BOOT0);
 /*****************************************************************************
 *
-*   ¹Ø±ÕimghdºÍnand¾ä±ú
+*   å…³é—­imghdå’Œnandå¥æŸ„
 *
 *
 *****************************************************************************/
@@ -665,10 +787,10 @@ __download_part_data__:
     ret = 0;
 
 _update_error_:
-    if(src_buf)
-    {
-        sprite_free(src_buf);
-    }
+//    if(src_buf)
+//    {
+//        sprite_free(src_buf);
+//    }
 //    if(buf0)
 //    {
 //        sprite_free(buf0);
@@ -677,10 +799,10 @@ _update_error_:
 //    {
 //        sprite_free(buf1);
 //    }
-    if(tmp_mbr_buf)
-    {
-    	sprite_free(tmp_mbr_buf);
-    }
+//    if(tmp_mbr_buf)
+//    {
+//    	sprite_free(tmp_mbr_buf);
+//    }
     if(sprite_type)
     {
     	update_flash_exit(1);

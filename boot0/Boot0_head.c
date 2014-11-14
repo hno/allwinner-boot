@@ -47,7 +47,7 @@ const boot0_file_head_t  BT0_head = {
 							   		      BOOT0_VERSION,
 							   		      EGON_VERSION,
 							   		      {
-							   		      	0, 0, '2','.','0','.','0',0
+							   		      	0, 0, '2','.','4','.','0',0
 							   		      },
 							 	      },
 #ifdef  DDR3_USED

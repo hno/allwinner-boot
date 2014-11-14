@@ -213,28 +213,31 @@ void Uint_to_string_dec( unsigned int input, char * str )
 *
 *******************************************************************************************************************
 */
-void int_to_string_hex( int input, char * str, int hex_flag )
+void int_to_string_hex( int input, char * str )
 {
 	int i;
-	int j;
-	char stack[8];
+	//int j;
+	//char stack[8];
+	static char base[] = "0123456789abcdef";
 
-
-	for( i = 0; i < 8; ++i )
+//	for( i = 0; i < 8; ++i )
+//	{
+//		if( hex_flag == HEX_X )
+//			stack[i] = "0123456789ABCDEF"[input&MASK_LOW4];
+//		else
+//			stack[i] = "0123456789abcdef"[input&MASK_LOW4];
+//
+//		input >>= 4;
+//	}
+	for( i = 9; i > 1; --i )
 	{
-		if( hex_flag == HEX_X )
-			stack[i] = "0123456789ABCDEF"[input&MASK_LOW4];
-		else
-			stack[i] = "0123456789abcdef"[input&MASK_LOW4];
-
+		str[i] = base[input&MASK_LOW4];
 		input >>= 4;
 	}
 
 	str[0] = '0';
-	str[1] = hex_flag;                         // Hex format shoud start with "0x" or "0X".
-	for( i = 7, j = 2; i >= 0; --i, ++j )
-		str[j] = stack[i];
-	str[j] = '\0';                             // 'str' must end with '\0'
+	str[1] = 'x';                         // Hex format shoud start with "0x" or "0X".
+	str[10] = '\0';                       // 'str' must end with '\0'
 
 	return;
 }

@@ -36,7 +36,9 @@
 
     	IMPORT   Boot0_C_part
     	IMPORT   set_pll
-
+    	IMPORT   disbale_cpus
+		IMPORT   config_pll1_para
+		IMPORT   set_vldo_for_pll
 
 		PRESERVE8
 
@@ -69,10 +71,21 @@ initialize
 	bic r0, r0, #( ARMV7_C1_A_BIT)                    ;// disable align
 	mcr p15, 0, r0, c1, c0
 
+    ldr r0, =0x01c00044
+    ldr r1,[r0]
+    orr r1,#0x1800
+    str r1,[r0]
+
 ;// set SP for C language
 	ldr sp, =BOOT0_STACK_BOTTOM
 
+;// set pll para
+	bl  config_pll1_para
+	bl  set_vldo_for_pll
+;// set stack
 	bl  set_pll
+;// disable cpus
+	bl  disbale_cpus
 ;/**********************************the end of initializing system*********************************/
 	bl  Boot0_C_part
 

@@ -31,8 +31,6 @@
 #include "load_Boot1_from_nand_i.h"
 
 
-
-
 /*******************************************************************************
 *函数名称: load_Boot1_from_nand
 *函数原型：int32 load_Boot1_from_nand( void )
@@ -51,16 +49,16 @@ __s32 load_Boot1_from_nand( void )
 	boot_file_head_t  *bfh;
 
 
-	if(NF_ERROR==NF_open( ))                         // 打开nand flash
+	if(NF_open( ) == NF_ERROR)                         // 打开nand flash
 	{
-		msg("can't open nand flash.\n");
+		msg("fail in opening nand flash\n");
+
 		return ERROR;
 	}
-	msg("Succeed in opening nand flash.\n");
-	msg("block from %d to %d\n", BOOT1_START_BLK_NUM, BOOT1_LAST_BLK_NUM);
+	//msg("Succeed in opening nand flash.\n");
+	//msg("block from %d to %d\n", BOOT1_START_BLK_NUM, BOOT1_LAST_BLK_NUM);
     for( i = BOOT1_START_BLK_NUM;  i <= BOOT1_LAST_BLK_NUM;  i++ )
     {
-    	msg("deal block %d\n", i);
     	if( NF_read_status( i ) == NF_BAD_BLOCK )		// 如果当前块是坏块，则进入下一块
     	{
     		msg("nand block %d is bad\n", i);
@@ -72,7 +70,7 @@ __s32 load_Boot1_from_nand( void )
 		    msg("the first data is error\n");
 			continue;
 		}
-		msg("Succeed in reading Boot1 file head.\n");
+		//msg("Succeed in reading Boot1 file head.\n");
 
 		/* 察看是否是文件头 */
 		if( check_magic( (__u32 *)BOOT1_BASE, BOOT1_MAGIC ) != CHECK_IS_CORRECT )
@@ -84,15 +82,14 @@ __s32 load_Boot1_from_nand( void )
 
 		bfh = (boot_file_head_t *) BOOT1_BASE;
         length =  bfh->length;
-      //  msg("The size of Boot1 is %x.\n", length );
-      //  msg("The align size of Boot1 is %x.\n", bfh->align_size);
+        //msg("The size of Boot1 is %x.\n", length );
+        //msg("The align size of Boot1 is %x.\n", NF_SECTOR_SIZE );
         if( ( length & ( NF_SECTOR_SIZE - 1 ) ) != 0 )     // length必须是NF_SECTOR_SIZE对齐的
         {
             msg("the boot1 is not aligned by %x\n", NF_SECTOR_SIZE);
         	continue;
 		}
-		msg("The size of Boot1 is %x.\n", length );
-
+		//msg("The size of Boot1 is %x.\n", length );
         if( length <=  NF_BLOCK_SIZE )
         {
         	/* 从一个块中载入Boot1的备份 */
@@ -104,8 +101,8 @@ __s32 load_Boot1_from_nand( void )
         	}
         	else if( status == ADV_NF_OK )
         	{
-                msg("Check is correct.\n");
-                bfh->eGON_vsn[2] = 0;
+                //msg("Check is correct.\n");
+                //msg("load boot1 ok\n");
                 NF_close( );                        // 关闭nand flash
                 return OK;
             }
@@ -129,7 +126,6 @@ __s32 load_Boot1_from_nand( void )
             if( check_sum( (__u32 *)BOOT1_BASE, length ) == CHECK_IS_CORRECT )
             {
                 msg("The file stored in start block %u is perfect.\n", i );
-                bfh->eGON_vsn[2] = 0;
                 NF_close( );                        // 关闭nand flash
                 return OK;
             }

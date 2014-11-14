@@ -72,7 +72,7 @@ __s32 load_and_check_in_one_blk( __u32 blk_num, void *buf, __u32 size, __u32 blk
         /* 校验备份是否完好，如果完好，则程序返回OK */
         if( check_file( (__u32 *)buf, size, magic ) == CHECK_IS_CORRECT )
         {
-            msg("The file stored in %X of block %u is perfect.\n", ( copy_base - blk_base ), blk_num );
+            //msg("The file stored in %X of block %u is perfect.\n", ( copy_base - blk_base ), blk_num );
 			return ADV_NF_OK;
 		}
 	}

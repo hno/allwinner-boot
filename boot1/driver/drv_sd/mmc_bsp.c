@@ -43,7 +43,11 @@ struct sunxi_mmc {
 	u32 chda;          /* (0x90) */
 	u32 cbda;          /* (0x94) */
 	u32 res2[26];      /* (0x98~0xff) */
-	u32 fifo;          /* (0x100) SMC FIFO Access Address */
+	u32 thldc;		 /* (0x100) Card Threshold Control Register */
+	u32 res3[2];		 /* (0x104~0x10b) */
+	u32 dsbd;		 /* (0x10c) eMMC4.5 DDR Start Bit Detection Control */
+	u32 res4[60];		/* (0x110~0x1ff) */
+	u32 fifo;          /* (0x200) SMC FIFO Access Address */
 };
 
 #ifdef MMC_DEBUG
@@ -133,120 +137,7 @@ struct sunxi_mmc_host {
 /* support 4 mmc hosts */
 struct mmc mmc_dev[MAX_MMC_NUM];
 struct sunxi_mmc_host mmc_host[MAX_MMC_NUM];
-
-u32 ccm_get_pll5_dev_clk(void)
-{
-	u32 rval = 0;
-	u32 n, k,p;
-	u32 pll5_clk = 0;
-	rval = readl(CCMU_PLL5_CLK_BASE);
-	n = (rval >> 8) &  0x1f;
-	k = ((rval >> 4) & 3) + 1;
-	p = 1 << ((rval >> 16) & 3);
-	pll5_clk = 24000000 * n * k / p;
-	return pll5_clk;
-}
-u32 ccm_get_pll6_dev_clk(void)
-{
-	u32 rval = 0;
-	u32 n, k;
-	u32 pll6_clk = 0;
-	rval = readl(CCMU_PLL6_CLK_BASE);
-	n = (rval >> 8) &  0x1f;
-	k = ((rval >> 4) & 3) + 1;
-	pll6_clk = (24000000 * n * k)>>1;
-	return pll6_clk;
-}
-
-
-
-s32 smc_set_card_clk(u32 smc_no, u32 cclk,u32 bus_width)
-{
-	struct sunxi_mmc_host* mmchost = &mmc_host[smc_no];
-	u32 sclk = 24000000;
-	u32 div;
-	u32 rval;
-	u32 src = 0;
-	u32 mclk_base = mmchost->mclkbase;
-	u32 m, n;
-	u32 outclk_pha = 0;
-	u32 samclk_pha = 0;
-	
-	
-	if (cclk > 400000) {
-		src = 1;//change to you select source
-		sclk = ccm_get_pll6_dev_clk();	//change to you select source clock
-//		src = 0;//change to you select source
-//		sclk = 24000000;	//change to you select source clock
-		outclk_pha = 0;
-		samclk_pha = 0;			
-	}else{
-		src = 0;
-		sclk = 24000000;
-		outclk_pha = 0;
-		samclk_pha = 0;	
-	}
-
-	div = (2 * sclk + cclk) / (2 * cclk);
-	div = div==0 ? 1 : div;
-	if (div > 128) {
-		m = 1;
-		n = 0;
-		mmcdbg("Source clock is too high\n");
-	} else if (div > 64) {
-		n = 3;
-		m = div >> 3;
-	} else if (div > 32) {
-		n = 2;
-		m = div >> 2;
-	} else if (div > 16) {
-		n = 1;
-		m = div >> 1;
-	} else {
-		n = 0;
-		m = div;
-	}
-	
-	rval = (1U << 31) | (src << 24) | (samclk_pha << 20)
-	  		| (n << 16) | (outclk_pha << 8) | (m - 1);
-	writel(rval, mclk_base);
-	
-	/* clear internal divider */
-	rval = readl(&mmchost->reg->clkcr) & (~0xff);
-	writel(rval, &mmchost->reg->clkcr);
- 
-	
-	switch(n)
-	{
-		case 0:
-			mmchost->mclk = sclk/1/m;
-			mmcdbg("Card clock=%d\n",sclk/1/m);
-			break;
-		case 1:
-			mmchost->mclk = sclk/2/m;
-			mmcdbg("Card clock=%d\n",sclk/2/m);
-			break;
-		case 2:
-			mmchost->mclk = sclk/4/m;
-			mmcdbg("Card clock=%d\n",sclk/4/m);
-			break;
-		case 3:
-			mmchost->mclk = sclk/8/m;
-			mmcdbg("Card clock=%d\n",sclk/8/m);
-			break;
-		default:
-			break;
-	}
-	//dumphex32("ccmu", (char*)0x01c20000, 0x100);
-	return cclk;
-}
-
-
-
-
-
-
-
+s32 smc_set_card_clk(u32 smc_no, u32 cclk,u32 bus_width,u32 ddr);
 
 static int mmc_resource_init(int sdc_no)
 {
@@ -285,6 +176,7 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
             if (onoff) {
 	            writel(0x222222, gpiof_base + 0x0);
 	            writel(0x555, gpiof_base + 0x1c);
+	            //writel(0xaaa, gpiof_base + 0x14);
 	            writel(0xfff, gpiof_base + 0x14);
 	        } else {
 	            writel(0x404044, gpiof_base + 0x0);
@@ -299,7 +191,7 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
 	            writel(0x33000000, gpioc_base + 0x0);
 	            writel(0x3333, gpioc_base + 0x4);
 	            writel(0x555 << 12, gpioc_base + 0x1c);
-	            writel(0xfff << 12, gpioc_base + 0x14);
+	            writel(0xaaa << 12, gpioc_base + 0x14);
             } else {
 	            writel(0, gpioc_base + 0x0);
 	            writel(0, gpioc_base + 0x4);
@@ -321,16 +213,16 @@ static int mmc_clk_io_onoff(int sdc_no, int onoff)
 		rval &= ~(1 << (8 + sdc_no));
 	writel(rval, mmchost->hclkbase);
 	/* release reset */
-	/*rval = readl(mmchost->hclkrst);
+	rval = readl(mmchost->hclkrst);
 	if (onoff)
 		rval |= (1 << (8 + sdc_no));
 	else
 		rval &= ~(1 << (8 + sdc_no));
 	writel(rval, mmchost->hclkrst);
-    */
+
 	/* config mod clock */
 	if (onoff) {
-		smc_set_card_clk(sdc_no,400000,1);
+		smc_set_card_clk(sdc_no,400000,1,0);
 		mmcdbg("init mmc mclk %d\n", mmchost->mclk);
 	} else {
 		writel(0, mmchost->mclkbase);
@@ -350,32 +242,158 @@ static int mmc_update_clk(struct mmc *mmc)
 	unsigned timeout = 0xfffff;
 
 	cmd = (1U << 31) | (1 << 21) | (1 << 13);
-  	writel(cmd, &mmchost->reg->cmd);
-	while((readl(&mmchost->reg->cmd)&0x80000000) && timeout--);
-	if (!timeout)
+	writel(cmd, &mmchost->reg->cmd);
+
+	while((readl(&mmchost->reg->cmd)&0x80000000) && --timeout);
+	if (!timeout) {
+		mmcinfo("update clk failed\n");
+		dumphex32("mmc", (char*)mmchost->reg, 0x100);
 		return -1;
+	}
 
 	writel(readl(&mmchost->reg->rint), &mmchost->reg->rint);
 	return 0;
 }
 
-static int mmc_config_clock(struct mmc *mmc, unsigned clk)
+
+u32 ccm_get_pll6_dev_clk(void)
+{
+	u32 rval = 0;
+	u32 n, k;
+	rval = readl(CCMU_PLL6_CLK_BASE);
+	n = (0x1f & (rval >> 8)) + 1;
+	k = (0x3 & (rval >> 4)) + 1;
+	return (24000000 * n * k)>>1;
+}
+
+/* 400K, SCLK-24M, CCLK-400K
+ * 25M, SCLK-PLL6(200M/180M), CCLK-25M(22.5M)
+ * 50M, SCLK-PLL6(200M/180M), CCLK-50M(45M)
+ * 100M, SCLK-PLL6(200M/180M), CCLK-50M(90M)
+ * 200M, SCLK-PLL6(200M/180M), CCLK-200M(180M)
+ */
+s32 smc_set_card_clk(u32 smc_no, u32 cclk,u32 bus_width,u32 ddr)
+{
+	struct sunxi_mmc_host* mmchost = &mmc_host[smc_no];
+	u32 sclk = 24000000;
+	u32 div;
+	u32 rval;
+	u32 src = 0;
+	u32 mclk_base =mmchost->mclkbase;
+	u32 m, n;
+	u32 outclk_pha = 0;
+	u32 samclk_pha = 0;
+	u32 ddr8_clk;
+
+	if (cclk > 400000) {
+		src = 1;
+		sclk = ccm_get_pll6_dev_clk();
+		outclk_pha = 3;
+		samclk_pha = 5;
+		/* if in ddr and width8 mode, module clock must be twice of card clock */
+		if (bus_width == 8 && ddr) {
+			ddr8_clk = cclk << 1;
+			div = (2 * sclk + ddr8_clk) / (2 * ddr8_clk);
+		} else {
+			div = (2 * sclk + cclk) / (2 * cclk);
+		}
+		div = div==0 ? 1 : div;
+		if (div > 128) {
+			m = 1;
+			n = 0;
+			mmcinfo("Source clock is too high\n");
+		} else if (div > 64) {
+			n = 3;
+			m = div >> 3;
+		} else if (div > 32) {
+			n = 2;
+			m = div >> 2;
+		} else if (div > 16) {
+			n = 1;
+			m = div >> 1;
+		} else {
+			n = 0;
+			m = div;
+		}
+
+		rval = (1U << 31) | (src << 24) | (samclk_pha << 20)
+	    		| (n << 16) | (outclk_pha << 8) | (m - 1);
+		writel(rval, mclk_base);
+
+		/* clear internal divider */
+		rval = readl(&mmchost->reg->clkcr) & (~0xff);
+		if (bus_width == 8 && ddr)
+			rval |= 0x1;
+		writel(rval, &mmchost->reg->clkcr);
+	} else {
+		src = 0;
+		sclk = 24000000;
+		outclk_pha = 0;
+		samclk_pha = 0;
+
+		div = (2 * sclk + cclk) / (2 * cclk);
+		div = div==0 ? 1 : div;
+		if (div > 128) {
+			m = 1;
+			n = 0;
+			mmcinfo("Source clock is too high\n");
+		} else if (div > 64) {
+			n = 3;
+			m = div >> 3;
+		} else if (div > 32) {
+			n = 2;
+			m = div >> 2;
+		} else if (div > 16) {
+			n = 1;
+			m = div >> 1;
+		} else {
+			n = 0;
+			m = div;
+		}
+
+		rval = (1U << 31) | (src << 24) | (samclk_pha << 20)
+	    		| (n << 16) | (outclk_pha << 8) | (m - 1);
+		writel(rval, mclk_base);
+
+		/* clear internal divider */
+		rval = readl(&mmchost->reg->clkcr) & (~0xff);
+		writel(rval,& mmchost->reg->clkcr);
+	}
+
+	mmchost->mclk = sclk/(1<<n)/m;
+	mmcdbg("Card clock=%d\n",mmchost->mclk);
+	//dumphex32("ccmu", (char*)0x01c20000, 0x100);
+
+	return cclk;
+}
+
+
+static int mmc_config_clock(struct mmc *mmc)
 {
 	struct sunxi_mmc_host* mmchost = (struct sunxi_mmc_host *)mmc->priv;
 	unsigned rval = readl(&mmchost->reg->clkcr);
-    
+
+	/*
+	 * CLKCREG[7:0]: divider
+	 * CLKCREG[16]:  on/off
+	 * CLKCREG[17]:  power save
+	 */
 	/* Disable Clock */
 	rval &= ~(1 << 16);
 	writel(rval, &mmchost->reg->clkcr);
-	if(mmc_update_clk(mmc))
+	if(mmc_update_clk(mmc)) {
+		mmcinfo("disable clock failed\n");
 		return -1;
-
-	smc_set_card_clk(mmchost->mmc_no,mmc->clock,mmc->bus_width);
+	}
+	/* Change Divider Factor */
+	smc_set_card_clk(mmchost->mmc_no,mmc->clock,mmc->bus_width,0);
 	/* Re-enable Clock */
-	rval |= (3 << 16);
+	rval |= (1 << 16);
 	writel(rval, &mmchost->reg->clkcr);
-	if(mmc_update_clk(mmc))
+	if(mmc_update_clk(mmc)) {
+		mmcinfo("re-enable clock failed\n");
 		return -1;
+	}
 	return 0;
 }
 
@@ -383,13 +401,16 @@ static void mmc_set_ios(struct mmc *mmc)
 {
 	struct sunxi_mmc_host* mmchost = (struct sunxi_mmc_host *)mmc->priv;
 
-
 	mmcdbg("ios: bus: %d, clock: %d\n", mmc->bus_width, mmc->clock);
 
-	if (mmc->clock && mmc_config_clock(mmc, mmc->clock)) {
-	    wlibc_uprintf("[mmc]: " "*** update clock failed\n");
-		mmchost->fatal_err = 1;
-	}
+	/* Change clock first */
+	if (mmc->clock)
+		if (mmc_config_clock(mmc)) {
+			mmchost->fatal_err = 1;
+			mmcinfo("Config clock failed\n");
+			return;
+		}
+
 	/* Change bus width */
 	if (mmc->bus_width == 8)
 		writel(2, &mmchost->reg->width);
@@ -412,7 +433,7 @@ static int mmc_trans_data_by_cpu(struct mmc *mmc, struct mmc_data *data)
 	unsigned i;
 	unsigned byte_cnt = data->blocksize * data->blocks;
 	unsigned *buff;
-	unsigned timeout = 0xfffff;
+	unsigned timeout = 0xffffff;
 
 	if (data->flags & MMC_DATA_READ) {
 		buff = (unsigned int *)data->b.dest;
@@ -421,7 +442,7 @@ static int mmc_trans_data_by_cpu(struct mmc *mmc, struct mmc_data *data)
 			if (timeout <= 0)
 				goto out;
 			buff[i] = readl(mmchost->database);
-			timeout = 0xfffff;
+			timeout = 0xffffff;
 		}
 	} else {
 		buff = (unsigned int *)data->b.src;
@@ -430,13 +451,15 @@ static int mmc_trans_data_by_cpu(struct mmc *mmc, struct mmc_data *data)
 			if (timeout <= 0)
 				goto out;
 			writel(buff[i], mmchost->database);
-			timeout = 0xfffff;
+			timeout = 0xffffff;
 		}
 	}
 
 out:
-	if (timeout <= 0)
+	if (timeout <= 0) {
+		mmcinfo("transfer by cpu failed\n");
 		return -1;
+	}
 
 	return 0;
 }
@@ -461,7 +484,8 @@ static int mmc_trans_data_by_dma(struct mmc *mmc, struct mmc_data *data)
 	else
 		remain = SDXC_DES_BUFFER_MAX_LEN;
 
-	//OSAL_SDCARD_CacheRangeFlush(buff, (unsigned long)byte_cnt, CACHE_CLEAN_FLUSH_D_CACHE_REGION);
+	wlibc_CleanFlushDCacheRegion(buff, (unsigned long)byte_cnt);
+//OSAL_CacheRangeFlush(buff, (unsigned long)byte_cnt, CACHE_CLEAN_FLUSH_D_CACHE_REGION);
 	for (i=0; i < buff_frag_num; i++, des_idx++) {
 		memset((void*)&pdes[des_idx], 0, sizeof(struct sunxi_mmc_des));
 		pdes[des_idx].des_chain = 1;
@@ -490,7 +514,8 @@ static int mmc_trans_data_by_dma(struct mmc *mmc, struct mmc_data *data)
 			(u32)((u32*)&pdes[des_idx])[0], (u32)((u32*)&pdes[des_idx])[1],
 			(u32)((u32*)&pdes[des_idx])[2], (u32)((u32*)&pdes[des_idx])[3]);
 	}
-	//OSAL_SDCARD_CacheRangeFlush(pdes, sizeof(struct sunxi_mmc_des) * (des_idx+1), CACHE_CLEAN_FLUSH_D_CACHE_REGION);
+	wlibc_CleanFlushDCacheRegion(pdes, sizeof(struct sunxi_mmc_des) * (des_idx+1));
+//	OSAL_CacheRangeFlush(pdes, sizeof(struct sunxi_mmc_des) * (des_idx+1), CACHE_CLEAN_FLUSH_D_CACHE_REGION);
 
 	/*
 	 * GCTRLREG
@@ -533,12 +558,26 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	unsigned int usedma = 0;
 	unsigned int bytecnt = 0;
 
-	if (mmchost->fatal_err)
+	if (mmchost->fatal_err) {
+		mmcinfo("Found fatal err,so no send cmd\n");
 		return -1;
+	}
 	if (cmd->resp_type & MMC_RSP_BUSY)
 		mmcdbg("mmc cmd %d check rsp busy\n", cmd->cmdidx);
-	if (cmd->cmdidx == 12)
+	if (cmd->cmdidx == 12) {
+		timeout = 0x4ffffff;
+		//mmcinfo("c12b");
+		do {
+			status = readl(&mmchost->reg->status);
+			if (!timeout--) {
+				error = -1;
+				mmcinfo("cmd12 check busy timeout\n");
+				goto out;
+			}
+			//mmcinfo("check busy\n");
+		} while (status & (1 << 9));
 		return 0;
+	}
 	/*
 	 * CMDREG
 	 * CMD[5:0]	: Command index
@@ -565,6 +604,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		cmdval |= (1 << 8);
 	if (data) {
 		if ((u32)data->b.dest & 0x3) {
+			mmcinfo("dest is not 4 byte align\n");
 			error = -1;
 			goto out;
 		}
@@ -607,17 +647,23 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 			ret = mmc_trans_data_by_cpu(mmc, data);
 		}
 		if (ret) {
+			mmcinfo("Transfer failed\n");
 			error = readl(&mmchost->reg->rint) & 0xbbc2;
+			if(!error)
+				error = 0xffffffff;
 			goto out;
 		}
 	}
 
-	timeout = 0xfffff;
+	timeout = 0xffffff;
 	do {
 		status = readl(&mmchost->reg->rint);
 		if (!timeout-- || (status & 0xbbc2)) {
 			error = status & 0xbbc2;
+			if(!error)
+				error = 0xffffffff;
 			mmcinfo("cmd %d timeout, err %x\n", cmd->cmdidx, error);
+			//dumphex32("mmc", (char*)mmchost->reg, 0x100);
 			goto out;
 		}
 	} while (!(status&0x4));
@@ -625,10 +671,14 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	if (data) {
 		unsigned done = 0;
 		timeout = usedma ? 0xffff*bytecnt : 0xffff;
+		if(timeout<=0)
+			timeout = 0x7fffffff;
 		do {
 			status = readl(&mmchost->reg->rint);
 			if (!timeout-- || (status & 0xbbc2)) {
 				error = status & 0xbbc2;
+				if(!error)
+					error = 0xffffffff;//represet software timeout
 				mmcinfo("data timeout, err %x\n", error);
 				goto out;
 			}
@@ -640,7 +690,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	}
 
 	if (cmd->resp_type & MMC_RSP_BUSY) {
-		timeout = 0x4fffff;
+		timeout = 0x4ffffff;
 		do {
 			status = readl(&mmchost->reg->status);
 			if (!timeout--) {
@@ -674,12 +724,15 @@ out:
 	 * IDST[9] : idma abnormal interrupt sumary
 	 */
 		status = readl(&mmchost->reg->idst);
+
+
 		writel(status, &mmchost->reg->idst);
         writel(0, &mmchost->reg->idie);
         writel(0, &mmchost->reg->dmac);
         writel(readl(&mmchost->reg->gctrl)&(~(1 << 5)), &mmchost->reg->gctrl);
 	}
 	if (error) {
+		dumphex32("mmc", (char*)mmchost->reg, 0x100);
 		writel(0x7, &mmchost->reg->gctrl);
 		mmc_update_clk(mmc);
 		mmcinfo("mmc cmd %d err %x\n", cmd->cmdidx, error);
@@ -713,17 +766,21 @@ int sunxi_mmc_init(int sdc_no, unsigned bus_width)
 	if (bus_width==4)
 		mmc->host_caps |= MMC_MODE_4BIT;
 
-	mmc->f_min = 400000;
+	mmc->f_min = 300000;
 	mmc->f_max = 52000000;
 
     mmc_host[sdc_no].pdes = (struct sunxi_mmc_des*)0x42000000;
-	if (mmc_resource_init(sdc_no))
+	if (mmc_resource_init(sdc_no)) {
+		mmcinfo("resource init failed\n");
 		return -1;
+	}
 
 	mmc_clk_io_onoff(sdc_no, 1);
 	ret = mmc_register(sdc_no, mmc);
-	if (ret < 0)
+	if (ret < 0) {
+		mmcinfo("mmc register failed\n");
 		return -1;
+	}
 
 	return mmc->lba;
 }
@@ -732,8 +789,9 @@ int sunxi_mmc_exit(int sdc_no)
 {
 	mmc_clk_io_onoff(sdc_no, 0);
 	mmc_unregister(sdc_no);
-	memset(&mmc_dev[sdc_no], 0, sizeof(struct mmc)*MAX_MMC_NUM);
-	memset(&mmc_host[sdc_no], 0, sizeof(struct sunxi_mmc_host)*MAX_MMC_NUM);
+	memset(&mmc_dev[sdc_no], 0, sizeof(struct mmc));
+	memset(&mmc_host[sdc_no], 0, sizeof(struct sunxi_mmc_host));
 
+	mmcdbg("sunxi mmc%d exit\n",sdc_no);
 	return 0;
 }

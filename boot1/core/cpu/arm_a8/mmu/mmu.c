@@ -118,7 +118,8 @@ void   mmu_enable( void )
 	asm("mrc p15,0,%0,c1,c0,0":"=r"(c1format));
 	//__asm{MRC p15,0,c1format,c1,c0,0}
 	c1format &= ~ 0x1007;
-	c1format |= 0x1005;				//打开ICACHE，DCACHE, MMU，DISABLE ALIGIN CHECK
+	//c1format |= 0x1005;				//打开ICACHE，DCACHE, MMU，DISABLE ALIGIN CHECK
+	c1format |= 0x0005;
 	asm("mcr p15,0,%0,c1,c0,0"::"r"(c1format));
 	//__asm{MCR p15,0,c1format,c1,c0,0}
 

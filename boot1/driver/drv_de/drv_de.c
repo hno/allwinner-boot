@@ -26,6 +26,8 @@ void DRV_lcd_open_callback(void *parg)
     __s32 i = lcd_flow_cnt[sel]++;
 
     flow = BSP_disp_lcd_get_open_flow(sel);
+    __inf("lcd %d timeout=%d\n", i, flow->func[i].delay);
+
 	if(i < flow->func_num)
     {
     	flow->func[i].func(sel);
@@ -44,7 +46,7 @@ void DRV_lcd_open_callback(void *parg)
         lcd_op_finished[sel] = 1;
     }
 }
-
+#if 1
 __s32 DRV_lcd_open(__u32 sel)
 {
     lcd_flow_cnt[sel] = 0;
@@ -57,6 +59,33 @@ __s32 DRV_lcd_open(__u32 sel)
 
     return 0;
 }
+#else
+__s32 DRV_lcd_open(__u32 sel)
+{
+    __u32 i = 0;
+    __lcd_flow_t *flow;
+
+	if(BSP_disp_lcd_used(sel))
+	{
+	    BSP_disp_lcd_open_before(sel);
+
+	    flow = BSP_disp_lcd_get_open_flow(sel);
+	    for(i=0; i<flow->func_num; i++)
+	    {
+	        __u32 timeout = flow->func[i].delay;
+
+	        flow->func[i].func(sel);
+
+	    	xDelayMS(timeout);
+
+	    }
+
+	    BSP_disp_lcd_open_after(sel);
+	}
+
+    return 0;
+}
+#endif
 
 __bool DRV_lcd_check_open_finished(__u32 sel)
 {
@@ -67,6 +96,7 @@ __bool DRV_lcd_check_open_finished(__u32 sel)
     }
     return lcd_op_finished[sel];
 }
+
 
 // [before][step_0][delay_0][step_1][delay_1]......[step_n-2][delay_n-2][step_n-1][delay_n-1][after]
 void DRV_lcd_close_callback(void *parg)
@@ -118,6 +148,179 @@ __bool DRV_lcd_check_close_finished(__u32 sel)
     return lcd_op_finished[sel];
 }
 
+void hdmi_delay_ms(__u32 t)
+{
+    wBoot_timer_delay(t);//ms
+}
+
+__s32 DRV_hdmi_open(void)
+{
+    __inf("DRV_hdmi_open\n");
+
+    Hdmi_hal_video_enable_sync(1);
+
+	return 0;
+}
+
+__s32 DRV_hdmi_close(void)
+{
+    __inf("DRV_hdmi_close\n");
+    
+	Hdmi_hal_video_enable_sync(0); 
+
+	return 0;
+}
+__s32 DRV_hdmi_set_display_mode(__disp_tv_mode_t mode)
+{
+	__u32 hdmi_mode;
+
+	__inf("DRV_hdmi_set_display_mode,mode:%d\n",mode);
+	
+	switch(mode)
+	{
+	case DISP_TV_MOD_480I:
+		hdmi_mode = HDMI1440_480I;
+		break;
+		
+	case DISP_TV_MOD_576I:
+		hdmi_mode = HDMI1440_576I;
+		break;
+		
+	case DISP_TV_MOD_480P:
+		hdmi_mode = HDMI480P;
+		break;
+		
+	case DISP_TV_MOD_576P:
+		hdmi_mode = HDMI576P;
+		break;  
+		
+	case DISP_TV_MOD_720P_50HZ:
+		hdmi_mode = HDMI720P_50;
+		break;
+		
+	case DISP_TV_MOD_720P_60HZ:
+		hdmi_mode = HDMI720P_60;
+		break;
+		
+	case DISP_TV_MOD_1080I_50HZ:
+		hdmi_mode = HDMI1080I_50;
+		break;
+		
+	case DISP_TV_MOD_1080I_60HZ:
+		hdmi_mode = HDMI1080I_60;
+		break;         
+		
+	case DISP_TV_MOD_1080P_24HZ:
+		hdmi_mode = HDMI1080P_24;
+		break;    
+		
+	case DISP_TV_MOD_1080P_50HZ:
+		hdmi_mode = HDMI1080P_50;
+		break;
+		
+	case DISP_TV_MOD_1080P_60HZ:
+		hdmi_mode = HDMI1080P_60;
+		break;  
+
+	case DISP_TV_MOD_1080P_24HZ_3D_FP:
+		hdmi_mode = HDMI1080P_24_3D_FP;
+		break;  
+		
+    case DISP_TV_MOD_720P_50HZ_3D_FP:
+        hdmi_mode = HDMI720P_50_3D_FP;
+        break;
+
+    case DISP_TV_MOD_720P_60HZ_3D_FP:
+        hdmi_mode = HDMI720P_60_3D_FP;
+        break;
+
+	default:
+	    __wrn("unsupported video mode %d when set display mode\n", mode);
+		return -1;
+	}
+
+	return Hdmi_hal_set_display_mode(hdmi_mode);
+}
+__s32 DRV_hdmi_mode_support(__disp_tv_mode_t mode)
+{
+	__u32 hdmi_mode;
+	
+	switch(mode)
+	{
+	case DISP_TV_MOD_480I:
+		hdmi_mode = HDMI1440_480I;
+		break;
+		
+	case DISP_TV_MOD_576I:
+		hdmi_mode = HDMI1440_576I;
+		break;
+		
+	case DISP_TV_MOD_480P:
+		hdmi_mode = HDMI480P;
+		break;
+		
+	case DISP_TV_MOD_576P:
+		hdmi_mode = HDMI576P;
+		break;  
+		
+	case DISP_TV_MOD_720P_50HZ:
+		hdmi_mode = HDMI720P_50;
+		break;
+		
+	case DISP_TV_MOD_720P_60HZ:
+		hdmi_mode = HDMI720P_60;
+		break;
+		
+	case DISP_TV_MOD_1080I_50HZ:
+		hdmi_mode = HDMI1080I_50;
+		break;
+		
+	case DISP_TV_MOD_1080I_60HZ:
+		hdmi_mode = HDMI1080I_60;
+		break;         
+		
+	case DISP_TV_MOD_1080P_24HZ:
+		hdmi_mode = HDMI1080P_24;
+		break;    
+		
+	case DISP_TV_MOD_1080P_50HZ:
+		hdmi_mode = HDMI1080P_50;
+		break;
+		
+	case DISP_TV_MOD_1080P_60HZ:
+		hdmi_mode = HDMI1080P_60;
+		break;  
+
+	case DISP_TV_MOD_1080P_24HZ_3D_FP:
+	    hdmi_mode = HDMI1080P_24_3D_FP;
+	    break;
+
+    case DISP_TV_MOD_720P_50HZ_3D_FP:
+        hdmi_mode = HDMI720P_50_3D_FP;
+        break;
+
+    case DISP_TV_MOD_720P_60HZ_3D_FP:
+        hdmi_mode = HDMI720P_60_3D_FP;
+        break;
+
+	default:
+		hdmi_mode = HDMI720P_50;
+		break;
+	}
+
+	return Hdmi_hal_mode_support(hdmi_mode);
+}
+__s32 DRV_hdmi_get_HPD_status(void)
+{
+	return Hdmi_hal_get_HPD();
+}
+
+
+__s32 DRV_hdmi_set_pll(__u32 pll, __u32 clk)
+{
+    Hdmi_hal_set_pll(pll, clk);
+    return 0;
+}
 __s32 DRV_set_exit_mode(__u32 mode)
 {
     exit_mode = mode;
@@ -148,23 +351,77 @@ __s32 DRV_DE_INIT(void)
 {
     __disp_bsp_init_para para;
 
-    para.base_image0    = 0x01e60000;
-    para.base_image1    = 0x01e40000;
-    para.base_scaler0   = 0x01e00000;
-    para.base_scaler1   = 0x01e20000;
-    para.base_lcdc0     = 0x01c0c000;
-    para.base_lcdc1     = 0x01c17000;
-    para.base_tvec0     = 0x01c0a000;
-    para.base_tvec1     = 0x01c1b000;
-    para.base_ccmu      = 0x01c20000;
-    para.base_sdram     = 0x01c01000;
-    para.base_pioc      = 0x01c20800;
-    para.base_pwm       = 0x01c20c00;
-	para.disp_int_process = disp_int_process;
+    para.base_image0   = 0x01e60000;
+    para.base_image1   = 0x01e40000;
+    para.base_scaler0  = 0x01e00000;
+    para.base_scaler1  = 0x01e20000;
+    para.base_lcdc0    = 0x01c0c000;
+    para.base_lcdc1    = 0x01c0d000;
+    para.base_deu0     = 0x01eb0000;
+    para.base_deu1     = 0x01ea0000;
+    para.base_drc0     = 0x01e70000;
+    para.base_drc1     = 0x01e50000;
+    para.base_cmu0     = 0x01e60000;
+    para.base_cmu1     = 0x01e40000;
+    para.base_dsi0     = 0x01ca0000;
+    para.base_ccmu     = 0x01c20000;
+    para.base_sdram    = 0x01c01000;
+    para.base_pioc     = 0x01c20800;
+    para.base_pwm      = 0x01c21400;
+    para.disp_int_process = disp_int_process;
+    para.hdmi_open           = DRV_hdmi_open;
+    para.hdmi_close          = DRV_hdmi_close;
+    para.hdmi_set_mode       = DRV_hdmi_set_display_mode;
+    para.hdmi_mode_support   = DRV_hdmi_mode_support;
+    para.hdmi_get_HPD_status = DRV_hdmi_get_HPD_status;
+    para.hdmi_set_pll        = DRV_hdmi_set_pll;
 
     BSP_disp_init(&para);
+    Hdmi_set_reg_base(0x01c16000);
+    Hdmi_hal_init();
     BSP_disp_open();
+     
+if(0)
+{
+    __disp_color_t bk_color;
+    int i;
 
+    bk_color.red = 0xff;
+
+    DRV_lcd_open(0);
+    __wrn("open lcd, delay 5000Ms\n");
+    xDelayMS(10);
+    BSP_disp_lcd_set_src(0, DISP_LCDC_SRC_WHITE);
+    __wrn("lcd set white src\n");
+    xDelayMS(10);
+    BSP_disp_lcd_set_src(0, DISP_LCDC_SRC_BLACK);
+    __wrn("lcd set black src\n");
+    xDelayMS(10);
+    BSP_disp_lcd_set_src(0, DISP_LCDC_SRC_DE_CH1);
+    __wrn("lcd set ch1 src\n");
+    bk_color.red = 0xff;
+    bk_color.green = 0x00;
+    bk_color.blue = 0x00;
+    BSP_disp_set_bk_color(0, &bk_color);
+    __wrn("set red back color\n");
+    xDelayMS(10);
+    bk_color.red = 0x00;
+    bk_color.green = 0xff;
+    bk_color.blue = 0x00;
+    BSP_disp_set_bk_color(0, &bk_color);
+    __wrn("set red back color\n");
+    xDelayMS(10);
+    bk_color.red = 0x00;
+    bk_color.green = 0x00;
+    bk_color.blue = 0xff;
+    BSP_disp_set_bk_color(0, &bk_color);
+    __wrn("set red back color\n");
+    xDelayMS(10);
+    BSP_disp_print_reg(1, DISP_REG_LCDC0);
+    BSP_disp_print_reg(1, DISP_REG_PIOC);
+
+    __wrn("==DRV_DE_INIT finish==\n");
+}
     return 0;
 }
 
@@ -502,13 +759,13 @@ __s32 DRV_DE_IOCTRL(__u32 hd, __u32 cmd, __s32 aux, void *pbuffer)
 		return DRV_lcd_close(aux);
 
 	case DISP_CMD_LCD_SET_BRIGHTNESS:
-		return BSP_disp_lcd_set_bright(aux, para0);
+		return BSP_disp_lcd_set_bright(aux, para0, 0);
 
 	case DISP_CMD_LCD_GET_BRIGHTNESS:
 		return BSP_disp_lcd_get_bright(aux);
 
-	case DISP_CMD_LCD_CPUIF_XY_SWITCH:
-		return BSP_disp_lcd_xy_switch(aux, para0);
+	//case DISP_CMD_LCD_CPUIF_XY_SWITCH:
+	//	return BSP_disp_lcd_xy_switch(aux, para0);
 
 	case DISP_CMD_LCD_SET_SRC:
 		return BSP_disp_lcd_set_src(aux, (__disp_lcdc_src_t)para0);
@@ -592,7 +849,7 @@ __s32 DRV_DE_IOCTRL(__u32 hd, __u32 cmd, __s32 aux, void *pbuffer)
 
 	case DISP_CMD_VGA_SET_SRC:
 		return BSP_disp_vga_set_src(aux, (__disp_lcdc_src_t)para0);
-
+/*
 //----sprite----
 	case DISP_CMD_SPRITE_OPEN:
 		return BSP_disp_sprite_open(aux);
@@ -683,7 +940,7 @@ __s32 DRV_DE_IOCTRL(__u32 hd, __u32 cmd, __s32 aux, void *pbuffer)
 
 	case DISP_CMD_SPRITE_BLOCK_GET_PARA:
 		return BSP_disp_sprite_block_get_para(aux, para0,(__disp_sprite_block_para_t*)para1);
-
+*/
 	default:
 	    __wrn("not supported display cmd:%x\n",cmd);
 	    return eGON2_FAIL;

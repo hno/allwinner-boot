@@ -545,6 +545,7 @@ int mmc_change_freq(struct mmc *mmc)
 	char ext_csd[512];
 	char cardtype;
 	int err;
+	int	retry = 10;
 
 	mmc->card_caps = 0;
 
@@ -564,7 +565,15 @@ int mmc_change_freq(struct mmc *mmc)
 
 	cardtype = ext_csd[196] & 0xf;
 
-	err = mmc_switch(mmc, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_HS_TIMING, 1);
+	//retry for Toshiba emmc¡£for the first time Toshiba emmc change to HS£¬
+	//it will return response crc err£¬so retry¡£
+	do{
+		err = mmc_switch(mmc, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_HS_TIMING, 1);
+		if(!err){
+			break;
+		}
+		mmcinfo("retry mmc switch(cmd6)\n");
+	}while(retry--);
 
 	if (err)
 		return err;
@@ -782,7 +791,7 @@ int mmc_startup(struct mmc *mmc)
 {
 	int err;
 	u32 mult, freq;
-	unsigned long long cmult, csize, capacity;
+	u64 cmult, csize, capacity;
 	struct mmc_cmd cmd;
 	char ext_csd[512];
 	int timeout = 1000;
@@ -1087,7 +1096,8 @@ int mmc_init(struct mmc *mmc)
 	err = sd_send_op_cond(mmc);
 
 	/* If the command timed out, we check for an MMC card */
-	if (err == TIMEOUT) {
+	//if (err == TIMEOUT) {
+	if(err){
 		err = mmc_send_op_cond(mmc);
 
 		if (err) {

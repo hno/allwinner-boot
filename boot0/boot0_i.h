@@ -1,38 +1,29 @@
 /*
-************************************************************************************************************************
-*                                                         eGON
-*                                         the Embedded GO-ON Bootloader System
-*
-*                             Copyright(C), 2006-2009, SoftWinners Microelectronic Co., Ltd.
-*											       All Rights Reserved
-*
-* File Name   : boot0_i.h
-*
-* Author      : Gary.Wang
-*
-* Version     : 1.1.0
-*
-* Date        : 2009.09.13
-*
-* Description :
-*
-* Others      : None at present.
-*
-*
-* History     :
-*
-*  <Author>        <time>       <version>      <description>
-*
-* Gary.Wang      2009.09.13       1.1.0        build the file
-*
-************************************************************************************************************************
-*/
+ * (C) Copyright 2012
+ *     wangflord@allwinnertech.com
+ *
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program;
+ *
+ */
 #ifndef  __boot0_i_h
 #define  __boot0_i_h
 
 #define  UBOOT_BASE  0x4a000000
-//#define  CONFIG_AW_FPGA_PLATFORM
-//#define  CONFIG_HOLD_SUPERSTANDBY_DATA_BY_PMU
+#define  FPGA_PLATFORM   1
+//#define  CONFIG_SUN6I_FPGA
+#undef   CONFIG_SUN6I_FPGA
 
 #include "types.h"
 #include "storage_media_cfg.h"
@@ -46,7 +37,8 @@
 #include "nand_for_boot.h"
 #include "load_Boot1_from_nand/load_Boot1_from_nand.h"
 #include "load_boot1_from_sdmmc/load_boot1_from_sdmmc.h"
-
+#include "dram_for_debug.h"
+#include "mctl_hal.h"
 
 
 #endif     //  ifndef __boot0_i_h

@@ -80,96 +80,144 @@
 */
 static __s32 check_key_to_fel(void)
 {
-    __s32 ret, count, time_tick;
-    __s32 value_old, value_new, value_cnt;
-    __s32 new_key, new_key_flag;
+	int ret;
+	int fel_key_mode;
+	int fel_key_max, fel_key_min;
 
 	eGon2_printf("key\n");
-    eGon2_key_get_status();
+    eGon2_key_get_value();
     eGon2_timer_delay(10);
 
-    time_tick = 0;
-    count = 0;
-    value_cnt = 0;
-    new_key = 0;
-    new_key_flag = 0;
-    ret = eGon2_key_get_value();  			//读取按键信息
-    if(ret < 0)             				//没有按键按下
+	fel_key_mode = 0;
+	ret = eGon2_script_parser_fetch("fel_key", "fel_key_max", &fel_key_max, 1);
+    if(ret)
     {
-        eGon2_printf("no key found\n");
-        return -1;
+    	eGon2_printf("fel key max not found, try old mode\n");
+    	fel_key_mode = 1;
     }
     else
     {
-    	value_old = ret;
-    }
+		ret = eGon2_script_parser_fetch("fel_key", "fel_key_min", &fel_key_min, 1);
+	    if(ret)
+	    {
+	    	eGon2_printf("fel key min not found, try old mode\n");
+	    	fel_key_mode = 1;
+	    }
+	}
 
-    while(1)
-    {
-        time_tick ++;
-        ret = eGon2_power_get_short_key();  //获取power按键信息
-        if(ret > 0)              	  		//没有POWER按键按下
-        {
-            count ++;
-        }
-        eGon2_timer_delay(40);
-        ret = eGon2_key_get_value();  		//读取按键信息
-        if(ret < 0)             			//没有按键按下
-        {
-            eGon2_printf("key not pressed anymore\n");
-            if(count == 1)
-            {
-            	if(new_key >= 2)
-            	{
-            		eGon2_printf("force to debug mode\n");
+	if(!fel_key_mode)
+	{
+		int key_value;
 
-            		return -2;
-            	}
-            }
-        	if(value_cnt >= 2)
-        	{
-        		return value_old;
-        	}
-        	else
-        	{
-        		return -1;
-        	}
-        }
-        else
-        {
-        	value_new = ret;
-        	if(value_old == value_new)
-        	{
-        		value_cnt ++;
-        		if(new_key_flag == 1)
-        		{
-        			new_key ++;
-        			new_key_flag ++;
-        		}
-        		else if(!new_key_flag)
-        		{
-        			new_key_flag ++;
-        		}
-        	}
-        	else
-        	{
-        		new_key_flag = 0;
-        		value_old = value_new;
-        	}
-        }
+	    key_value = eGon2_key_get_value();  		//读取按键信息
+	    if(key_value < 0)             				//没有按键按下
+	    {
+	        eGon2_printf("no key found\n");
+	        return -1;
+	    }
 
-        if(count == 3)
-        {
-        	eGon2_printf("you can release the key to update now\n");
-            return 0;
-        }
+		if((key_value <= fel_key_max) && (key_value >= fel_key_min))
+		{
+			eGon2_printf("fel key detected\n");
 
-        if((!count) && (time_tick >= KEY_MAX_COUNT_GO_ON))
-        {
-            eGon2_printf("LRADC key timeout without power key\n");
-            return value_old;
-        }
-    }
+			return 0;
+		}
+
+		eGon2_printf("fel key value %d is not in the range from %d to %d\n", key_value, fel_key_min, fel_key_max);
+
+		return key_value;
+	}
+	else
+	{
+	    __s32 count, time_tick;
+	    __s32 value_old, value_new, value_cnt;
+	    __s32 new_key, new_key_flag;
+
+	    time_tick = 0;
+	    count = 0;
+	    value_cnt = 0;
+	    new_key = 0;
+	    new_key_flag = 0;
+	    ret = eGon2_key_get_value();  			//读取按键信息
+	    if(ret < 0)             				//没有按键按下
+	    {
+	        eGon2_printf("no key found\n");
+	        return -1;
+	    }
+	    else
+	    {
+	    	value_old = ret;
+	    }
+
+	    while(1)
+	    {
+	        time_tick ++;
+	        ret = axp_probe_key();  			//获取power按键信息
+	        if(ret > 0)              	  		//检测到POWER按键按下
+	        {
+	            count ++;
+	        }
+
+	        eGon2_timer_delay(40);
+	        ret = eGon2_key_get_value();  		//读取按键信息
+	        if(ret < 0)             			//没有按键按下
+	        {
+	            eGon2_printf("key not pressed anymore\n");
+	            if(count == 1)
+	            {
+	            	if(new_key >= 2)
+	            	{
+	            		eGon2_printf("1\n");
+	            		eGon2_printf("force to debug mode\n");
+
+	            		return -2;
+	            	}
+	            }
+	        	if(value_cnt >= 2)
+	        	{
+	        		return value_old;
+	        	}
+	        	else
+	        	{
+	        		return -1;
+	        	}
+	        }
+	        else
+	        {
+	        	value_new = ret;
+	        	if(value_old == value_new)
+	        	{
+	        		value_cnt ++;
+	        		if(new_key_flag == 1)
+	        		{
+	        			new_key ++;
+	        			new_key_flag ++;
+	        		}
+	        		else if(!new_key_flag)
+	        		{
+	        			new_key_flag ++;
+	        		}
+	        	}
+	        	else
+	        	{
+	        		new_key_flag = 0;
+	        		value_old = value_new;
+	        	}
+	        }
+
+	        if(count == 3)
+	        {
+	        	eGon2_printf("you can unclench the key to update now\n");
+	            return 0;
+	        }
+
+	        if((!count) && (time_tick >= KEY_MAX_COUNT_GO_ON))
+	        {
+	            eGon2_printf("timeout, but no power key found\n");
+	            return value_old;
+	        }
+	    }
+	}
 }
 /*
 ************************************************************************************************************

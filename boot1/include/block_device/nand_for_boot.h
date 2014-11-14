@@ -1,14 +1,51 @@
-#ifndef __NAND_FOR_BOOT1__
-#define __NAND_FOR_BOOT1__
+/*
+************************************************************************************************************************
+*                                                      eNand
+*                                     Nand flash driver logic control module define
+*
+*                             Copyright(C), 2008-2009, SoftWinners Microelectronic Co., Ltd.
+*											       All Rights Reserved
+*
+* File Name : bsp_nand.h
+*
+* Author : Kevin.z
+*
+* Version : v0.1
+*
+* Date : 2008.03.25
+*
+* Description : This file define the function interface and some data structure export
+*               for the nand bsp.
+*
+* Others : None at present.
+*
+*
+* History :
+*
+*  <Author>        <time>       <version>      <description>
+*
+* Kevin.z         2008.03.25      0.1          build the file
+*
+************************************************************************************************************************
+*/
+#ifndef __BSP_FOR_BOOT1_H__
+#define __BSP_FOR_BOOT1_H__
 
 #define SUCCESS	0
 #define FAIL	-1
 #define BADBLOCK -2
+//---------------------------------------------------------------
+//  nand driver 版本号
+//---------------------------------------------------------------
+#define  NAND_VERSION_0                 0x02
+#define  NAND_VERSION_1                 0x11
 
-
-typedef struct
+//---------------------------------------------------------------
+//  结构体 定义
+//---------------------------------------------------------------
+typedef struct 
 {
-	//__u32		ChannelCnt;
+	__u32		ChannelCnt;
 	__u32        ChipCnt;                            //the count of the total nand flash chips are currently connecting on the CE pin
     __u32       ChipConnectInfo;                    //chip connect information, bit == 1 means there is a chip connecting on the CE pin
 	__u32		RbCnt;
@@ -28,353 +65,135 @@ typedef struct
 	__u32 		good_block_ratio;					//good block ratio get from hwscan
 	__u32		ReadRetryType;						//the read retry type
 	__u32       DDRType;
-	__u32		Reserved[23];
+	__u32		Reserved[22];
 }boot_nand_para_t;
 
+typedef struct boot_flash_info{
+	__u32 chip_cnt;
+	__u32 blk_cnt_per_chip;
+	__u32 blocksize;
+	__u32 pagesize;
+	__u32 pagewithbadflag; /*bad block flag was written at the first byte of spare area of this page*/
+}boot_flash_info_t;
 
 
-
-typedef struct boot_physical_param
-{
+//for simple
+struct boot_physical_param{
 	__u32   chip; //chip no
 	__u32  block; // block no within chip
 	__u32  page; // apge no within block
-	__u64  sectorbitmap; //done't care
+	__u32  sectorbitmap; //done't care
 	void   *mainbuf; //data buf
 	void   *oobbuf; //oob buf
-}
-boot_physical_param_t;
+};
 
-typedef struct boot_flash_info
-{
-	__u32 chip_cnt;
-	__u32 blk_cnt_per_chip;
-	__u32 blocksize; //unit by sector
-	__u32 pagesize; //unit by sector
-	__u32 pagewithbadflag; /*bad block flag was written at the first byte of spare area of this page*/
-}
-boot_flash_info_t;
+#define ND_MAX_PART_COUNT		15	 									//max part count
 
-typedef struct _boot_nand_logical_t
-{
-	__u32 start_sector;           //起始扇区
-	__u32 nsector;				  //总扇区数
-	void  *pbuffer;				  //数据地址
-}
-boot_nand_logical_t;
-/*
-************************************************************************************************************************
-*                       READ ONE SINGLE PAGE
+struct nand_disk{
+	unsigned long size;
+	unsigned long offset;
+	unsigned char type;
+};
+
+//---------------------------------------------------------------
+//  函数 定义
+//---------------------------------------------------------------
+
+//for logic
+extern __s32 LML_Init(void);
+extern __s32 LML_Exit(void);
+extern __s32 LML_Read(__u32 nLba, __u32 nLength, void* pBuf);
+extern __s32 LML_Write(__u32 nLba, __u32 nLength, void* pBuf);
+extern __s32 LML_FlushPageCache(void);
+
+extern __s32 BMM_RleaseLogBlock(__u32 log_level);
+extern __s32 BMM_WriteBackAllMapTbl(void);
+
+extern __s32 NAND_CacheFlush(void);
+extern __s32 NAND_CacheFlushDev(__u32 dev_num);
+extern __s32 NAND_CacheRead(__u32 blk, __u32 nblk, void *buf);
+extern __s32 NAND_CacheWrite(__u32 blk, __u32 nblk, void *buf);
+extern __s32 NAND_CacheOpen(void);
+extern __s32 NAND_CacheClose(void);
+
+//for format
+extern __s32 FMT_Init(void);
+extern __s32 FMT_Exit(void);
+extern __s32 FMT_FormatNand(void);
+extern void  ClearNandStruct( void );
+
+//for scan
+__s32  SCN_AnalyzeNandSystem(void);
+
+//for physical
+extern __s32 PHY_Init(void);
+extern __s32 PHY_Exit(void);
+extern __s32 PHY_ChangeMode(__u8 serial_mode);
+extern __s32 PHY_ScanDDRParam(void);
+
+//for simplie(boot0)
+extern __s32 PHY_SimpleErase(struct boot_physical_param * eraseop);
+extern __s32 PHY_SimpleErase_2CH(struct boot_physical_param * eraseop);
+extern __s32 PHY_SimpleRead(struct boot_physical_param * readop);
+extern __s32 PHY_SimpleRead_2CH(struct boot_physical_param * readop);
+extern __s32 PHY_SimpleWrite(struct boot_physical_param * writeop);
+extern __s32 PHY_SimpleWrite_1K(struct boot_physical_param * writeop);
+extern __s32 PHY_SimpleWrite_Seq(struct boot_physical_param * writeop);
+extern __s32 PHY_SimpleRead_Seq(struct boot_physical_param * readop);
+extern __s32 PHY_SimpleRead_1K(struct boot_physical_param * readop);
+extern __s32 BOOT_AnalyzeNandSystem(void);
+
+//for param get&set
+extern __u32 NAND_GetValidBlkRatio(void);
+extern __s32 NAND_SetValidBlkRatio(__u32 ValidBlkRatio);
+extern __u32 NAND_GetFrequencePar(void);
+extern __s32 NAND_SetFrequencePar(__u32 FrequencePar);
+extern __u32 NAND_GetNandVersion(void);
+extern __s32 NAND_GetParam(boot_nand_para_t * nand_param);
+extern __s32 NAND_GetFlashInfo(boot_flash_info_t *info);
+extern __u32 NAND_GetDiskSize(void);
+extern void  NAND_SetSrcClkName(__u32 pll_name);
+
+//for lsb mode
+extern __s32 NFC_LSBEnable(__u32 chip, __u32 read_retry_type);
+extern __s32 NFC_LSBDisable(__u32 chip, __u32 read_retry_type);
+extern __s32 NFC_LSBInit(__u32 read_retry_type);
+extern __s32 NFC_LSBExit(__u32 read_retry_type);
+
+//for rb int
+extern void NFC_RbIntEnable(void);
+extern void NFC_RbIntDisable(void);
+extern void NFC_RbIntClearStatus(void);
+extern __u32 NFC_RbIntGetStatus(void);
+extern __u32 NFC_GetRbSelect(void);
+extern __u32 NFC_GetRbStatus(__u32 rb);
+extern __u32 NFC_RbIntOccur(void);
+
+extern void NFC_DmaIntEnable(void);
+extern void NFC_DmaIntDisable(void);
+extern void NFC_DmaIntClearStatus(void);
+extern __u32 NFC_DmaIntGetStatus(void);
+extern __u32 NFC_DmaIntOccur(void);
+
+//for mbr
+extern int mbr2disks(struct nand_disk* disk_array);
+
+
+
+/* 
+*   Description:
+*   1. if u wanna set dma callback hanlder(sleep during dma transfer) to free cpu for other tasks,
+*      one must call the interface before nand flash initialization.
+      this option is also protected by dma poll method,wakup(succeed or timeout) then check 
+      dma transfer complete or still running.
+*   2. if u use dma poll method,no need to call the interface.
 *
-*Description: read one page data from nand based on single plane;
-*
-*Arguments  : *readop - the structure with physical address in nand and data buffer
-*
-*Return     :   = SUCESS  read ok;
-*               = FAIL    read fail.
-************************************************************************************************************************
+*   3. default is unuse dma callback hanlder,that is,dma poll method.
+*   4. input para  : 0:dma poll method;  1:dma callback isr,free cpu for other tasks.
+*   5. return value: 0:set succeed; -1:set failed.
 */
-__s32 NFB_PhyRead (struct boot_physical_param *readop);
-__s32 NFB_PhyRead_Seq (struct boot_physical_param *readop);
-__s32 NFB_PhyRead_1K (struct boot_physical_param *readop);
-/*
-************************************************************************************************************************
-*                       READ ONE SINGLE PAGE 1K PAGE_SIZE
-*
-*Description: read one page data from nand based on single plane;
-*
-*Arguments  : *readop - the structure with physical address in nand and data buffer
-*
-*Return     :   = SUCESS  read ok;
-*               = FAIL    read fail.
-************************************************************************************************************************
-*/
-__s32 NAND_PhyRead (struct boot_physical_param *readop);
-__s32 NAND_PhyRead_Seq (struct boot_physical_param *readop);
-__s32 NAND_PhyRead_1K (struct boot_physical_param *readop);
-/*
-************************************************************************************************************************
-*                       WRITE ONE SINGLE PAGE
-*
-*Description: write one page data to nand based on single plane;
-*
-*Arguments  : *writeop - the structure with physical address in nand and data buffer
-*
-*Return     :   = SUCESS  	write ok;
-*               = FAIL    	write fail.
-*				= BADBLOCK	write fail and bad block made by program
-************************************************************************************************************************
-*/
-__s32 NFB_PhyWrite (struct boot_physical_param *writeop);
-__s32 NFB_PhyWrite_Seq (struct boot_physical_param *writeop);
-__s32 NFB_PhyWrite_1K (struct boot_physical_param *writeop);
-/*
-************************************************************************************************************************
-*                       WRITE ONE SINGLE PAGE WITH 1K PAGESIZE
-*
-*Description: write one page data to nand based on single plane, pagesize set to 1k bytes;
-*
-*Arguments  : *writeop - the structure with physical address in nand and data buffer
-*
-*Return     :   = SUCESS  	write ok;
-*               = FAIL    	write fail.
-*				= BADBLOCK	write fail and bad block made by program
-************************************************************************************************************************
-*/
-__s32 NAND_PhyWrite (struct boot_physical_param *writeop);
-__s32 NAND_PhyWrite_1K (struct boot_physical_param *writeop);
-__s32 NAND_PhyWrite_Seq (struct boot_physical_param *writeop);
-/*
-************************************************************************************************************************
-*                       ERASE ONE SINGLE BLOCK
-*
-*Description: erase one block in nand based on single plane;
-*
-*Arguments  : *eraseop - the structure with physical address in nand and data buffer
-*
-*Return     :   = SUCESS  	erase ok;
-*               = FAIL    	erase fail.
-*				= BADBLOCK	erase fail and bad block made by erase
-************************************************************************************************************************
-*/
-__s32 NFB_PhyErase(struct boot_physical_param *eraseop);
-__s32 NAND_PhyErase(struct boot_physical_param *eraseop);
-/*
-************************************************************************************************************************
-*                       GET FLASH INFO
-*
-*Description: get some info about nand flash;
-*
-*Arguments  : *param     the stucture with info.
-*
-*Return     : the result of chip reset;
-*               = SUCESS  get ok;
-*               = FAIL    get fail.
-************************************************************************************************************************
-*/
-__s32 NFB_GetFlashInfo(struct boot_flash_info *param);
-__s32 NAND_GetFlashInfo(struct boot_flash_info *param);
-/*
-************************************************************************************************************************
-*                       GET NAND VERSION INFO
-*
-*Description: get some info about nand flash;
-*
-*Arguments  : *param     the stucture with info.
-*
-*Return     :   >0     get ok;
-*               =0    get fail.
-************************************************************************************************************************
-*/
-__u32 NFB_GetNandVersion(void);
-
-/*
-************************************************************************************************************************
-*                       INIT NAND FLASH
-*
-*Description: initial nand flash,request hardware resources;
-*
-*Arguments  : void.
-*
-*Return     :   = SUCESS  initial ok;
-*               = FAIL    initial fail.
-************************************************************************************************************************
-*/
-__s32 NFB_PhyInit(void);
-/*
-************************************************************************************************************************
-*                       RELEASE NAND FLASH
-*
-*Description: release  nand flash and free hardware resources;
-*
-*Arguments  : void.
-*
-*Return     :   = SUCESS  release ok;
-*               = FAIL    release fail.
-************************************************************************************************************************
-*/
-__s32 NFB_PhyExit(void);
-/*
-************************************************************************************************************************
-*                       WRITE SOME LOGICAl SECTORS
-*
-*Description: write some logic area;
-*
-*Arguments  : nSectnum   - start sector number
-*			  nSectorCnt - sector count
-*			  *pBuf		 - data buffer
-*Return     :   = SUCESS  	write ok;
-*               = FAIL    	write fail.
-
-************************************************************************************************************************
-*/
-__s32 NFB_LogicWrite(__u32 nSectNum, __u32 nSectorCnt, void * pBuf);
-__s32 NAND_LogicWrite(__u32 nSectNum, __u32 nSectorCnt, void * pBuf);
-/*
-************************************************************************************************************************
-*                       READ SOME LOGICAl SECTORS
-*
-*Description: read some logic area;
-*
-*Arguments  : nSectnum   - start sector number
-*			  nSectorCnt - sector count
-*			  *pBuf		 - data buffer
-*Return     :   = SUCESS  	read ok;
-*               = FAIL    	read fail.
-
-************************************************************************************************************************
-*/
-__s32 NFB_LogicRead(__u32 nSectNum, __u32 nSectorCnt, void * pBuf);
-__s32 NAND_LogicRead(__u32 nSectNum, __u32 nSectorCnt, void * pBuf);
+extern __s32 NAND_SetDrqCbMethod(__u32 used);
 
 
-/*
-************************************************************************************************************************
-*                       INIT NAND DRIEVER
-*
-*Description: configure nand flash driver, include physic init and logic init;
-*
-*Arguments  : void
-*Return     :   = SUCESS  	init ok;
-*               = other    	init fail.
+#endif  //ifndef __NAND_LOGIC_H__
 
-************************************************************************************************************************
-*/
-__s32 NFB_Init(void);
-__s32 NAND_Init(void);
-/*
-************************************************************************************************************************
-*                       EXIT NAND DRIVER
-*
-*Description: exit physic layer and logic layer;
-*
-*Arguments  : void
-*Return     :   = SUCESS  	exit ok;
-*               = FAIL    	exit fail.
-
-************************************************************************************************************************
-*/
-__s32 NFB_Exit(void);
-__s32 NAND_Exit(void);
-
-/*
-************************************************************************************************************************
-*                       SCAN NAND HW
-*
-*Description: initial nand flash,request hardware resources;
-*
-*Arguments  : void.
-*
-*Return     :   = SUCESS  initial ok;
-*               = FAIL    initial fail.
-************************************************************************************************************************
-*/
-__s32 NAND_HWScanStart(boot_nand_para_t *nand_connect);
-
-
-/************************************************************************************************************************
-*                       NAND_HWScanStop
-*
-*Description: release  nand flash and free hardware resources;
-*
-*Arguments  : void.
-*
-*Return     :   = SUCESS  release ok;
-*               = FAIL    release fail.
-************************************************************************************************************************
-*/
-__s32 NAND_HWScanStop(void);
-
-/*
-************************************************************************************************************************
-*                       NAND_VersionCheck
-*
-*Description: Check the nand flash driver is current version
-*
-*Arguments  : void.
-*
-*Return     :   = 0  version match;
-*                 1  version not match
-*                -1  can't get invalid version info
-************************************************************************************************************************
-*/
-__s32 NAND_VersionCheck(void);
-__s32 NAND_VersionGet(__u8 *version);
-
-/*
-************************************************************************************************************************
-*                       NAND_EraseBootBlocks
-*
-*Description: Check the nand flash driver is current version
-*
-*Arguments  : connecnt info.
-*
-*Return     :   = 0     OK;
-*               other  Fail.
-************************************************************************************************************************
-*/
-__s32  NAND_EraseBootBlocks( const boot_nand_para_t *connect_info_p);
-
-
-/*
-************************************************************************************************************************
-*                       NAND_EraseChip
-*
-*Description: Erase chip, only erase the all 0x0 blocks
-*
-*Arguments  : connecnt info.
-*
-*Return     :   = 0     OK;
-*               other  Fail.
-************************************************************************************************************************
-*/
-__s32  NAND_EraseChip( const boot_nand_para_t *connect_info_p);
-
-/*******************************************************************************
-*函数名称: NAND_BadBlockScan
-*函数原型：bad_blcok_scan(const boot_nand_para_t *connect_info_p)
-*函数功能: 标记blk_num指定的块为坏块。
-*入口参数: connect_info_p
-*返 回 值: >0              编程操作成功
-*          -1              编程操作失败
-*
-*备    注:
-*******************************************************************************/
-__s32 NAND_BadBlockScan(const boot_nand_para_t *connect_info_p);
-
-
-/*
-************************************************************************************************************************
-*                       Nand Get Parameter
-*
-*Description: get some parameter about nand after hwscan;
-*
-*Arguments  : *param     the stucture with info.
-*
-*Return     :   = 0     get ok;
-*               = -1    get fail.
-************************************************************************************************************************
-*/
-__s32 BOOT_NandGetPara(boot_nand_para_t *param);
-
-/*
-************************************************************************************************************
-*
-*                                             function
-*
-*    函数名称：
-*
-*    参数列表：
-*
-*    返回值  ：
-*
-*    说明    ：
-*
-*
-************************************************************************************************************
-*/
-__s32  Nand_Burn_Boot0(__u32 Boot0_buf, __u32 length );
-__s32  Nand_Burn_Boot1(__u32 Boot1_buf, __u32 length );
-
-
-#endif

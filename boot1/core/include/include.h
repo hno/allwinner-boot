@@ -21,6 +21,7 @@
 #ifndef __INCLUDE_H_
 #define __INCLUDE_H_	1
 
+#define   BOOT_STANDBY_DRAM_PARA_ADDR    0x200
 
 #include  "misc.h"
 #include  "egon2.h"

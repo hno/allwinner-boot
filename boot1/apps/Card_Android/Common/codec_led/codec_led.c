@@ -66,6 +66,7 @@ __u16  pbuf_play[2] = {0xBFDA, 0x7DF7};
 */
 int codec_init(void)
 {
+#if 0
 	int i;
 	__u32 reg_val;
 
@@ -100,7 +101,7 @@ int codec_init(void)
 	CCMU_REG_APB_MOD0 |= 1<<0;
 
 	*(volatile unsigned int *)(0x01c20000 + 0x140) |= 1U<<31;
-
+#endif
 	return 0;
 }
 //*****************************************************************************
@@ -125,6 +126,7 @@ int codec_init(void)
 //*****************************************************************************
 void ac_setup_dma(unsigned int saddr, unsigned int daddr, unsigned int  bcnt)
 {
+#if 0
 	__dma_setting_t  dma_config;
 
 	dma_config.cfg.src_drq_type = 0x16;		//DRAM
@@ -145,7 +147,7 @@ void ac_setup_dma(unsigned int saddr, unsigned int daddr, unsigned int  bcnt)
 
 	wlibc_CleanFlushDCacheRegion((void *)saddr, bcnt);
 	wBoot_dma_start(codec_dma_hd, saddr, daddr, bcnt);
-
+#endif
 	return ;
 }
 /*
@@ -166,6 +168,7 @@ void ac_setup_dma(unsigned int saddr, unsigned int daddr, unsigned int  bcnt)
 */
 __u32 codec_play(void)
 {
+#if 0
 	int i;
 
 	AC_DAC_DPC = 0x80000000;
@@ -180,6 +183,8 @@ __u32 codec_play(void)
 	AC_DAC_ACTL |= 0x02;
 
 	return codec_dma_hd;
+#endif
+	return 0;
 }
 /*
 ************************************************************************************************************
@@ -199,6 +204,7 @@ __u32 codec_play(void)
 */
 void codec_wink(int status)
 {
+#if 0
 	int i;
 
 	wBoot_dma_stop(codec_dma_hd);
@@ -221,7 +227,7 @@ void codec_wink(int status)
 		}
 	}
 	wBoot_dma_Restart(codec_dma_hd);
-
+#endif
 	return ;
 }
 

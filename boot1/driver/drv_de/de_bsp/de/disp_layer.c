@@ -33,7 +33,7 @@ static __s32 Layer_Get_Idle_Prio(__u32 sel)
             {
                break;
             }
-            else if(j == gdisp.screen[sel].max_layers-1)//not layer use this prio
+            else if(j == gdisp.screen[sel].max_layers-1)//no layer use this prio
             {
                 return i;
             }
@@ -399,6 +399,7 @@ __s32 BSP_disp_layer_release(__u32 sel, __u32 hid)
 {
     __u32   cpu_sr;
     __layer_man_t * layer_man;
+    layer_src_t layer_src;
 
     hid = HANDTOID(hid);
     HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
@@ -418,7 +419,14 @@ __s32 BSP_disp_layer_release(__u32 sel, __u32 hid)
                 image_clk_off(1-sel);
                 gdisp.screen[1-sel].image_output_type = 0;
             }
+          
+            BSP_disp_cmu_layer_enable(sel, IDTOHAND(hid),FALSE);
+            disp_cmu_layer_clear(sel);
+
             Scaler_Release(layer_man->scaler_index, FALSE);      /*release a scaler object */
+            //pr_warn("BSP_disp_deu_disable, ====1======sel=%d,hid=%d\n",sel,hid);
+            BSP_disp_deu_enable(sel, IDTOHAND(hid), FALSE);
+            disp_deu_clear(sel, IDTOHAND(hid));
         }
         else
         {
@@ -426,16 +434,15 @@ __s32 BSP_disp_layer_release(__u32 sel, __u32 hid)
         	{
             	Yuv_Channel_Release(sel, hid);
             }
-            else
-            {
-                layer_src_t layer_src;
-
-                memset(&layer_src, 0, sizeof(layer_src_t));
-            	DE_BE_Layer_Set_Framebuffer(sel, hid, &layer_src);
-            }
         }
     }
+    
+    memset(&layer_src, 0, sizeof(layer_src_t));
+    DE_BE_Layer_Set_Framebuffer(sel, hid, &layer_src);
+
     memset(layer_man, 0 ,sizeof(__layer_man_t));
+    layer_man->para.scn_win.width  = 0x1;
+    layer_man->para.scn_win.height = 0x1;
     DE_BE_Layer_Enable(sel, hid, FALSE);
     DE_BE_Layer_Video_Enable(sel, hid, FALSE);
     DE_BE_Layer_Video_Ch_Sel(sel, hid, 0);
@@ -561,6 +568,7 @@ __s32 BSP_disp_layer_set_framebuffer(__u32 sel, __u32 hid, __disp_fb_t * pfb)//k
                 layer_fb.offset_x   = layer_man->para.src_win.x;
                 layer_fb.offset_y   = layer_man->para.src_win.y;
                 layer_fb.format = pfb->format;
+                layer_fb.pre_multiply = pfb->pre_multiply;
                 DE_BE_Layer_Set_Framebuffer(sel, hid,&layer_fb);
             }
 
@@ -647,6 +655,14 @@ __s32 BSP_disp_layer_set_src_window(__u32 sel, __u32 hid,__disp_rect_t *regn)//i
             
             ret = Scaler_Set_SclRegn(layer_man->scaler_index, regn);
             gdisp.scaler[layer_man->scaler_index].b_reg_change = TRUE;
+
+            OSAL_IrqLock(&cpu_sr);
+            layer_man->para.src_win.x = regn->x;
+            layer_man->para.src_win.y = regn->y;
+            layer_man->para.src_win.width = regn->width;
+            layer_man->para.src_win.height = regn->height;
+            OSAL_IrqUnLock(cpu_sr);
+
             BSP_disp_cfg_finish(sel);
             return ret;
         }
@@ -669,6 +685,7 @@ __s32 BSP_disp_layer_set_src_window(__u32 sel, __u32 hid,__disp_rect_t *regn)//i
                 layer_fb.offset_x   = regn->x;
                 layer_fb.offset_y   = regn->y;
                 layer_fb.format = layer_man->para.fb.format;
+                layer_fb.pre_multiply = layer_man->para.fb.pre_multiply;
 
                 DE_BE_Layer_Set_Framebuffer(sel, hid,&layer_fb);
             }
@@ -771,6 +788,10 @@ __s32 BSP_disp_layer_set_screen_window(__u32 sel, __u32 hid,__disp_rect_t * regn
                 BSP_disp_cfg_finish(sel);
                 return ret;
             }
+            if(BSP_disp_cmu_layer_get_enable(sel, IDTOHAND(hid)) ==1)
+            {
+                IEP_CMU_Set_Imgsize(sel, regn->width, regn->height);
+            }
         }
         if(get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV && layer_man->para.mode != DISP_LAYER_WORK_MODE_SCALER)
         {
@@ -863,7 +884,17 @@ __s32 BSP_disp_layer_set_para(__u32 sel, __u32 hid,__disp_layer_info_t *player)
         {
             if(layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER)
             {
-                Scaler_Release(layer_man->scaler_index, TRUE);
+                if(BSP_disp_cmu_layer_get_enable(sel, IDTOHAND(hid)) ==1)
+                {
+                    BSP_disp_cmu_layer_enable(sel, IDTOHAND(hid), FALSE);
+                    disp_cmu_layer_clear(sel);
+                }
+                if(BSP_disp_deu_get_enable(sel,IDTOHAND(hid)) ==1)
+                {
+                    BSP_disp_deu_enable(sel,IDTOHAND(hid),FALSE);
+                    disp_deu_clear(sel, IDTOHAND(hid));
+                }
+                Scaler_Release(layer_man->scaler_index, FALSE);
                 DE_BE_Layer_Video_Enable(sel, hid, FALSE);
                 DE_BE_Layer_Video_Ch_Sel(sel, hid, 0);
                 layer_man->para.mode = DISP_LAYER_WORK_MODE_NORMAL;
@@ -876,7 +907,7 @@ __s32 BSP_disp_layer_set_para(__u32 sel, __u32 hid,__disp_layer_info_t *player)
 
             if(layer_man->para.mode != DISP_LAYER_WORK_MODE_SCALER)
             {
-        	    __u32 format = DISP_FORMAT_ARGB8888;
+        	    layer_src_t layer_src;
 
         	    ret = Scaler_Request(0xff);
         	    if(ret < 0)
@@ -887,19 +918,38 @@ __s32 BSP_disp_layer_set_para(__u32 sel, __u32 hid,__disp_layer_info_t *player)
         	    }
         	    DE_SCAL_Start(ret);
 
-        	    format = DISP_FORMAT_ARGB8888;
-        	    DE_BE_Layer_Set_Format(sel, hid, format,FALSE,DISP_SEQ_ARGB);
         	    DE_BE_Layer_Video_Enable(sel, hid, TRUE);   
         	    DE_BE_Layer_Video_Ch_Sel(sel, hid, ret);
+                memset(&layer_src, 0, sizeof(layer_src_t));
+                layer_src.format = DISP_FORMAT_ARGB8888;
+                layer_src.br_swap = FALSE;
+                layer_src.pixseq = DISP_SEQ_ARGB;
+                DE_BE_Layer_Set_Framebuffer(sel, hid, &layer_src);
+
         	    layer_man->scaler_index = ret;
         	    layer_man->para.mode = DISP_LAYER_WORK_MODE_SCALER;
         	    gdisp.scaler[ret].screen_index = sel;
+                gdisp.scaler[ret].layer_id = hid;
         	}
         	scaler = &(gdisp.scaler[layer_man->scaler_index]) ;
 
         	player->scn_win.y &= ((gdisp.screen[sel].b_out_interlace== 1)?0xfffffffe:0xffffffff);
+            
+            if(scaler->deu.enable)
+            {
+                scaler->out_fb.seq= DISP_SEQ_P3210;
+                scaler->out_fb.format= DISP_FORMAT_YUV444;
+                scaler->out_fb.mode = DISP_MOD_NON_MB_PLANAR;
+            }else
+            {
+                scaler->out_fb.seq= DISP_SEQ_ARGB;
+                scaler->out_fb.format= DISP_FORMAT_ARGB8888;//DISP_FORMAT_RGB888;//
+                scaler->out_fb.mode = DISP_MOD_INTERLEAVED;
+            }
+/*            
             scaler->out_fb.seq= DISP_SEQ_ARGB;
             scaler->out_fb.format= DISP_FORMAT_RGB888;
+ */
             scaler->out_size.height  = player->scn_win.height;
             scaler->out_size.width   = player->scn_win.width;
         	if(player->b_from_screen)
@@ -934,7 +984,13 @@ __s32 BSP_disp_layer_set_para(__u32 sel, __u32 hid,__disp_layer_info_t *player)
             scaler->b_trd_out = player->b_trd_out;
             scaler->out_trd_mode = player->out_trd_mode;
             DE_SCAL_Output_Select(layer_man->scaler_index, sel);
+            disp_deu_output_select(sel, IDTOHAND(hid), sel);
             Scaler_Set_Para(layer_man->scaler_index, scaler);
+            if(BSP_disp_cmu_layer_get_enable(sel, IDTOHAND(hid)) ==1)
+            {
+                IEP_CMU_Set_Imgsize(sel, player->scn_win.width, player->scn_win.height);
+            }
+
         }
         else
         {
@@ -967,6 +1023,7 @@ __s32 BSP_disp_layer_set_para(__u32 sel, __u32 hid,__disp_layer_info_t *player)
                 layer_fb.fb_width   = player->fb.size.width;
                 layer_fb.offset_x   = player->src_win.x;
                 layer_fb.offset_y   = player->src_win.y;
+                layer_fb.pre_multiply = player->fb.pre_multiply;
 
 	            bpp = DE_BE_Format_To_Bpp(sel, layer_fb.format);
                 size = (player->fb.size.width * player->scn_win.height * bpp + 7)/8;
@@ -1275,166 +1332,6 @@ __s32 BSP_disp_layer_get_enhance_enable(__u32 sel, __u32 hid)
     if((layer_man->status & LAYER_USED) && layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER)
     {
         return gdisp.scaler[layer_man->scaler_index].enhance_en;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_vpp_enable(__u32 sel, __u32 hid, __bool enable)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        DE_SCAL_Vpp_Enable(layer_man->scaler_index, enable);
-        gdisp.scaler[layer_man->scaler_index].vpp_en = enable;
-        return DIS_SUCCESS;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_get_vpp_enable(__u32 sel, __u32 hid)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        return gdisp.scaler[layer_man->scaler_index].vpp_en;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_set_luma_sharp_level(__u32 sel, __u32 hid, __u32 level)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        DE_SCAL_Vpp_Set_Luma_Sharpness_Level(layer_man->scaler_index,level);
-        gdisp.scaler[layer_man->scaler_index].luma_sharpe_level = level;
-        return DIS_SUCCESS;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_get_luma_sharp_level(__u32 sel, __u32 hid)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        return gdisp.scaler[layer_man->scaler_index].luma_sharpe_level;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_set_chroma_sharp_level(__u32 sel, __u32 hid, __u32 level)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        DE_SCAL_Vpp_Set_Chroma_Sharpness_Level(layer_man->scaler_index,level);
-        gdisp.scaler[layer_man->scaler_index].chroma_sharpe_level = level;
-        return DIS_SUCCESS;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_get_chroma_sharp_level(__u32 sel, __u32 hid)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        return gdisp.scaler[layer_man->scaler_index].chroma_sharpe_level;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_set_white_exten_level(__u32 sel, __u32 hid, __u32 level)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        DE_SCAL_Vpp_Set_White_Level_Extension(layer_man->scaler_index,level);
-        gdisp.scaler[layer_man->scaler_index].while_exten_level = level;
-        return DIS_SUCCESS;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_get_white_exten_level(__u32 sel, __u32 hid)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        return gdisp.scaler[layer_man->scaler_index].while_exten_level;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_set_black_exten_level(__u32 sel, __u32 hid, __u32 level)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        DE_SCAL_Vpp_Set_Black_Level_Extension(layer_man->scaler_index,level);
-        gdisp.scaler[layer_man->scaler_index].black_exten_level = level;
-        return DIS_SUCCESS;
-    }
-    return DIS_NOT_SUPPORT;
-}
-
-__s32 BSP_disp_layer_get_black_exten_level(__u32 sel, __u32 hid)
-{
-    __layer_man_t * layer_man;
-    
-    hid= HANDTOID(hid);
-    HLID_ASSERT(hid, gdisp.screen[sel].max_layers);
-
-    layer_man = &gdisp.screen[sel].layer_manage[hid];
-    if((layer_man->status & LAYER_USED) && (layer_man->para.mode == DISP_LAYER_WORK_MODE_SCALER) && (get_fb_type(layer_man->para.fb.format) == DISP_FB_TYPE_YUV))
-    {
-        return gdisp.scaler[layer_man->scaler_index].black_exten_level;
     }
     return DIS_NOT_SUPPORT;
 }

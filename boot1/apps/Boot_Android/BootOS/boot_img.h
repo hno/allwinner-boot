@@ -75,6 +75,65 @@ typedef struct boot_global_info
 }
 boot_global_info_t;
 
+/* Android bootimage file format */
+#define FASTBOOT_BOOT_MAGIC "ANDROID!"
+#define FASTBOOT_BOOT_MAGIC_SIZE 8
+#define FASTBOOT_BOOT_NAME_SIZE 16
+#define FASTBOOT_BOOT_ARGS_SIZE 512
+
+#ifndef CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE
+#define CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE 2048
+#endif
+
+struct fastboot_boot_img_hdr {
+	unsigned char magic[FASTBOOT_BOOT_MAGIC_SIZE];
+
+	unsigned kernel_size;  /* size in bytes */
+	unsigned kernel_addr;  /* physical load addr */
+
+	unsigned ramdisk_size; /* size in bytes */
+	unsigned ramdisk_addr; /* physical load addr */
+
+	unsigned second_size;  /* size in bytes */
+	unsigned second_addr;  /* physical load addr */
+
+	unsigned tags_addr;    /* physical addr for kernel tags */
+	unsigned page_size;    /* flash page size we assume */
+	unsigned unused[2];    /* future expansion: should be 0 */
+
+	unsigned char name[FASTBOOT_BOOT_NAME_SIZE]; /* asciiz product name */
+
+	unsigned char cmdline[FASTBOOT_BOOT_ARGS_SIZE];
+
+	unsigned id[8]; /* timestamp / checksum / sha1 / etc */
+};
+
+
+#define IH_NMLEN		32	/* Image Name Length		*/
+/*
+ * Legacy format image header,
+ * all data in network byte order (aka natural aka bigendian).
+ */
+typedef struct image_header {
+	uint32_t	ih_magic;	/* Image Header Magic Number	*/
+	uint32_t	ih_hcrc;	/* Image Header CRC Checksum	*/
+	uint32_t	ih_time;	/* Image Creation Timestamp	*/
+	uint32_t	ih_size;	/* Image Data Size		*/
+	uint32_t	ih_load;	/* Data	 Load  Address		*/
+	uint32_t	ih_ep;		/* Entry Point Address		*/
+	uint32_t	ih_dcrc;	/* Image Data CRC Checksum	*/
+	uint8_t		ih_os;		/* Operating System		*/
+	uint8_t		ih_arch;	/* CPU architecture		*/
+	uint8_t		ih_type;	/* Image Type			*/
+	uint8_t		ih_comp;	/* Compression Type		*/
+	uint8_t		ih_name[IH_NMLEN];	/* Image Name		*/
+} image_header_t;
+
+
+#define ALIGN(x,a)    (((x)+(a)-1)&(~(a-1)))
+//#define __ALIGN_MASK(x,mask)	(((x)+(mask))&~(mask))
+//#define ALIGN(x,a)		__ALIGN_MASK((x),(typeof(x))(a)-1)
+
 
 #endif   //__BOOT_IMG__
 

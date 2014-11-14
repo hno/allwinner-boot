@@ -38,7 +38,7 @@
 //RsvdSecCnt = 0x100; 0x20~0x8000
 int FormatDisk(void)
 {
-	u32 ret = OK;
+	u32 ret = 0;
 	u8 buffer[512];
 	FormatParameter param;
 
@@ -49,7 +49,7 @@ int FormatDisk(void)
 	//
 	//--------------------------------------------------------------------------
 	ret = FATFS_Format((struct FormatParameter *)&param);
-	if (OK != ret)
+	if (0 != ret)
 	{
 		__inf("FATFS_Format failed %d\n", ret);
 		return ret;

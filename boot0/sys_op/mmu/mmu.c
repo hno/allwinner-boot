@@ -101,7 +101,7 @@ void mmu_system_init(__u32 dram_base, __u32 dram_size, __u32 mmu_base)
 	__asm{mcr p15, 0, mmu_base, c2, c0, 1}
 	//clean i/d cache
 	flush_icache();
-	flush_dcache();
+	//flush_dcache();
 	//set domain controller
 	mmu_set_domain_access();
 	//

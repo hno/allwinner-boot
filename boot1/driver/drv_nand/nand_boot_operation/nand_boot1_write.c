@@ -54,18 +54,18 @@ __s32 write_in_one_blk( __u32 blk_num, void *buf, __u32 size, __u32 blk_size )
 	    	return ADV_NF_OVERTIME_ERR;
         else if( status == NF_ERASE_ERR )
         {
-        	__wrn("fail in erasing block %u.\n", blk_num);
+        	__inf("fail in erasing block %u.\n", blk_num);
         	NF_mark_bad_block( blk_num );         // 在标记坏块前，先擦除
         	return ADV_NF_NEW_BAD_BLOCK;
         }
-		__msg("Succeed in erasing block %u.\n", blk_num);
+		__inf("Succeed in erasing block %u\n", blk_num);
 
         for( copy_base = blk_num * blk_size, copy_end = copy_base + size, blk_end = copy_base + blk_size;
         	 copy_end <= blk_end;
         	 copy_base += size, copy_end = copy_base + size )
         {
     	    status = NF_write( copy_base >> NF_SCT_SZ_WIDTH, buf, scts_per_copy );
-    		__msg("finish in progmming address %x on block %u.\n", copy_base, blk_num );
+    		//__inf("progm address %x on block %u ok\n", copy_base, blk_num );
     	    if( status == NF_OVERTIME_ERR )
     	    	return ADV_NF_OVERTIME_ERR;
     	    else if( status == NF_PROG_ERR )
@@ -91,7 +91,7 @@ try_again:
 
 
 failure:
-		__msg("fail in programming block %u, it is bad block.\n", blk_num);
+	__msg("fail in programming block %u, it is bad block.\n", blk_num);
 	/* 先擦除，后标记 */
 	NF_erase( blk_num );
 	NF_mark_bad_block( blk_num );
@@ -182,17 +182,14 @@ __s32  Nand_Burn_Boot1(__u32 Boot1_buf, __u32 length )
 	__s32               status;
 	__s32				ret = -1;
 
-    if(NF_ERROR==NF_open( ))                                             // 打开nand flash
-    {
-        __inf("%s: NF_open fail !\n",__FUNCTION__);
-		return -1;
-    }
+    NF_open( );                                             // 打开nand flash
+
     if( length <= NF_BLOCK_SIZE )
     {
         for( i = BOOT1_START_BLK_NUM;  i <= BOOT1_LAST_BLK_NUM;  i++ )
         {
-            if( NF_read_status( i ) == NF_BAD_BLOCK )		// 如果当前块是坏块，则进入下一块
-                continue;
+            //if( NF_read_status( i ) == NF_BAD_BLOCK )		// 如果当前块是坏块，则进入下一块
+            //    continue;
 
             /* 在当前块中填充满Boot1的备份 */
             status = write_in_one_blk( i, (void *)Boot1_buf, length, NF_BLOCK_SIZE );
@@ -204,8 +201,8 @@ __s32  Nand_Burn_Boot1(__u32 Boot1_buf, __u32 length )
     {
     	for( i = BOOT1_START_BLK_NUM;  i <= BOOT1_LAST_BLK_NUM;  i++ )
         {
-            if( NF_read_status( i ) == NF_BAD_BLOCK )		// 如果当前块是坏块，则进入下一块
-                continue;
+            //if( NF_read_status( i ) == NF_BAD_BLOCK )		// 如果当前块是坏块，则进入下一块
+            //    continue;
 
         	status = write_in_many_blks( i, BOOT1_LAST_BLK_NUM, (void*)Boot1_buf,
             	                        length, NF_BLOCK_SIZE, &write_blks );

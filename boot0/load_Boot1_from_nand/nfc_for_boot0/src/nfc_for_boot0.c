@@ -107,7 +107,14 @@ __s32 _wait_cmd_finish(void)
 
 void _dma_config_start(__u8 rw, __u32 buff_addr, __u32 len)
 {
-	NAND_DMAConfigStart(rw,buff_addr,  len);
+	__u32 reg_val;
+	//set mbus dma mode
+	reg_val = NFC_READ_REG(NFC_REG_CTL);
+	reg_val &= (~(0x1<<15));
+	NFC_WRITE_REG(NFC_REG_CTL, reg_val);
+	//set dma address & byte counter
+    NFC_WRITE_REG(NFC_REG_MDMA_ADDR, buff_addr);
+	NFC_WRITE_REG(NFC_REG_DMA_CNT, len);
 }
 
 __s32 _wait_dma_end(void)
@@ -733,19 +740,17 @@ __s32 NFC_Init(NFC_INIT_INFO *nand_info )
         ddr_param[i] = 0;
 
     NandIOBase[0] = (__u32)NAND_IORemap(NAND_IO_BASE_ADDR0, 4096);
-//    NandIOBase[1] = (__u32)NAND_IORemap(NAND_IO_BASE_ADDR1, 4096);
-//    NandIndex = 0;
-    //init clk
-    NAND_ClkRequest();
-    NAND_AHBEnable();
-    NAND_SetClk(10);
-    NAND_ClkEnable();
+    NandIOBase[1] = (__u32)NAND_IORemap(NAND_IO_BASE_ADDR1, 4096);
+    NandIndex = 0;
     
     //init pin
-    NAND_PIORequest();
+    NAND_PIORequest(NandIndex);
     
-    if(NAND_RequestDMA() < 0)
-    	return -1;
+    //init clk
+    NAND_ClkRequest(NandIndex);
+    NAND_SetClk(NandIndex,10);
+   
+
 	NFC_SetEccMode(0);
 
 	/*init nand control machine*/
@@ -775,12 +780,10 @@ void NFC_Exit( void )
 	NFC_WRITE_REG(NFC_REG_CTL,cfg);
 
 	 //init clk
-	NAND_ClkDisable();
-    NAND_AHBDisable();
-    NAND_ClkRelease();
+    NAND_ClkRelease(NandIndex);
 
     //init pin
-    NAND_PIORelease();
+    NAND_PIORelease(NandIndex);
     
 }
 
